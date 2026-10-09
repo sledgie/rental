@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Credit note</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:1150px;font-family:'Manrope',system-ui,sans-serif;background:#F3F5F8;color:#0F1B2D}
+.side{background:#0F1B2D;color:#B8C2D3;padding:24px 16px;display:flex;flex-direction:column;gap:4px}
+.nav{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:600;color:#B8C2D3;text-decoration:none;min-height:24px}
+.nav:hover{background:#18273D;color:#fff}
+.card{background:#fff;border-radius:16px;padding:20px;border:1px solid #E6EAF0}
+th{font-size:12px;font-weight:700;color:#5B6678;text-align:left;padding:10px 8px;border-bottom:1px solid #E6EAF0}
+td{padding:8px;border-bottom:1px solid #F0F2F6;font-size:14px}
+.tbl{overflow-x:auto}
+@media(max-width:900px){.app{grid-template-columns:1fr}.side{display:none}}
+</style>
+</helmet>
+<div class="app">
+<aside class="side">
+<div style="display:flex;align-items:center;gap:10px;padding:4px 12px 20px;color:#fff;font-weight:800;font-size:17px"><div style="width:28px;height:28px;border-radius:8px;background:#19B394"></div>Keystone</div>
+<a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Dashboard</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Properties</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Tenants</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Rent</a><a class="nav" href="#" style="background:#18273D;color:#fff"><span style="width:6px;height:6px;border-radius:3px;background:#19B394"></span>Credit notes</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Maintenance</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Financials</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Documents</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Reports</a>
+<a class="nav" href="#" style="margin-top:auto"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Settings</a>
+</aside>
+<main style="padding:24px 28px 40px;display:flex;flex-direction:column;gap:20px;min-width:0;max-width:1100px">
+<div><a href="#" style="font-size:13px;font-weight:700;color:#5B6678;text-decoration:none">Credit notes /</a><h1 style="margin:4px 0 0;font-size:28px;font-weight:800">New credit note</h1><div style="font-size:13px;color:#5B6678;margin-top:4px">Editing an existing credit note uses this same form with the fields filled in.</div></div>
+<section class="card"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px">
+<label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:13px;font-weight:700">Tenant name</span><select style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D"><option>Jane Doe &middot; 123 Main 102</option></select><span style="font-size:12px;color:#5B6678">Choose from your tenants</span></label>
+<label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:13px;font-weight:700">Credit note number</span><input value="CN-0004" placeholder="" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D"><span style="font-size:12px;color:#5B6678">Generated automatically, you can change it</span></label>
+<label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:13px;font-weight:700">Reference number</span><input value="" placeholder="e.g. Interac e-Transfer reference" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D"><span style="font-size:12px;color:#5B6678">Optional</span></label>
+<label style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:13px;font-weight:700">Credit note date</span><input value="2026-10-08" placeholder="" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D"></label>
+<label style="display:flex;flex-direction:column;gap:6px;grid-column:1/-1"><span style="font-size:13px;font-weight:700">Subject</span><input value="Overpayment on September rent" placeholder="What is this credit for?" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D"></label>
+</div></section>
+<section class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-weight:800;font-size:16px">Items</div><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Manage items</a></div>
+<div class="tbl"><table style="width:100%;border-collapse:collapse;min-width:820px"><thead><tr><th>Item details</th><th>Account</th><th style="text-align:right">Quantity</th><th style="text-align:right">Rate</th><th style="text-align:right">Discount</th><th style="text-align:right">Amount</th><th></th></tr></thead><tbody>
+<tr><td style="width:30%"><select style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D;height:40px"><option>Rent overpayment</option></select></td><td style="width:22%"><select style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D;height:40px"><option>Rent Adjustments</option></select></td><td style="width:11%"><input value="1.00" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D;height:40px;text-align:right"></td><td style="width:13%"><input value="1,000.00" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D;height:40px;text-align:right"></td><td style="width:11%"><input value="0.00" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D;height:40px;text-align:right"></td><td style="text-align:right;font-weight:800;white-space:nowrap;width:10%">$1,000.00</td><td style="width:44px"><button aria-label="Remove row" style="width:40px;height:40px;border-radius:10px;border:1px solid #D5DBE5;background:#fff;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A12418" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></td></tr><tr><td style="width:30%"><select style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D;height:40px"><option>Select an item</option></select></td><td style="width:22%"><select style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D;height:40px"><option>Select an account</option></select></td><td style="width:11%"><input value="1.00" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D;height:40px;text-align:right"></td><td style="width:13%"><input value="0.00" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D;height:40px;text-align:right"></td><td style="width:11%"><input value="0.00" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D;height:40px;text-align:right"></td><td style="text-align:right;font-weight:800;white-space:nowrap;width:10%">$0.00</td><td style="width:44px"><button aria-label="Remove row" style="width:40px;height:40px;border-radius:10px;border:1px solid #D5DBE5;background:#fff;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A12418" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></td></tr></tbody></table></div>
+<div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:flex-start;margin-top:14px">
+<button style="height:40px;padding:0 16px;border-radius:12px;border:1px solid #0E7C66;background:#fff;color:#0E7C66;font:700 13px 'Manrope',sans-serif">+ Add row</button>
+<div style="min-width:280px;margin-left:auto;display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:12px;background:#F8FAFC"><div style="display:flex;justify-content:space-between;font-size:14px"><span style="color:#5B6678;font-weight:600">Subtotal</span><b>$1,000.00</b></div><div style="display:flex;justify-content:space-between;font-size:16px;border-top:1px solid #E6EAF0;padding-top:10px"><b>Total credit</b><b>$1,000.00</b></div></div></div>
+<div style="font-size:12px;color:#5B6678;margin-top:8px">Amount = quantity x rate - discount</div></section>
+<section class="card"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">Customer notes</span><textarea placeholder="Thank you for your payment." style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D;height:110px;padding:12px 14px;resize:vertical"></textarea><span style="font-size:12px;color:#5B6678">Shown on the credit note</span></label>
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">Terms and conditions</span><textarea placeholder="How this credit can be used." style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D;height:110px;padding:12px 14px;resize:vertical"></textarea><span style="font-size:12px;color:#5B6678">Shown on the credit note</span></label>
+</div></section>
+<div style="display:flex;flex-wrap:wrap;gap:10px"><button style="height:44px;padding:0 22px;border-radius:12px;border:0;background:#0E7C66;color:#fff;font:700 14px 'Manrope',sans-serif">Save as Open</button><button style="height:44px;padding:0 22px;border-radius:12px;border:1px solid #D5DBE5;background:#fff;font:700 14px 'Manrope',sans-serif">Cancel</button></div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1150}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

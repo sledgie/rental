@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tenant account</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:1000px;font-family:'Manrope',system-ui,sans-serif;background:#F3F5F8;color:#0F1B2D}
+.side{background:#0F1B2D;color:#B8C2D3;padding:24px 16px;display:flex;flex-direction:column;gap:4px}
+.nav{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:600;color:#B8C2D3;text-decoration:none;min-height:24px}
+.nav:hover{background:#18273D;color:#fff}
+.card{background:#fff;border-radius:16px;padding:20px;border:1px solid #E6EAF0}
+th{font-size:12px;font-weight:700;color:#5B6678;text-align:left;padding:10px 12px;border-bottom:1px solid #E6EAF0}
+td{font-size:14px;padding:12px;border-bottom:1px solid #F0F2F6}
+.tbl{overflow-x:auto}
+.chip{height:36px;padding:0 14px;border-radius:999px;border:1px solid #D5DBE5;background:#fff;font:700 13px 'Manrope',sans-serif;color:#0F1B2D}
+@media(max-width:900px){.app{grid-template-columns:1fr}.side{display:none}}
+</style>
+</helmet>
+<div class="app">
+<aside class="side">
+<div style="display:flex;align-items:center;gap:10px;padding:4px 12px 20px;color:#fff;font-weight:800;font-size:17px"><div style="width:28px;height:28px;border-radius:8px;background:#19B394"></div>Keystone</div>
+<a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Dashboard</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Properties</a><a class="nav" href="#" style="background:#18273D;color:#fff"><span style="width:6px;height:6px;border-radius:3px;background:#19B394"></span>Tenants</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Rent</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Credit notes</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Maintenance</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Financials</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Documents</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Reports</a>
+<a class="nav" href="#" style="margin-top:auto"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Settings</a>
+</aside>
+<main style="padding:24px 28px 40px;display:flex;flex-direction:column;gap:20px;min-width:0">
+<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between">
+<div><a href="#" style="font-size:13px;font-weight:700;color:#5B6678;text-decoration:none">Tenants / John Smith /</a>
+<div style="display:flex;align-items:center;gap:12px;margin-top:4px;flex-wrap:wrap"><h1 style="margin:0;font-size:28px;font-weight:800">Account &middot; John Smith</h1><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#DDF3EC;color:#0A5C4B;font-size:12px;font-weight:700;white-space:nowrap">Active</span></div>
+<div style="color:#5B6678;font-size:14px;margin-top:4px">123 Main Street &middot; Unit 101 &middot; Rent $2,100 / month</div></div>
+<div style="display:flex;flex-wrap:wrap;gap:10px"><button style="height:44px;padding:0 18px;border-radius:12px;border:1px solid #D5DBE5;background:#fff;font:700 14px 'Manrope',sans-serif">Download statement</button><button style="height:44px;padding:0 18px;border-radius:12px;border:1px solid #D5DBE5;background:#fff;font:700 14px 'Manrope',sans-serif">Print</button><button style="height:44px;padding:0 18px;border-radius:12px;border:1px solid #D5DBE5;background:#fff;font:700 14px 'Manrope',sans-serif">Issue credit note</button><button style="height:44px;padding:0 18px;border-radius:12px;border:1px solid #0E7C66;background:#fff;color:#0E7C66;font:700 14px 'Manrope',sans-serif">Send invoice</button><button style="height:44px;padding:0 18px;border-radius:12px;border:0;background:#0E7C66;color:#fff;font:700 14px 'Manrope',sans-serif">Record payment</button></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px"><div class="card" style="border-color:#E6EAF0"><div style="font-size:13px;color:#5B6678;font-weight:600">Total charged</div><div style="font-size:28px;font-weight:800;margin-top:6px;color:#0F1B2D">$4,200</div><div style="font-size:13px;color:#5B6678;font-weight:600;margin-top:4px">Sep and Oct</div></div><div class="card" style="border-color:#E6EAF0"><div style="font-size:13px;color:#5B6678;font-weight:600">Payments received</div><div style="font-size:28px;font-weight:800;margin-top:6px;color:#0F1B2D">$3,600</div><div style="font-size:13px;color:#5B6678;font-weight:600;margin-top:4px">2 payments</div></div><div class="card" style="border-color:#E6EAF0"><div style="font-size:13px;color:#5B6678;font-weight:600">Credit notes</div><div style="font-size:28px;font-weight:800;margin-top:6px;color:#0F1B2D">$100</div><div style="font-size:13px;color:#5B6678;font-weight:600;margin-top:4px">1 issued</div></div><div class="card" style="border-color:#F2C4BE"><div style="font-size:13px;color:#5B6678;font-weight:600">Balance owing</div><div style="font-size:28px;font-weight:800;margin-top:6px;color:#A12418">$500</div><div style="font-size:13px;color:#5B6678;font-weight:600;margin-top:4px">Oct 2026 rent</div></div></div>
+<div class="card" style="display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;padding:14px 16px"><b style="font-size:13px">Period</b><div style="display:flex;flex-wrap:wrap;gap:8px"><button class="chip" style="background:#0F1B2D;color:#fff;border-color:#0F1B2D">YTD</button><button class="chip">Current year</button><button class="chip">Current month</button><button class="chip">Beginning of year to today</button><button class="chip">Custom</button></div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto"><label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700">From<input value="2026-01-01" style="height:40px;width:130px;box-sizing:border-box;border-radius:10px;border:1px solid #D5DBE5;padding:0 10px;font:500 14px 'Manrope',sans-serif"></label><label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700">To<input value="2026-10-08" style="height:40px;width:130px;box-sizing:border-box;border-radius:10px;border:1px solid #D5DBE5;padding:0 10px;font:500 14px 'Manrope',sans-serif"></label><button style="height:40px;padding:0 16px;border-radius:10px;border:0;background:#0E7C66;color:#fff;font:700 13px 'Manrope',sans-serif">Apply</button></div></div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><button class="chip" style="background:#0F1B2D;color:#fff;border-color:#0F1B2D">All 5</button><button class="chip" style="">Invoices 1</button><button class="chip" style="">Payments 2</button><button class="chip" style="">Credit notes 1</button><button class="chip" style="">Charges 1</button>
+<label style="margin-left:auto;min-width:200px"><span style="position:absolute;left:-9999px">Search transactions</span><input placeholder="Search transactions" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 16px;font:500 14px 'Manrope',sans-serif;background:#fff"></label></div>
+<div class="card tbl" style="padding:8px 8px 4px">
+<table style="width:100%;border-collapse:collapse;min-width:860px"><thead><tr><th>Date</th><th>Type</th><th>Reference</th><th>Description</th><th style="text-align:right">Charges</th><th style="text-align:right">Payments and credits</th><th style="text-align:right">Balance</th><th>Status</th><th></th></tr></thead><tbody>
+<tr><td style="white-space:nowrap">Oct 5, 2026</td><td><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#DDF3EC;color:#0A5C4B;font-size:12px;font-weight:700;white-space:nowrap">Payment</span></td><td><b>Bank transfer</b></td><td>October rent, partial</td><td style="text-align:right"></td><td style="text-align:right;color:#0A5C4B">$1,600</td><td style="text-align:right"><b>$500</b></td><td>Completed</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">View</a></td></tr>
+<tr><td style="white-space:nowrap">Oct 1, 2026</td><td><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#E1EAFB;color:#1B3F9A;font-size:12px;font-weight:700;white-space:nowrap">Invoice</span></td><td><b>INV-0001</b></td><td>October rent</td><td style="text-align:right">$2,100</td><td style="text-align:right;color:#0A5C4B"></td><td style="text-align:right"><b>$2,100</b></td><td>Sent</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">View</a></td></tr>
+<tr><td style="white-space:nowrap">Sep 3, 2026</td><td><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#DDF3EC;color:#0A5C4B;font-size:12px;font-weight:700;white-space:nowrap">Payment</span></td><td><b>Bank transfer</b></td><td>September rent</td><td style="text-align:right"></td><td style="text-align:right;color:#0A5C4B">$2,000</td><td style="text-align:right"><b>$0</b></td><td>Completed</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">View</a></td></tr>
+<tr><td style="white-space:nowrap">Sep 1, 2026</td><td><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#EFE6FB;color:#5B2D9E;font-size:12px;font-weight:700;white-space:nowrap">Credit note</span></td><td><b>CN-0001</b></td><td>Move-in discount</td><td style="text-align:right"></td><td style="text-align:right;color:#0A5C4B">$100</td><td style="text-align:right"><b>$2,000</b></td><td>Applied</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">View</a></td></tr>
+<tr><td style="white-space:nowrap">Sep 1, 2026</td><td><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#EBEEF3;color:#46536A;font-size:12px;font-weight:700;white-space:nowrap">Charge</span></td><td><b>Rent charge</b></td><td>September rent</td><td style="text-align:right">$2,100</td><td style="text-align:right;color:#0A5C4B"></td><td style="text-align:right"><b>$2,100</b></td><td>Paid</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">View</a></td></tr>
+</tbody></table>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

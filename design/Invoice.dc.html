@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Send rent invoice</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:1150px;font-family:'Manrope',system-ui,sans-serif;background:#F3F5F8;color:#0F1B2D}
+.side{background:#0F1B2D;color:#B8C2D3;padding:24px 16px;display:flex;flex-direction:column;gap:4px}
+.nav{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:600;color:#B8C2D3;text-decoration:none;min-height:24px}
+.nav:hover{background:#18273D;color:#fff}
+.card{background:#fff;border-radius:16px;padding:20px;border:1px solid #E6EAF0}
+@media(max-width:900px){.app{grid-template-columns:1fr}.side{display:none}}
+</style>
+</helmet>
+<div class="app">
+<aside class="side">
+<div style="display:flex;align-items:center;gap:10px;padding:4px 12px 20px;color:#fff;font-weight:800;font-size:17px"><div style="width:28px;height:28px;border-radius:8px;background:#19B394"></div>Keystone</div>
+<a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Dashboard</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Properties</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Tenants</a><a class="nav" href="#" style="background:#18273D;color:#fff"><span style="width:6px;height:6px;border-radius:3px;background:#19B394"></span>Rent</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Credit notes</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Maintenance</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Financials</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Documents</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Reports</a>
+<a class="nav" href="#" style="margin-top:auto"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Settings</a>
+</aside>
+<main style="padding:24px 28px 40px;display:flex;flex-direction:column;gap:20px;min-width:0">
+<div><a href="#" style="font-size:13px;font-weight:700;color:#5B6678;text-decoration:none">Rent / Invoices /</a><h1 style="margin:4px 0 0;font-size:28px;font-weight:800">Send rent invoice</h1></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+<section class="card"><div style="font-weight:800;font-size:16px;margin-bottom:14px">Invoice details</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px"><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">Tenant</span><select style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D"><option>John Smith &middot; 123 Main 101</option></select></label><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">Lease</span><select style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D"><option>Sep 2026 to Aug 2027</option></select></label><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">Invoice number</span><input value="INV-0001" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D"></label><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">Billing period</span><select style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D"><option>October 2026</option></select></label><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">Issue date</span><input value="2026-10-08" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D"></label><label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">Due date</span><input value="2026-10-01" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D"></label></div></section>
+<section class="card"><div style="font-weight:800;font-size:16px">Line items</div><div style="font-size:13px;color:#5B6678;margin:2px 0 12px">Pulled from the tenant's open charges. Add late fees, credits or one-off items.</div>
+<table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;font-size:12px;color:#5B6678;padding:8px 0;border-bottom:1px solid #E6EAF0">Description</th><th style="text-align:right;font-size:12px;color:#5B6678;padding:8px 0;border-bottom:1px solid #E6EAF0">Amount</th></tr></thead><tbody>
+<tr><td style="padding:10px 0;border-bottom:1px solid #EEF0F4;">October rent</td><td style="padding:10px 0;border-bottom:1px solid #EEF0F4;text-align:right;">$2,100.00</td></tr><tr><td style="padding:10px 0;border-bottom:1px solid #EEF0F4;">Payment applied (Oct 5)</td><td style="padding:10px 0;border-bottom:1px solid #EEF0F4;text-align:right;">-$1,600.00</td></tr></tbody></table>
+<button style="margin-top:12px;height:40px;padding:0 16px;border-radius:12px;border:1px solid #D5DBE5;background:#fff;font:700 13px 'Manrope',sans-serif">Add line item</button></section>
+<section class="card" style="display:flex;flex-direction:column;gap:14px"><div style="font-weight:800;font-size:16px">Delivery</div>
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">Send to</span><input value="john.smith@example.com" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D"></label>
+<label style="display:flex;gap:12px;align-items:center;justify-content:space-between"><span><span style="font-weight:700;font-size:14px;display:block">Attach PDF</span><span style="font-size:12px;color:#5B6678">Also available through the tenant portal</span></span><input type="checkbox" checked style="width:20px;height:20px;margin:0;flex:none"></label>
+<label style="display:flex;gap:12px;align-items:center;justify-content:space-between"><span><span style="font-weight:700;font-size:14px;display:block">Include payment instructions</span><span style="font-size:12px;color:#5B6678">Shown at the bottom of the invoice</span></span><input type="checkbox" checked style="width:20px;height:20px;margin:0;flex:none"></label>
+<label style="display:flex;gap:12px;align-items:center;justify-content:space-between"><span><span style="font-weight:700;font-size:14px;display:block">Send automatically each month</span><span style="font-size:12px;color:#5B6678">Generate and email on the 25th for the following month</span></span><input type="checkbox"  style="width:20px;height:20px;margin:0;flex:none"></label></section></div>
+<aside style="align-self:start;min-width:0"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-weight:800;font-size:16px">Preview</div><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#EBEEF3;color:#46536A;font-size:12px;font-weight:700;white-space:nowrap">Draft</span></div>
+<div style="background:#fff;border:1px solid #E6EAF0;border-radius:6px;padding:36px 34px;box-shadow:0 10px 30px rgba(15,27,45,.08);display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;justify-content:space-between;gap:12px"><div><div style="display:flex;align-items:center;gap:8px;font-weight:800"><div style="width:22px;height:22px;border-radius:6px;background:#19B394"></div>Keystone</div><div style="font-size:12px;color:#5B6678;margin-top:6px">[Your business address]</div></div><div style="text-align:right"><div style="font-size:26px;font-weight:800;letter-spacing:.5px">INVOICE</div><div style="font-size:13px;color:#5B6678">INV-0001</div></div></div>
+<div style="display:flex;justify-content:space-between;gap:12px;font-size:13px"><div><div style="color:#5B6678;font-weight:700">Bill to</div><div style="font-weight:700;margin-top:2px">John Smith</div><div>123 Main Street, Unit 101</div></div><div style="text-align:right"><div><span style="color:#5B6678;font-weight:700">Issued</span> Oct 8, 2026</div><div><span style="color:#5B6678;font-weight:700">Due</span> Oct 1, 2026</div></div></div>
+<table style="width:100%;border-collapse:collapse;font-size:14px"><tbody><tr><td style="padding:10px 0;border-bottom:1px solid #EEF0F4;">October 2026 rent</td><td style="padding:10px 0;border-bottom:1px solid #EEF0F4;text-align:right;">$2,100.00</td></tr><tr><td style="padding:10px 0;border-bottom:1px solid #EEF0F4;">Payment received Oct 5</td><td style="padding:10px 0;border-bottom:1px solid #EEF0F4;text-align:right;">-$1,600.00</td></tr><tr><td style="padding:10px 0;border-bottom:1px solid #EEF0F4;font-weight:800">Amount due</td><td style="padding:10px 0;border-bottom:1px solid #EEF0F4;text-align:right;font-weight:800">$500.00</td></tr></tbody></table>
+<div style="font-size:12px;color:#5B6678;border-top:1px solid #E6EAF0;padding-top:14px"><b>Payment instructions</b><br>[Your bank transfer or e-transfer details]</div></div></aside>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end"><button style="height:44px;padding:0 20px;border-radius:12px;border:1px solid #D5DBE5;background:#fff;font:700 14px 'Manrope',sans-serif">Cancel</button><button style="height:44px;padding:0 20px;border-radius:12px;border:1px solid #D5DBE5;background:#fff;font:700 14px 'Manrope',sans-serif">Save draft</button><button style="height:44px;padding:0 20px;border-radius:12px;border:1px solid #0E7C66;background:#fff;color:#0E7C66;font:700 14px 'Manrope',sans-serif">Download PDF</button><button style="height:44px;padding:0 20px;border-radius:12px;border:0;background:#0E7C66;color:#fff;font:700 14px 'Manrope',sans-serif">Send invoice</button></div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1150}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

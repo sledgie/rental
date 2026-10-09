@@ -1,0 +1,1340 @@
+// Rental Property Management & Accounting System
+// REFERENCE MODEL (the app runs on the Oracle script generated from this file by tools/prisma_to_oracle.py).
+// PostgreSQL schema. Money is stored as integer minor units (cents).
+// Every tenant-scoped table carries businessId; enforce with service-layer scoping + Postgres RLS.
+//
+// Raw-SQL migration additions (Prisma cannot express these) are listed at the bottom.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Prisma 7: the connection URL lives in prisma.config.ts, not here.
+}
+
+// ───────────────────────── Enums ─────────────────────────
+
+enum PropertyType {
+  SINGLE_FAMILY
+  MULTI_FAMILY
+  APARTMENT_BUILDING
+  CONDO
+  COMMERCIAL
+  MIXED_USE
+  OTHER
+}
+enum UnitStatus {
+  OCCUPIED
+  VACANT
+  RESERVED
+  MAINTENANCE
+  UNAVAILABLE
+}
+enum TenantStatus {
+  APPLICANT
+  ACTIVE
+  PAST
+  PENDING_MOVE_IN
+  PENDING_MOVE_OUT
+}
+enum LeaseStatus {
+  DRAFT
+  PENDING_SIGNATURE
+  PARTIALLY_SIGNED
+  SIGNED
+  ACTIVE
+  EXPIRING
+  EXPIRED
+  TERMINATED
+}
+enum PaymentFrequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUALLY
+}
+enum ChargeType {
+  RENT
+  LATE_FEE
+  DEPOSIT
+  CREDIT
+  ADJUSTMENT
+  OTHER
+}
+enum ChargeStatus {
+  OPEN
+  PARTIALLY_PAID
+  PAID
+  VOID
+}
+enum PaymentMethod {
+  CASH
+  CHEQUE
+  BANK_TRANSFER
+  CREDIT_CARD
+  DEBIT_CARD
+  OTHER
+}
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  VIEWED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  VOID
+}
+enum CreditNoteStatus {
+  DRAFT
+  OPEN
+  PARTIALLY_APPLIED
+  APPLIED
+  VOID
+}
+enum BillStatus {
+  DRAFT
+  OPEN
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+enum RequestPriority {
+  LOW
+  MEDIUM
+  HIGH
+  EMERGENCY
+}
+enum RequestStatus {
+  NEW
+  OPEN
+  CLOSED
+  CANCELLED
+}
+enum WorkOrderStatus {
+  NEW
+  OPEN
+  ASSIGNED
+  SCHEDULED
+  IN_PROGRESS
+  WAITING
+  COMPLETED
+  CANCELLED
+}
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+enum BankAccountType {
+  CHECKING
+  SAVINGS
+  CREDIT_CARD
+  CASH
+  OTHER
+}
+enum BankTxnType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER_IN
+  TRANSFER_OUT
+  FEE
+  INTEREST
+}
+enum BankTxnStatus {
+  UNCATEGORIZED
+  CATEGORIZED
+  RECONCILED
+}
+enum JournalSource {
+  MANUAL
+  RENT_CHARGE
+  PAYMENT
+  EXPENSE
+  BILL
+  BILL_PAYMENT
+  BANK_TXN
+  TRANSFER
+  DEPOSIT
+  RECURRING
+  REVERSAL
+  OPENING
+}
+enum JournalStatus {
+  POSTED
+  REVERSED
+}
+enum DocumentOwnerType {
+  BUSINESS
+  PROPERTY
+  UNIT
+  TENANT
+  LEASE
+  VENDOR
+  WORK_ORDER
+  TRANSACTION
+}
+enum DocumentType {
+  IDENTIFICATION
+  LEASE
+  LEASE_ADDENDUM
+  INSURANCE
+  PROPERTY_TAX
+  INVOICE
+  RECEIPT
+  MAINTENANCE
+  NOTICE
+  INSPECTION
+  FINANCIAL
+  OTHER
+}
+enum DocumentStatus {
+  ACTIVE
+  ARCHIVED
+  SIGNED
+}
+enum IdDocType {
+  DRIVERS_LICENSE
+  PASSPORT
+  GOVERNMENT_ID
+  OTHER
+}
+enum VerificationStatus {
+  UNVERIFIED
+  VERIFIED
+  REJECTED
+}
+enum SignatureRequestStatus {
+  DRAFT
+  FIELDS_ADDED
+  READY_TO_SEND
+  SENT
+  VIEWED
+  PARTIALLY_SIGNED
+  COMPLETED
+  DECLINED
+  VOIDED
+  EXPIRED
+}
+enum SignerStatus {
+  PENDING
+  SENT
+  VIEWED
+  SIGNED
+  DECLINED
+}
+enum FieldType {
+  SIGNATURE
+  INITIALS
+  FULL_NAME
+  DATE
+  TEXT
+  CHECKBOX
+}
+enum SignatureAction {
+  SENT
+  DELIVERED
+  OPENED
+  VIEWED
+  SIGNED
+  DECLINED
+  COMPLETED
+  VERIFIED_OTP
+  VOIDED
+}
+enum NotificationType {
+  RENT_OVERDUE
+  RENT_DUE_SOON
+  LEASE_EXPIRING
+  ID_EXPIRING
+  INSURANCE_EXPIRING
+  BILL_DUE
+  BILL_OVERDUE
+  MAINTENANCE_REQUEST
+  SIGNATURE_REQUESTED
+  SIGNATURE_PENDING
+  DOCUMENT_EXPIRED
+}
+enum RecurringKind {
+  RENT_CHARGE
+  BILL
+  EXPENSE
+  PAYMENT
+  JOURNAL_ENTRY
+}
+enum WebhookStatus {
+  PENDING
+  DELIVERED
+  FAILED
+}
+
+// ───────────────────────── Tenancy / Auth ─────────────────────────
+
+model Business {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  currency  String   @default("CAD") @db.Char(3)
+  timezone  String   @default("America/Toronto")
+  jurisdiction String? // drives e-signature configuration
+  fiscalYearStartMonth Int @default(1)
+  booksClosedThrough DateTime? @db.Date // period lock
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users Membership[]
+  roles Role[]
+  properties Property[]
+  units Unit[]
+  tenants Tenant[]
+  leases Lease[]
+  rentCharges RentCharge[]
+  invoices Invoice[]
+  creditNotes CreditNote[]
+  items Item[]
+  payments Payment[]
+  expenses Expense[]
+  expenseAllocations ExpenseAllocation[]
+  bills Bill[]
+  billPayments BillPayment[]
+  vendors Vendor[]
+  maintenanceRequests MaintenanceRequest[]
+  workOrders WorkOrder[]
+  bankAccounts BankAccount[]
+  bankTransactions BankTransaction[]
+  accounts Account[]
+  journalEntries JournalEntry[]
+  expenseCategories ExpenseCategory[]
+  documents Document[]
+  signatureRequests SignatureRequest[]
+  notifications Notification[]
+  notificationRules NotificationRule[]
+  recurringTemplates RecurringTemplate[]
+  auditLogs AuditLog[]
+  apiKeys ApiKey[]
+  webhookEndpoints WebhookEndpoint[]
+  events DomainEvent[]
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  isActive     Boolean  @default(true)
+  mfaSecretEnc String?  // encrypted TOTP secret
+  mfaEnabled   Boolean  @default(false)
+  failedLogins Int      @default(0)
+  lockedUntil  DateTime?
+  lastLoginAt  DateTime?
+  tenantId     String?  @unique @db.Uuid // set for tenant-portal users
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships Membership[]
+  sessions Session[]
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+  auditLogs AuditLog[]
+  notifications Notification[]
+}
+
+model Session {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @db.Uuid
+  refreshTokenHash String   @unique
+  userAgent        String?
+  ip               String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+
+model Role {
+  id          String  @id @default(uuid()) @db.Uuid
+  businessId  String  @db.Uuid
+  key         String  // owner, property_manager, accountant, maintenance_manager, tenant, custom...
+  name        String
+  isSystem    Boolean @default(false)
+  permissions String[] // e.g. "expense:create", "document:download"
+  business Business @relation(fields: [businessId], references: [id])
+  memberships Membership[]
+  @@unique([businessId, key])
+}
+
+// User ↔ Business with a role and optional property scope.
+model Membership {
+  id          String  @id @default(uuid()) @db.Uuid
+  userId      String  @db.Uuid
+  businessId  String  @db.Uuid
+  roleId      String  @db.Uuid
+  allProperties Boolean @default(true)
+  propertyIds String[] @db.Uuid // used when allProperties = false
+  createdAt   DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id])
+  role Role @relation(fields: [roleId], references: [id])
+  @@unique([userId, businessId])
+}
+
+model ApiKey {
+  id          String  @id @default(uuid()) @db.Uuid
+  businessId  String  @db.Uuid
+  name        String
+  keyHash     String  @unique
+  prefix      String
+  permissions String[]
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+  business Business @relation(fields: [businessId], references: [id])
+}
+
+// ───────────────────────── Property hierarchy ─────────────────────────
+
+model Property {
+  id            String   @id @default(uuid()) @db.Uuid
+  businessId    String   @db.Uuid
+  name          String
+  type          PropertyType
+  addressLine1  String
+  addressLine2  String?
+  city          String
+  region        String
+  postalCode    String
+  country       String   @default("CA")
+  purchaseDate  DateTime? @db.Date
+  purchasePriceCents BigInt?
+  estimatedValueCents BigInt?
+  mortgageInfo  Json?
+  taxInfo       Json?
+  insuranceInfo Json?
+  insuranceExpiresOn DateTime? @db.Date
+  notes         String?
+  archivedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id])
+  units Unit[]
+  leases Lease[]
+  rentCharges RentCharge[]
+  payments Payment[]
+  expenses Expense[]
+  expenseAllocations ExpenseAllocation[]
+  bills Bill[]
+  maintenanceRequests MaintenanceRequest[]
+  workOrders WorkOrder[]
+  bankTransactions BankTransaction[]
+  journalLines JournalEntryLine[]
+  @@index([businessId])
+}
+
+model Unit {
+  id           String   @id @default(uuid()) @db.Uuid
+  businessId   String   @db.Uuid
+  propertyId   String   @db.Uuid
+  unitNumber   String
+  unitType     String?
+  bedrooms     Decimal? @db.Decimal(3,1)
+  bathrooms    Decimal? @db.Decimal(3,1)
+  squareFeet   Int?
+  marketRentCents Int?
+  depositCents Int?
+  status       UnitStatus @default(VACANT)
+  availableOn  DateTime? @db.Date
+  allowMultipleActiveLeases Boolean @default(false)
+  notes        String?
+  archivedAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
+  leases Lease[]
+  rentCharges RentCharge[]
+  payments Payment[]
+  expenses Expense[]
+  bills Bill[]
+  maintenanceRequests MaintenanceRequest[]
+  workOrders WorkOrder[]
+  bankTransactions BankTransaction[]
+  journalLines JournalEntryLine[]
+  @@unique([propertyId, unitNumber])
+  @@index([businessId, propertyId])
+}
+
+// ───────────────────────── Tenants & leases ─────────────────────────
+
+model Tenant {
+  id               String   @id @default(uuid()) @db.Uuid
+  businessId       String   @db.Uuid
+  firstName        String
+  lastName         String
+  email            String?
+  phone            String?
+  dateOfBirthEnc   String?  // encrypted at application level
+  emergencyContact String?
+  emergencyPhone   String?
+  status           TenantStatus @default(APPLICANT)
+  moveInDate       DateTime? @db.Date
+  moveOutDate      DateTime? @db.Date
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id])
+  user User?
+  idDocuments TenantIdDocument[]
+  invoices Invoice[]
+  creditNotes CreditNote[]
+  leases Lease[]
+  rentCharges RentCharge[]
+  payments Payment[]
+  maintenanceRequests MaintenanceRequest[]
+  workOrders WorkOrder[]
+  journalLines JournalEntryLine[]
+  @@index([businessId, lastName])
+}
+
+// Dedicated metadata for identity documents; the file itself is a Document/DocumentVersion.
+model TenantIdDocument {
+  id           String   @id @default(uuid()) @db.Uuid
+  businessId   String   @db.Uuid
+  tenantId     String   @db.Uuid
+  documentId   String   @unique @db.Uuid
+  idType       IdDocType
+  expiresOn    DateTime? @db.Date
+  verification VerificationStatus @default(UNVERIFIED)
+  verifiedById String?  @db.Uuid
+  verifiedAt   DateTime?
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  document Document @relation(fields: [documentId], references: [id])
+  @@index([tenantId])
+}
+
+model Lease {
+  id             String   @id @default(uuid()) @db.Uuid
+  businessId     String   @db.Uuid
+  propertyId     String   @db.Uuid
+  unitId         String   @db.Uuid
+  tenantId       String   @db.Uuid // primary tenant
+  status         LeaseStatus @default(DRAFT)
+  startDate      DateTime @db.Date
+  endDate        DateTime @db.Date
+  monthlyRentCents Int
+  depositCents   Int      @default(0)
+  rentDueDay     Int      @default(1)
+  lateFeeCents   Int      @default(0)
+  lateFeeGraceDays Int    @default(0)
+  frequency      PaymentFrequency @default(MONTHLY)
+  renewalTerms   String?
+  notes          String?
+  terminatedAt   DateTime? @db.Date
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
+  unit Unit @relation(fields: [unitId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  rentCharges RentCharge[]
+  payments Payment[]
+  journalLines JournalEntryLine[]
+  signatureRequests SignatureRequest[]
+  invoices Invoice[]
+  creditNotes CreditNote[]
+  @@index([businessId, status])
+  @@index([unitId, status])
+  @@index([tenantId])
+}
+
+// ───────────────────────── Rent & payments (AR) ─────────────────────────
+
+model RentCharge {
+  id           String   @id @default(uuid()) @db.Uuid
+  businessId   String   @db.Uuid
+  propertyId   String   @db.Uuid
+  unitId       String   @db.Uuid
+  tenantId     String   @db.Uuid
+  leaseId      String   @db.Uuid
+  type         ChargeType @default(RENT)
+  description  String
+  periodStart  DateTime? @db.Date
+  dueDate      DateTime @db.Date
+  amountCents  Int      // credits stored as negative amounts
+  paidCents    Int      @default(0)
+  status       ChargeStatus @default(OPEN)
+  accountId    String?  @db.Uuid // income account (resolved by posting service)
+  recurringTemplateId String? @db.Uuid
+  journalEntryId String? @unique @db.Uuid
+  createdAt    DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
+  unit Unit @relation(fields: [unitId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  lease Lease @relation(fields: [leaseId], references: [id])
+  applications PaymentApplication[]
+  invoiceLines InvoiceLine[]
+  creditApplications CreditApplication[]
+  // Prevent duplicate recurring generation:
+  @@unique([leaseId, type, periodStart])
+  @@index([businessId, status, dueDate])
+}
+
+model Payment {
+  id           String   @id @default(uuid()) @db.Uuid
+  businessId   String   @db.Uuid
+  propertyId   String   @db.Uuid
+  unitId       String   @db.Uuid
+  tenantId     String   @db.Uuid
+  leaseId      String   @db.Uuid
+  amountCents  Int
+  receivedOn   DateTime @db.Date
+  method       PaymentMethod
+  reference    String?
+  status       PaymentStatus @default(COMPLETED)
+  bankAccountId String? @db.Uuid
+  notes        String?
+  idempotencyKey String?
+  journalEntryId String? @unique @db.Uuid
+  createdAt    DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
+  unit Unit @relation(fields: [unitId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  lease Lease @relation(fields: [leaseId], references: [id])
+  bankAccount BankAccount? @relation(fields: [bankAccountId], references: [id])
+  applications PaymentApplication[]
+  @@unique([businessId, idempotencyKey])
+  @@index([businessId, receivedOn])
+}
+
+// Supports partial payments and one payment covering many charges.
+model PaymentApplication {
+  id          String @id @default(uuid()) @db.Uuid
+  paymentId   String @db.Uuid
+  chargeId    String @db.Uuid
+  amountCents Int
+  payment Payment    @relation(fields: [paymentId], references: [id])
+  charge  RentCharge @relation(fields: [chargeId], references: [id])
+  @@unique([paymentId, chargeId])
+}
+
+// ───────────────────────── Vendors, expenses, bills (AP) ─────────────────────────
+
+model Vendor {
+  id          String @id @default(uuid()) @db.Uuid
+  businessId  String @db.Uuid
+  company     String
+  contactName String?
+  phone       String?
+  email       String?
+  address     String?
+  taxInfoEnc  String?
+  services    String[]
+  propertyIds String[] @db.Uuid
+  notes       String?
+  archivedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+  expenses Expense[]
+  bills Bill[]
+  workOrders WorkOrder[]
+  bankTransactions BankTransaction[]
+  journalLines JournalEntryLine[]
+  @@index([businessId, company])
+}
+
+model ExpenseCategory {
+  id         String @id @default(uuid()) @db.Uuid
+  businessId String @db.Uuid
+  name       String
+  accountId  String @db.Uuid // default GL expense account
+  business Business @relation(fields: [businessId], references: [id])
+  account Account @relation(fields: [accountId], references: [id])
+  expenses Expense[]
+  bills Bill[]
+  @@unique([businessId, name])
+}
+
+// Property/unit both null = general business expense. unit null + property set = property-wide.
+// If allocations exist, they define the property split; the header keeps the original total.
+model Expense {
+  id            String   @id @default(uuid()) @db.Uuid
+  businessId    String   @db.Uuid
+  propertyId    String?  @db.Uuid
+  unitId        String?  @db.Uuid
+  categoryId    String   @db.Uuid
+  vendorId      String?  @db.Uuid
+  workOrderId   String?  @unique @db.Uuid
+  date          DateTime @db.Date
+  amountCents   Int      // total including tax
+  taxCents      Int      @default(0)
+  paymentAccountId String? @db.Uuid // bank account or card used
+  description   String
+  notes         String?
+  isAllocated   Boolean  @default(false)
+  journalEntryId String? @unique @db.Uuid
+  recurringTemplateId String? @db.Uuid
+  createdAt     DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+  property Property? @relation(fields: [propertyId], references: [id])
+  unit Unit? @relation(fields: [unitId], references: [id])
+  category ExpenseCategory @relation(fields: [categoryId], references: [id])
+  vendor Vendor? @relation(fields: [vendorId], references: [id])
+  paymentAccount BankAccount? @relation(fields: [paymentAccountId], references: [id])
+  workOrder WorkOrder? @relation(fields: [workOrderId], references: [id])
+  allocations ExpenseAllocation[]
+  @@index([businessId, date])
+  @@index([businessId, propertyId])
+}
+
+model ExpenseAllocation {
+  id          String @id @default(uuid()) @db.Uuid
+  businessId  String @db.Uuid
+  expenseId   String @db.Uuid
+  propertyId  String @db.Uuid
+  unitId      String? @db.Uuid
+  amountCents Int
+  business Business @relation(fields: [businessId], references: [id])
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id])
+  @@index([expenseId])
+}
+
+model Bill {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String   @db.Uuid
+  vendorId    String   @db.Uuid
+  propertyId  String?  @db.Uuid
+  unitId      String?  @db.Uuid
+  categoryId  String   @db.Uuid
+  billNumber  String?
+  billDate    DateTime @db.Date
+  dueDate     DateTime @db.Date
+  amountCents Int
+  taxCents    Int      @default(0)
+  paidCents   Int      @default(0)
+  status      BillStatus @default(DRAFT)
+  notes       String?
+  recurringTemplateId String? @db.Uuid
+  journalEntryId String? @unique @db.Uuid
+  createdAt   DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+  vendor Vendor @relation(fields: [vendorId], references: [id])
+  property Property? @relation(fields: [propertyId], references: [id])
+  unit Unit? @relation(fields: [unitId], references: [id])
+  category ExpenseCategory @relation(fields: [categoryId], references: [id])
+  payments BillPayment[]
+  @@index([businessId, status, dueDate])
+}
+
+model BillPayment {
+  id            String @id @default(uuid()) @db.Uuid
+  businessId    String @db.Uuid
+  billId        String @db.Uuid
+  bankAccountId String @db.Uuid
+  amountCents   Int
+  paidOn        DateTime @db.Date
+  reference     String?
+  journalEntryId String? @unique @db.Uuid
+  business Business @relation(fields: [businessId], references: [id])
+  bill Bill @relation(fields: [billId], references: [id])
+  bankAccount BankAccount @relation(fields: [bankAccountId], references: [id])
+}
+
+// An invoice is a presentation/delivery document over RentCharges. It does NOT post to the ledger itself:
+// the charge (and its journal entry) remains the source of truth, so nothing is double counted.
+model Invoice {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String   @db.Uuid
+  tenantId    String   @db.Uuid
+  leaseId     String   @db.Uuid
+  number      String
+  issueDate   DateTime @db.Date
+  dueDate     DateTime @db.Date
+  periodStart DateTime? @db.Date
+  status      InvoiceStatus @default(DRAFT)
+  notes       String?
+  sendTo      String?
+  includePaymentInstructions Boolean @default(true)
+  sentAt      DateTime?
+  viewedAt    DateTime?
+  viewTokenHash String? @unique // portal/email view link, hashed like signing tokens
+  pdfVersionId String? @db.Uuid // generated PDF stored as a DocumentVersion
+  recurringTemplateId String? @db.Uuid
+  createdAt   DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  lease Lease @relation(fields: [leaseId], references: [id])
+  lines InvoiceLine[]
+  creditNotes CreditNote[]
+  @@unique([businessId, number])
+  @@index([businessId, status, dueDate])
+}
+
+model InvoiceLine {
+  id          String @id @default(uuid()) @db.Uuid
+  invoiceId   String @db.Uuid
+  chargeId    String? @db.Uuid // links to the RentCharge being invoiced; null for notes-only lines
+  description String
+  amountCents Int
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  charge RentCharge? @relation(fields: [chargeId], references: [id])
+  @@index([invoiceId])
+}
+
+// A credit note is credit held for a tenant. It sits as a liability (Tenant Credits) until applied.
+// remaining = amountCents - SUM(applications). Applying it to a rent charge posts Dr Tenant Credits / Cr Accounts Receivable.
+// Issuing: overpayment -> Dr Bank / Cr Tenant Credits; discount or adjustment -> Dr Rent Adjustments (contra income) / Cr Tenant Credits.
+model CreditNote {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String   @db.Uuid
+  tenantId    String   @db.Uuid
+  leaseId     String?  @db.Uuid
+  invoiceId   String?  @db.Uuid
+  number      String
+  referenceNumber String? // e.g. Interac e-Transfer reference
+  subject     String?
+  status      CreditNoteStatus @default(DRAFT)
+  customerNotes String?
+  terms       String?
+  issueDate   DateTime @db.Date
+  amountCents Int      // = SUM(lines.amountCents)
+  appliedCents Int     @default(0) // denormalized; kept equal to SUM(applications) in the same transaction
+  reason      String
+  autoApply   Boolean  @default(false) // apply remainder to future rent charges automatically
+  voidedAt    DateTime?
+  journalEntryId String? @unique @db.Uuid
+  createdAt   DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  lease Lease? @relation(fields: [leaseId], references: [id])
+  invoice Invoice? @relation(fields: [invoiceId], references: [id])
+  applications CreditApplication[]
+  lines CreditNoteLine[]
+  @@unique([businessId, number])
+  @@index([businessId, tenantId])
+}
+
+// Catalog of billable/creditable items (e.g. "Rent overpayment", "Late fee waiver") with a default rate and account.
+model Item {
+  id           String @id @default(uuid()) @db.Uuid
+  businessId   String @db.Uuid
+  name         String
+  description  String?
+  rateCents    Int    @default(0)
+  accountId    String @db.Uuid // default GL account for this item
+  isActive     Boolean @default(true)
+  business Business @relation(fields: [businessId], references: [id])
+  account Account @relation(fields: [accountId], references: [id])
+  creditNoteLines CreditNoteLine[]
+  @@unique([businessId, name])
+}
+
+// amountCents = round(quantity * rateCents) - discountCents
+model CreditNoteLine {
+  id            String @id @default(uuid()) @db.Uuid
+  creditNoteId  String @db.Uuid
+  itemId        String? @db.Uuid
+  accountId     String @db.Uuid
+  description   String?
+  quantity      Decimal @default(1) @db.Decimal(12,2)
+  rateCents     Int    @default(0)
+  discountCents Int    @default(0)
+  amountCents   Int
+  position      Int
+  creditNote CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+  item Item? @relation(fields: [itemId], references: [id])
+  account Account @relation(fields: [accountId], references: [id])
+  @@index([creditNoteId])
+}
+
+// Mirrors PaymentApplication: one credit note can cover several charges, and one charge can use several credits.
+model CreditApplication {
+  id           String   @id @default(uuid()) @db.Uuid
+  creditNoteId String   @db.Uuid
+  chargeId     String   @db.Uuid
+  amountCents  Int
+  appliedOn    DateTime @db.Date
+  journalEntryId String? @unique @db.Uuid
+  creditNote CreditNote @relation(fields: [creditNoteId], references: [id])
+  charge RentCharge @relation(fields: [chargeId], references: [id])
+  @@index([chargeId])
+}
+
+// ───────────────────────── Maintenance ─────────────────────────
+
+model MaintenanceRequest {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String   @db.Uuid
+  propertyId  String   @db.Uuid
+  unitId      String   @db.Uuid
+  tenantId    String?  @db.Uuid
+  issue       String
+  description String?
+  priority    RequestPriority @default(MEDIUM)
+  status      RequestStatus @default(NEW)
+  preferredAccess String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
+  unit Unit @relation(fields: [unitId], references: [id])
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+  workOrders WorkOrder[]
+  @@index([businessId, status])
+}
+
+model WorkOrder {
+  id            String   @id @default(uuid()) @db.Uuid
+  businessId    String   @db.Uuid
+  requestId     String?  @db.Uuid
+  propertyId    String   @db.Uuid
+  unitId        String?  @db.Uuid
+  tenantId      String?  @db.Uuid
+  vendorId      String?  @db.Uuid
+  issue         String
+  description   String?
+  priority      RequestPriority @default(MEDIUM)
+  status        WorkOrderStatus @default(NEW)
+  assignedOn    DateTime? @db.Date
+  scheduledOn   DateTime?
+  completedOn   DateTime? @db.Date
+  estimatedCostCents Int?
+  actualCostCents    Int?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id])
+  request MaintenanceRequest? @relation(fields: [requestId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
+  unit Unit? @relation(fields: [unitId], references: [id])
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+  vendor Vendor? @relation(fields: [vendorId], references: [id])
+  expense Expense?
+  @@index([businessId, status])
+}
+
+// ───────────────────────── Banking ─────────────────────────
+
+model BankAccount {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String   @db.Uuid
+  name        String
+  type        BankAccountType @default(CHECKING)
+  institution String?
+  last4       String?  @db.Char(4) // never store full account numbers
+  glAccountId String   @unique @db.Uuid // each bank account maps to an asset/liability GL account
+  openingBalanceCents BigInt @default(0)
+  archivedAt  DateTime?
+
+  business Business @relation(fields: [businessId], references: [id])
+  glAccount Account @relation(fields: [glAccountId], references: [id])
+  transactions BankTransaction[]
+  reconciliations Reconciliation[]
+  payments Payment[]
+  billPayments BillPayment[]
+  expenses Expense[]
+  journalLines JournalEntryLine[]
+}
+
+model BankTransaction {
+  id            String   @id @default(uuid()) @db.Uuid
+  businessId    String   @db.Uuid
+  bankAccountId String   @db.Uuid
+  date          DateTime @db.Date
+  type          BankTxnType
+  amountCents   Int      // signed: deposits +, withdrawals -
+  description   String?
+  status        BankTxnStatus @default(UNCATEGORIZED)
+  categoryAccountId String? @db.Uuid
+  propertyId    String?  @db.Uuid
+  unitId        String?  @db.Uuid
+  vendorId      String?  @db.Uuid
+  transferPairId String? @db.Uuid
+  reconciliationId String? @db.Uuid
+  externalId    String?  // for future bank-feed imports (dedupe)
+  journalEntryId String? @unique @db.Uuid
+  createdAt     DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+  bankAccount BankAccount @relation(fields: [bankAccountId], references: [id])
+  property Property? @relation(fields: [propertyId], references: [id])
+  unit Unit? @relation(fields: [unitId], references: [id])
+  vendor Vendor? @relation(fields: [vendorId], references: [id])
+  reconciliation Reconciliation? @relation(fields: [reconciliationId], references: [id])
+  @@unique([bankAccountId, externalId])
+  @@index([businessId, bankAccountId, date])
+}
+
+model Reconciliation {
+  id                  String @id @default(uuid()) @db.Uuid
+  bankAccountId       String @db.Uuid
+  statementDate       DateTime @db.Date
+  statementBalanceCents BigInt
+  completedAt         DateTime?
+  bankAccount BankAccount @relation(fields: [bankAccountId], references: [id])
+  transactions BankTransaction[]
+}
+
+// ───────────────────────── Accounting engine ─────────────────────────
+
+model Account {
+  id         String @id @default(uuid()) @db.Uuid
+  businessId String @db.Uuid
+  code       String
+  name       String
+  type       AccountType
+  subtype    String?   // e.g. bank, accounts_receivable, accounts_payable, deposit_liability
+  systemKey  String?   // stable key used by posting rules (e.g. "AR", "AP", "RENT_INCOME")
+  parentId   String?   @db.Uuid
+  isActive   Boolean   @default(true)
+  description String?
+
+  business Business @relation(fields: [businessId], references: [id])
+  parent Account? @relation("AccountTree", fields: [parentId], references: [id])
+  children Account[] @relation("AccountTree")
+  lines JournalEntryLine[]
+  bankAccount BankAccount?
+  categories ExpenseCategory[]
+  items Item[]
+  creditNoteLines CreditNoteLine[]
+  @@unique([businessId, code])
+  @@unique([businessId, systemKey])
+}
+
+model JournalEntry {
+  id         String   @id @default(uuid()) @db.Uuid
+  businessId String   @db.Uuid
+  entryNumber Int
+  date       DateTime @db.Date
+  memo       String?
+  source     JournalSource
+  sourceType String?  // e.g. "Payment"
+  sourceId   String?  @db.Uuid
+  status     JournalStatus @default(POSTED)
+  reversalOfId String? @unique @db.Uuid
+  createdById String?  @db.Uuid
+  createdAt  DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+  reversalOf JournalEntry? @relation("Reversal", fields: [reversalOfId], references: [id])
+  reversedBy JournalEntry? @relation("Reversal")
+  lines JournalEntryLine[]
+  @@unique([businessId, entryNumber])
+  @@index([businessId, date])
+  @@index([sourceType, sourceId])
+}
+
+// Dimensional line. Exactly one of debitCents / creditCents is > 0 (CHECK constraint).
+model JournalEntryLine {
+  id          String @id @default(uuid()) @db.Uuid
+  entryId     String @db.Uuid
+  businessId  String @db.Uuid
+  accountId   String @db.Uuid
+  debitCents  BigInt @default(0)
+  creditCents BigInt @default(0)
+  memo        String?
+  // dimensions
+  propertyId  String? @db.Uuid
+  unitId      String? @db.Uuid
+  tenantId    String? @db.Uuid
+  leaseId     String? @db.Uuid
+  vendorId    String? @db.Uuid
+  bankAccountId String? @db.Uuid
+  categoryId  String? @db.Uuid
+  date        DateTime @db.Date // denormalized from entry for fast reporting
+
+  entry JournalEntry @relation(fields: [entryId], references: [id])
+  account Account @relation(fields: [accountId], references: [id])
+  property Property? @relation(fields: [propertyId], references: [id])
+  unit Unit? @relation(fields: [unitId], references: [id])
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+  lease Lease? @relation(fields: [leaseId], references: [id])
+  vendor Vendor? @relation(fields: [vendorId], references: [id])
+  bankAccount BankAccount? @relation(fields: [bankAccountId], references: [id])
+  @@index([businessId, accountId, date])
+  @@index([businessId, propertyId, date])
+  @@index([businessId, unitId, date])
+  @@index([businessId, tenantId])
+}
+
+model RecurringTemplate {
+  id         String @id @default(uuid()) @db.Uuid
+  businessId String @db.Uuid
+  kind       RecurringKind
+  frequency  PaymentFrequency
+  startDate  DateTime @db.Date
+  endDate    DateTime? @db.Date
+  nextRunOn  DateTime @db.Date
+  payload    Json     // amount, property, unit, category, etc.
+  isActive   Boolean  @default(true)
+  business Business @relation(fields: [businessId], references: [id])
+  @@index([isActive, nextRunOn])
+}
+
+// ───────────────────────── Documents ─────────────────────────
+
+model Document {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String   @db.Uuid
+  name        String
+  type        DocumentType
+  ownerType   DocumentOwnerType
+  ownerId     String?  @db.Uuid
+  // convenience FKs for scoping & permissions
+  propertyId  String?  @db.Uuid
+  tenantId    String?  @db.Uuid
+  leaseId     String?  @db.Uuid
+  expiresOn   DateTime? @db.Date
+  status      DocumentStatus @default(ACTIVE)
+  isSensitive Boolean  @default(false)
+  currentVersionId String? @unique @db.Uuid
+  uploadedById String? @db.Uuid
+  createdAt   DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+  versions DocumentVersion[] @relation("DocVersions")
+  idDocument TenantIdDocument?
+  signatureRequests SignatureRequest[]
+  @@index([businessId, ownerType, ownerId])
+  @@index([businessId, expiresOn])
+}
+
+model DocumentVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  documentId  String   @db.Uuid
+  version     Int
+  storageKey  String   @unique // random, non-guessable; never exposed
+  fileName    String
+  mimeType    String
+  sizeBytes   BigInt
+  sha256      String
+  pageCount   Int?
+  isImmutable Boolean  @default(false) // true for signed versions
+  isCertificate Boolean @default(false)
+  uploadedById String? @db.Uuid
+  createdAt   DateTime @default(now())
+  document Document @relation("DocVersions", fields: [documentId], references: [id])
+  @@unique([documentId, version])
+}
+
+// ───────────────────────── E-signature ─────────────────────────
+
+model SignatureRequest {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String   @db.Uuid
+  documentId  String   @db.Uuid
+  sourceVersionId String @db.Uuid     // version being signed (hash-locked at send time)
+  sourceSha256 String?
+  leaseId     String?  @db.Uuid
+  tenantId    String?  @db.Uuid
+  title       String
+  message     String?
+  status      SignatureRequestStatus @default(DRAFT)
+  signingOrderEnforced Boolean @default(true)
+  expiresAt   DateTime?
+  completedAt DateTime?
+  completedVersionId String? @db.Uuid
+  certificateVersionId String? @db.Uuid
+  createdById String   @db.Uuid
+  createdAt   DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
+  document Document @relation(fields: [documentId], references: [id])
+  lease Lease? @relation(fields: [leaseId], references: [id])
+  signers Signer[]
+  fields SignatureField[]
+  events SignatureEvent[]
+  @@index([businessId, status])
+}
+
+model Signer {
+  id          String @id @default(uuid()) @db.Uuid
+  requestId   String @db.Uuid
+  name        String
+  email       String
+  role        String   // Tenant, Owner, ...
+  order       Int      @default(1)
+  required    Boolean  @default(true)
+  status      SignerStatus @default(PENDING)
+  tokenHash   String?  @unique // SHA-256 of the 256-bit URL token; raw token never stored
+  tokenExpiresAt DateTime?
+  pinHash     String?
+  verification String  @default("none") // none | email_otp | sms_otp | pin
+  otpHash     String?
+  otpExpiresAt DateTime?
+  otpAttempts Int @default(0)
+  signedAt    DateTime?
+  signatureImageKey String? // storage key for the drawn/typed signature artifact
+  request SignatureRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  fields SignatureField[]
+  events SignatureEvent[]
+  @@index([requestId])
+}
+
+model SignatureField {
+  id        String @id @default(uuid()) @db.Uuid
+  requestId String @db.Uuid
+  signerId  String @db.Uuid
+  type      FieldType
+  page      Int
+  // normalized 0..1 coordinates relative to page, origin top-left
+  x         Float
+  y         Float
+  width     Float
+  height    Float
+  required  Boolean @default(true)
+  label     String?
+  value     String?   // text/date/checkbox value or reference for signature artifact
+  filledAt  DateTime?
+  request SignatureRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  signer Signer @relation(fields: [signerId], references: [id], onDelete: Cascade)
+  @@index([requestId, signerId])
+}
+
+// Append-only. Revoke UPDATE/DELETE at DB level.
+model SignatureEvent {
+  id         String @id @default(uuid()) @db.Uuid
+  requestId  String @db.Uuid
+  signerId   String? @db.Uuid
+  action     SignatureAction
+  email      String?
+  ip         String?
+  userAgent  String?
+  documentVersionId String? @db.Uuid
+  documentSha256 String?
+  status     String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  request SignatureRequest @relation(fields: [requestId], references: [id])
+  signer Signer? @relation(fields: [signerId], references: [id])
+  @@index([requestId, createdAt])
+}
+
+// ───────────────────────── Notifications, audit, events ─────────────────────────
+
+model NotificationRule {
+  id         String @id @default(uuid()) @db.Uuid
+  businessId String @db.Uuid
+  type       NotificationType
+  enabled    Boolean @default(true)
+  leadDays   Int[]   // e.g. [60, 30] for lease expiry
+  channels   String[] // in_app, email, webhook
+  business Business @relation(fields: [businessId], references: [id])
+  @@unique([businessId, type])
+}
+
+model Notification {
+  id         String @id @default(uuid()) @db.Uuid
+  businessId String @db.Uuid
+  userId     String? @db.Uuid
+  type       NotificationType
+  title      String
+  body       String?
+  entityType String?
+  entityId   String?  @db.Uuid
+  dedupeKey  String?
+  readAt     DateTime?
+  createdAt  DateTime @default(now())
+  business Business @relation(fields: [businessId], references: [id])
+  user User? @relation(fields: [userId], references: [id])
+  @@unique([businessId, dedupeKey])
+  @@index([userId, readAt])
+}
+
+model AuditLog {
+  id         String @id @default(uuid()) @db.Uuid
+  businessId String @db.Uuid
+  userId     String? @db.Uuid
+  action     String   // e.g. "tenant.created", "document.downloaded"
+  entityType String
+  entityId   String?  @db.Uuid
+  before     Json?
+  after      Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  business Business @relation(fields: [businessId], references: [id])
+  user User? @relation(fields: [userId], references: [id])
+  @@index([businessId, entityType, entityId])
+  @@index([businessId, createdAt])
+}
+
+// Transactional outbox: written in the same DB transaction as the change, then delivered.
+model DomainEvent {
+  id         String @id @default(uuid()) @db.Uuid
+  businessId String @db.Uuid
+  type       String   // lease.created, payment.received, signature.completed ...
+  payload    Json
+  createdAt  DateTime @default(now())
+  business Business @relation(fields: [businessId], references: [id])
+  deliveries WebhookDelivery[]
+  @@index([businessId, type, createdAt])
+}
+
+model WebhookEndpoint {
+  id         String @id @default(uuid()) @db.Uuid
+  businessId String @db.Uuid
+  url        String
+  secretEnc  String   // HMAC signing secret, encrypted
+  eventTypes String[]
+  isActive   Boolean @default(true)
+  business Business @relation(fields: [businessId], references: [id])
+  deliveries WebhookDelivery[]
+}
+
+model WebhookDelivery {
+  id         String @id @default(uuid()) @db.Uuid
+  eventId    String @db.Uuid
+  endpointId String @db.Uuid
+  status     WebhookStatus @default(PENDING)
+  attempts   Int @default(0)
+  nextAttemptAt DateTime?
+  lastError  String?
+  event DomainEvent @relation(fields: [eventId], references: [id])
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id])
+  @@index([status, nextAttemptAt])
+}
+
+// ═════════════ Raw SQL to add in the first migration (Prisma can't express these) ═════════════
+//
+// -- One active lease per unit unless unit.allowMultipleActiveLeases (enforced in service + exclusion constraint):
+// CREATE EXTENSION IF NOT EXISTS btree_gist;
+// ALTER TABLE "Lease" ADD CONSTRAINT lease_no_overlap EXCLUDE USING gist (
+//   "unitId" WITH =, daterange("startDate","endDate",'[]') WITH &&
+// ) WHERE (status IN ('SIGNED','ACTIVE','EXPIRING'));   -- skipped for units that allow multiples (use partial per-unit logic)
+//
+// -- Journal lines: exactly one side positive.
+// ALTER TABLE "JournalEntryLine" ADD CONSTRAINT jel_one_side CHECK (
+//   ("debitCents" > 0 AND "creditCents" = 0) OR ("creditCents" > 0 AND "debitCents" = 0));
+//
+// -- Entries must balance (deferred constraint trigger on JournalEntryLine: SUM(debit) = SUM(credit) per entry).
+// -- Posted entries immutable: BEFORE UPDATE/DELETE trigger on JournalEntry & JournalEntryLine raising an exception.
+// -- Signed DocumentVersion immutable: trigger rejecting UPDATE/DELETE when isImmutable = true.
+// -- SignatureEvent / AuditLog append-only: REVOKE UPDATE, DELETE from the app role.
+// -- Row-level security: ENABLE RLS on every table with businessId; policy USING (businessId = current_setting('app.business_id')::uuid).

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dashboard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:1000px;font-family:'Manrope',system-ui,sans-serif;background:#F3F5F8;color:#0F1B2D}
+.side{background:#0F1B2D;color:#B8C2D3;padding:24px 16px;display:flex;flex-direction:column;gap:4px}
+.nav{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:600;color:#B8C2D3;text-decoration:none;min-height:24px}
+.nav:hover{background:#18273D;color:#fff}
+.card{background:#fff;border-radius:16px;padding:20px;border:1px solid #E6EAF0}
+th{font-size:12px;font-weight:700;color:#5B6678;text-align:left;padding:10px 12px;border-bottom:1px solid #E6EAF0}
+td{font-size:14px;padding:12px;border-bottom:1px solid #F0F2F6}
+.tbl{overflow-x:auto}
+@media(max-width:900px){.app{grid-template-columns:1fr}.side{display:none}}
+</style>
+</helmet>
+<div class="app">
+<aside class="side">
+<div style="display:flex;align-items:center;gap:10px;padding:4px 12px 20px;color:#fff;font-weight:800;font-size:17px"><div style="width:28px;height:28px;border-radius:8px;background:#19B394"></div>Keystone</div>
+<a class="nav" href="#" style="background:#18273D;color:#fff"><span style="width:6px;height:6px;border-radius:3px;background:#19B394"></span>Dashboard</a>
+<a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Properties</a>
+<a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Tenants</a>
+<a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Rent</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Credit notes</a>
+<a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Maintenance</a>
+<a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Financials</a>
+<a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Documents</a>
+<a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Reports</a>
+<a class="nav" href="#" style="margin-top:auto"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Settings</a>
+</aside>
+<main style="padding:24px 28px 40px;display:flex;flex-direction:column;gap:20px;min-width:0">
+<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+<button style="display:flex;align-items:center;gap:8px;height:44px;padding:0 16px;border-radius:12px;border:1px solid #D5DBE5;background:#fff;font:700 14px 'Manrope',sans-serif;color:#0F1B2D">Rental Business &middot; All Properties<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5B6678" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+<label style="flex:1;min-width:200px;max-width:420px"><span style="position:absolute;left:-9999px">Search</span><input placeholder="Search tenants, units, bills, documents" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 16px;font:500 14px 'Manrope',sans-serif;background:#fff"></label>
+<div style="margin-left:auto;display:flex;gap:10px"><button style="height:44px;padding:0 18px;border-radius:12px;border:0;background:#0E7C66;color:#fff;font:700 14px 'Manrope',sans-serif">Record payment</button></div>
+</div>
+<div><h1 style="margin:0;font-size:28px;font-weight:800">Business overview</h1><div style="color:#5B6678;font-size:14px;margin-top:4px">October 2026 &middot; 3 properties</div></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px">
+<div class="card"><div style="font-size:13px;color:#5B6678;font-weight:600">Rental income</div><div style="font-size:30px;font-weight:800;margin-top:6px">$21,250</div><div style="font-size:13px;color:#0E7C66;font-weight:700;margin-top:4px">Collected this month</div></div>
+<div class="card"><div style="font-size:13px;color:#5B6678;font-weight:600">Expenses</div><div style="font-size:30px;font-weight:800;margin-top:6px">$4,462</div><div style="font-size:13px;color:#5B6678;font-weight:600;margin-top:4px">Across 3 properties</div></div>
+<div class="card"><div style="font-size:13px;color:#5B6678;font-weight:600">Net operating income</div><div style="font-size:30px;font-weight:800;margin-top:6px">$16,788</div><div style="font-size:13px;color:#0E7C66;font-weight:700;margin-top:4px">79% margin</div></div>
+<div class="card" style="border-color:#F2C4BE"><div style="font-size:13px;color:#5B6678;font-weight:600">Outstanding rent</div><div style="font-size:30px;font-weight:800;margin-top:6px;color:#A12418">$4,250</div><a href="#" style="font-size:13px;color:#A12418;font-weight:700;margin-top:4px;display:inline-block">3 tenants &middot; view details</a></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px">
+<div class="card" style="grid-column:span 2;min-width:0">
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:800;font-size:16px">Income vs expenses</div><div style="display:flex;gap:14px;font-size:12px;font-weight:600;color:#5B6678"><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#0E7C66;margin-right:6px"></span>Income</span><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#F2A33A;margin-right:6px"></span>Expenses</span></div></div>
+<div style="display:flex;align-items:flex-end;gap:18px;height:190px;margin-top:20px;padding:0 8px;border-bottom:1px solid #E6EAF0">
+<div style="flex:1;display:flex;gap:6px;align-items:flex-end;justify-content:center"><div style="width:22px;height:140px;background:#0E7C66;border-radius:6px 6px 0 0"></div><div style="width:22px;height:48px;background:#F2A33A;border-radius:6px 6px 0 0"></div></div>
+<div style="flex:1;display:flex;gap:6px;align-items:flex-end;justify-content:center"><div style="width:22px;height:148px;background:#0E7C66;border-radius:6px 6px 0 0"></div><div style="width:22px;height:60px;background:#F2A33A;border-radius:6px 6px 0 0"></div></div>
+<div style="flex:1;display:flex;gap:6px;align-items:flex-end;justify-content:center"><div style="width:22px;height:144px;background:#0E7C66;border-radius:6px 6px 0 0"></div><div style="width:22px;height:42px;background:#F2A33A;border-radius:6px 6px 0 0"></div></div>
+<div style="flex:1;display:flex;gap:6px;align-items:flex-end;justify-content:center"><div style="width:22px;height:152px;background:#0E7C66;border-radius:6px 6px 0 0"></div><div style="width:22px;height:70px;background:#F2A33A;border-radius:6px 6px 0 0"></div></div>
+<div style="flex:1;display:flex;gap:6px;align-items:flex-end;justify-content:center"><div style="width:22px;height:150px;background:#0E7C66;border-radius:6px 6px 0 0"></div><div style="width:22px;height:52px;background:#F2A33A;border-radius:6px 6px 0 0"></div></div>
+<div style="flex:1;display:flex;gap:6px;align-items:flex-end;justify-content:center"><div style="width:22px;height:160px;background:#0E7C66;border-radius:6px 6px 0 0"></div><div style="width:22px;height:54px;background:#F2A33A;border-radius:6px 6px 0 0"></div></div>
+</div>
+<div style="display:flex;gap:18px;padding:8px 8px 0;font-size:12px;font-weight:600;color:#5B6678"><span style="flex:1;text-align:center">May</span><span style="flex:1;text-align:center">Jun</span><span style="flex:1;text-align:center">Jul</span><span style="flex:1;text-align:center">Aug</span><span style="flex:1;text-align:center">Sep</span><span style="flex:1;text-align:center">Oct</span></div>
+</div>
+<div class="card">
+<div style="font-weight:800;font-size:16px;margin-bottom:12px">Needs attention</div>
+<div style="display:flex;flex-direction:column;gap:12px;font-size:14px">
+<div style="display:flex;gap:10px;align-items:flex-start"><span style="margin-top:6px;width:8px;height:8px;border-radius:4px;background:#B42318;flex:none"></span><div><b>Late rent</b><div style="color:#5B6678;font-size:13px">3 tenants &middot; $4,250</div></div></div>
+<div style="display:flex;gap:10px;align-items:flex-start"><span style="margin-top:6px;width:8px;height:8px;border-radius:4px;background:#B45309;flex:none"></span><div><b>Lease expires in 30 days</b><div style="color:#5B6678;font-size:13px">456 King &middot; Unit 202 &middot; Jane Doe</div></div></div>
+<div style="display:flex;gap:10px;align-items:flex-start"><span style="margin-top:6px;width:8px;height:8px;border-radius:4px;background:#1D4ED8;flex:none"></span><div><b>Awaiting signature</b><div style="color:#5B6678;font-size:13px">Lease Agreement &middot; John Smith</div></div></div>
+<div style="display:flex;gap:10px;align-items:flex-start"><span style="margin-top:6px;width:8px;height:8px;border-radius:4px;background:#B42318;flex:none"></span><div><b>Bill overdue</b><div style="color:#5B6678;font-size:13px">Electricity &middot; $420 &middot; 123 Main</div></div></div>
+<div style="display:flex;gap:10px;align-items:flex-start"><span style="margin-top:6px;width:8px;height:8px;border-radius:4px;background:#B45309;flex:none"></span><div><b>Open work order</b><div style="color:#5B6678;font-size:13px">Plumbing &middot; 123 Main 101 &middot; $385 est.</div></div></div>
+</div></div>
+</div>
+<div class="card tbl">
+<div style="font-weight:800;font-size:16px;margin-bottom:8px">Property performance</div>
+<table style="width:100%;border-collapse:collapse;min-width:560px"><thead><tr><th>Property</th><th>Income</th><th>Expenses</th><th>NOI</th><th>Occupancy</th></tr></thead><tbody>
+<tr><td><b>123 Main Street</b></td><td>$8,450</td><td>$1,862</td><td><b>$6,588</b></td><td><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#FDF0DC;color:#8A4B06;font-size:12px;font-weight:700">75%</span></td></tr>
+<tr><td><b>456 King Street</b></td><td>$7,200</td><td>$1,420</td><td><b>$5,780</b></td><td><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#DDF3EC;color:#0A5C4B;font-size:12px;font-weight:700">100%</span></td></tr>
+<tr><td><b>789 Queen Street</b></td><td>$5,600</td><td>$1,180</td><td><b>$4,420</b></td><td><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#DDF3EC;color:#0A5C4B;font-size:12px;font-weight:700">83%</span></td></tr>
+</tbody></table>
+</div>
+<div class="card tbl">
+<div style="font-weight:800;font-size:16px;margin-bottom:8px">Rent roll &middot; October</div>
+<table style="width:100%;border-collapse:collapse;min-width:640px"><thead><tr><th>Unit</th><th>Tenant</th><th>Due</th><th>Paid</th><th>Outstanding</th><th>Status</th></tr></thead><tbody>
+<tr><td>123 Main &middot; 101</td><td>John Smith</td><td>$2,100</td><td>$1,600</td><td><b>$500</b></td><td><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#FDF0DC;color:#8A4B06;font-size:12px;font-weight:700">Partial</span></td></tr>
+<tr><td>123 Main &middot; 102</td><td>Occupied</td><td>$1,950</td><td>$1,950</td><td>$0</td><td><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#DDF3EC;color:#0A5C4B;font-size:12px;font-weight:700">Paid</span></td></tr>
+<tr><td>456 King &middot; 202</td><td>Jane Doe</td><td>$2,400</td><td>$1,200</td><td><b>$1,200</b></td><td><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#FBE3E0;color:#A12418;font-size:12px;font-weight:700">Late</span></td></tr>
+<tr><td>789 Queen &middot; 301</td><td>Bob Wilson</td><td>$2,550</td><td>$0</td><td><b>$2,550</b></td><td><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#FBE3E0;color:#A12418;font-size:12px;font-weight:700">Late</span></td></tr>
+</tbody></table>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

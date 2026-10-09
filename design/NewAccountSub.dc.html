@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New account</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width:720px;height:820px;box-sizing:border-box;background:#B9C1CE;display:flex;align-items:center;justify-content:center;font-family:'Manrope',system-ui,sans-serif;color:#0F1B2D">
+<div style="width:620px;background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(15,27,45,.28);overflow:hidden">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid #E6EAF0"><div style="font-weight:800;font-size:20px">New account</div><button aria-label="Close" style="width:40px;height:40px;border-radius:10px;border:0;background:#F3F5F8;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B6678" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+<div style="padding:24px;display:flex;flex-direction:column;gap:18px">
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">Account type <span style="color:#A12418">*</span></span><select style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D"><option>Expense</option></select><span style="font-size:12px;color:#5B6678">Decides where the account appears in reports</span></label>
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">Account name <span style="color:#A12418">*</span></span><input value="Snow Removal" placeholder="" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D"></label>
+<label style="display:flex;gap:10px;align-items:center;font-size:14px;font-weight:700"><input type="checkbox" checked style="width:20px;height:20px;margin:0;flex:none">Make this a sub-account</label>
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">Parent account <span style="color:#A12418">*</span></span><select style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D"><option>5500 &middot; Landscaping</option></select><span style="font-size:12px;color:#5B6678">Only Expense accounts are listed</span></label>
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">Account code <span style="color:#A12418">*</span></span><input value="5510" placeholder="" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D"><span style="font-size:12px;color:#5B6678">Next free code under the parent account</span></label>
+<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">Description</span><textarea placeholder="What is this account used for?" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 14px;font:500 14px 'Manrope',sans-serif;background:#fff;color:#0F1B2D;height:90px;padding:12px 14px;resize:vertical">Winter snow clearing for all properties</textarea></label>
+</div>
+<div style="display:flex;gap:10px;padding:16px 24px 24px"><button style="height:44px;padding:0 24px;border-radius:12px;border:0;background:#0E7C66;color:#fff;font:700 14px 'Manrope',sans-serif">Save</button><button style="height:44px;padding:0 24px;border-radius:12px;border:1px solid #D5DBE5;background:#fff;font:700 14px 'Manrope',sans-serif">Cancel</button></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":720,"height":820}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

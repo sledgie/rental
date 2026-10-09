@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Properties</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:1100px;font-family:'Manrope',system-ui,sans-serif;background:#F3F5F8;color:#0F1B2D}
+.side{background:#0F1B2D;color:#B8C2D3;padding:24px 16px;display:flex;flex-direction:column;gap:4px}
+.nav{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:600;color:#B8C2D3;text-decoration:none;min-height:24px}
+.nav:hover{background:#18273D;color:#fff}
+.card{background:#fff;border-radius:16px;padding:20px;border:1px solid #E6EAF0}
+th{font-size:12px;font-weight:700;color:#5B6678;text-align:left;padding:10px 12px;border-bottom:1px solid #E6EAF0}
+td{font-size:14px;padding:12px;border-bottom:1px solid #F0F2F6}
+.tbl{overflow-x:auto}
+.chip{height:36px;padding:0 14px;border-radius:999px;border:1px solid #D5DBE5;background:#fff;font:700 13px 'Manrope',sans-serif;color:#0F1B2D}
+@media(max-width:900px){.app{grid-template-columns:1fr}.side{display:none}}
+</style>
+</helmet>
+<div class="app">
+<aside class="side">
+<div style="display:flex;align-items:center;gap:10px;padding:4px 12px 20px;color:#fff;font-weight:800;font-size:17px"><div style="width:28px;height:28px;border-radius:8px;background:#19B394"></div>Keystone</div>
+<a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Dashboard</a>
+<a class="nav" href="#" style="background:#18273D;color:#fff"><span style="width:6px;height:6px;border-radius:3px;background:#19B394"></span>Properties</a>
+<a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Tenants</a>
+<a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Rent</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Credit notes</a>
+<a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Maintenance</a>
+<a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Financials</a>
+<a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Documents</a>
+<a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Reports</a>
+<a class="nav" href="#" style="margin-top:auto"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Settings</a>
+</aside>
+<main style="padding:24px 28px 40px;display:flex;flex-direction:column;gap:20px;min-width:0">
+<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+<div><h1 style="margin:0;font-size:28px;font-weight:800">Properties</h1><div style="color:#5B6678;font-size:14px;margin-top:4px">3 properties &middot; 16 units &middot; 14 occupied</div></div>
+<div style="margin-left:auto;display:flex;gap:10px"><button style="height:44px;padding:0 18px;border-radius:12px;border:1px solid #D5DBE5;background:#fff;font:700 14px 'Manrope',sans-serif">Export</button><button style="height:44px;padding:0 18px;border-radius:12px;border:0;background:#0E7C66;color:#fff;font:700 14px 'Manrope',sans-serif">Add property</button></div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+<button class="chip" style="background:#0F1B2D;color:#fff;border-color:#0F1B2D">All</button><button class="chip">Has vacancy</button><button class="chip">Late rent</button><button class="chip">Open maintenance</button>
+<label style="margin-left:auto;min-width:200px"><span style="position:absolute;left:-9999px">Search properties</span><input placeholder="Search properties" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 16px;font:500 14px 'Manrope',sans-serif;background:#fff"></label>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
+<div class="card" style="padding:0;overflow:hidden">
+<div style="height:120px;background:#D9E6F7;display:flex;align-items:flex-end;padding:12px"><span style="font-size:12px;font-weight:700;background:#fff;border-radius:999px;padding:3px 10px">Multi-family</span></div>
+<div style="padding:18px;display:flex;flex-direction:column;gap:14px">
+<div><div style="font-weight:800;font-size:17px">123 Main Street</div><div style="font-size:13px;color:#5B6678">Multi-family &middot; 4 units</div></div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+<div><div style="font-size:12px;color:#5B6678;font-weight:600">Income</div><div style="font-weight:800">$8,450</div></div>
+<div><div style="font-size:12px;color:#5B6678;font-weight:600">Expenses</div><div style="font-weight:800">$1,862</div></div>
+<div><div style="font-size:12px;color:#5B6678;font-weight:600">NOI</div><div style="font-weight:800;color:#0E7C66">$6,588</div></div></div>
+<div><div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:6px"><span>Occupancy &middot; 3 of 4 units</span><span>75%</span></div><div style="height:8px;border-radius:4px;background:#E6EAF0"><div style="height:8px;border-radius:4px;width:75%;background:#F2A33A"></div></div></div>
+<div style="font-size:13px;color:#5B6678;font-weight:600">1 open work order &middot; 1 bill due</div>
+</div></div>
+<div class="card" style="padding:0;overflow:hidden">
+<div style="height:120px;background:#DDEFE8;display:flex;align-items:flex-end;padding:12px"><span style="font-size:12px;font-weight:700;background:#fff;border-radius:999px;padding:3px 10px">Apartment</span></div>
+<div style="padding:18px;display:flex;flex-direction:column;gap:14px">
+<div><div style="font-weight:800;font-size:17px">456 King Street</div><div style="font-size:13px;color:#5B6678">Apartment building &middot; 6 units</div></div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+<div><div style="font-size:12px;color:#5B6678;font-weight:600">Income</div><div style="font-weight:800">$7,200</div></div>
+<div><div style="font-size:12px;color:#5B6678;font-weight:600">Expenses</div><div style="font-weight:800">$1,420</div></div>
+<div><div style="font-size:12px;color:#5B6678;font-weight:600">NOI</div><div style="font-weight:800;color:#0E7C66">$5,780</div></div></div>
+<div><div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:6px"><span>Occupancy &middot; 6 of 6 units</span><span>100%</span></div><div style="height:8px;border-radius:4px;background:#E6EAF0"><div style="height:8px;border-radius:4px;width:100%;background:#0E7C66"></div></div></div>
+<div style="font-size:13px;color:#5B6678;font-weight:600">1 lease expiring in 30 days</div>
+</div></div>
+<div class="card" style="padding:0;overflow:hidden">
+<div style="height:120px;background:#F6E7D6;display:flex;align-items:flex-end;padding:12px"><span style="font-size:12px;font-weight:700;background:#fff;border-radius:999px;padding:3px 10px">Multi-family</span></div>
+<div style="padding:18px;display:flex;flex-direction:column;gap:14px">
+<div><div style="font-weight:800;font-size:17px">789 Queen Street</div><div style="font-size:13px;color:#5B6678">Multi-family &middot; 6 units</div></div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+<div><div style="font-size:12px;color:#5B6678;font-weight:600">Income</div><div style="font-weight:800">$5,600</div></div>
+<div><div style="font-size:12px;color:#5B6678;font-weight:600">Expenses</div><div style="font-weight:800">$1,180</div></div>
+<div><div style="font-size:12px;color:#5B6678;font-weight:600">NOI</div><div style="font-weight:800;color:#0E7C66">$4,420</div></div></div>
+<div><div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:6px"><span>Occupancy &middot; 5 of 6 units</span><span>83%</span></div><div style="height:8px;border-radius:4px;background:#E6EAF0"><div style="height:8px;border-radius:4px;width:83%;background:#0E7C66"></div></div></div>
+<div style="font-size:13px;color:#5B6678;font-weight:600">1 late payment</div>
+</div></div>
+</div>
+<div class="card tbl">
+<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><div style="font-weight:800;font-size:16px">Units &middot; 123 Main Street</div><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Open property</a></div>
+<table style="width:100%;border-collapse:collapse;min-width:640px"><thead><tr><th>Unit</th><th>Type</th><th>Tenant</th><th>Rent</th><th>Lease ends</th><th>Status</th></tr></thead><tbody>
+<tr><td><b>101</b></td><td>1 bed &middot; 1 bath</td><td>John Smith</td><td>$2,100</td><td>Aug 2027</td><td><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#DDF3EC;color:#0A5C4B;font-size:12px;font-weight:700">Occupied</span></td></tr>
+<tr><td><b>102</b></td><td>3 bed &middot; 2 bath</td><td>Jane Doe</td><td>$3,100</td><td>Nov 2026</td><td><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#FBE3E0;color:#A12418;font-size:12px;font-weight:700">Expiring</span></td></tr>
+<tr><td><b>103</b></td><td>3 bed &middot; 2 bath</td><td>Bob Wilson</td><td>$3,250</td><td>Mar 2027</td><td><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#DDF3EC;color:#0A5C4B;font-size:12px;font-weight:700">Occupied</span></td></tr>
+<tr><td><b>104</b></td><td>2 bed &middot; 1 bath</td><td>None</td><td>$2,600 asking</td><td>None</td><td><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#FDF0DC;color:#8A4B06;font-size:12px;font-weight:700">Vacant</span></td></tr>
+</tbody></table>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

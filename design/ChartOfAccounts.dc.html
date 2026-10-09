@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chart of accounts</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:1250px;font-family:'Manrope',system-ui,sans-serif;background:#F3F5F8;color:#0F1B2D}
+.side{background:#0F1B2D;color:#B8C2D3;padding:24px 16px;display:flex;flex-direction:column;gap:4px}
+.nav{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:600;color:#B8C2D3;text-decoration:none;min-height:24px}
+.nav:hover{background:#18273D;color:#fff}
+.card{background:#fff;border-radius:16px;padding:20px;border:1px solid #E6EAF0}
+th{font-size:12px;font-weight:700;color:#5B6678;text-align:left;padding:10px 12px;border-bottom:1px solid #E6EAF0}
+td{font-size:14px;padding:11px 12px;border-bottom:1px solid #F0F2F6}
+.tbl{overflow-x:auto}
+.chip{height:36px;padding:0 14px;border-radius:999px;border:1px solid #D5DBE5;background:#fff;font:700 13px 'Manrope',sans-serif;color:#0F1B2D}
+@media(max-width:900px){.app{grid-template-columns:1fr}.side{display:none}}
+</style>
+</helmet>
+<div class="app">
+<aside class="side">
+<div style="display:flex;align-items:center;gap:10px;padding:4px 12px 20px;color:#fff;font-weight:800;font-size:17px"><div style="width:28px;height:28px;border-radius:8px;background:#19B394"></div>Keystone</div>
+<a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Dashboard</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Properties</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Tenants</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Rent</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Credit notes</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Maintenance</a><a class="nav" href="#" style="background:#18273D;color:#fff"><span style="width:6px;height:6px;border-radius:3px;background:#19B394"></span>Financials</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Documents</a><a class="nav" href="#"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Reports</a>
+<a class="nav" href="#" style="margin-top:auto"><span style="width:6px;height:6px;border-radius:3px;background:#3B4A63"></span>Settings</a>
+</aside>
+<main style="padding:24px 28px 40px;display:flex;flex-direction:column;gap:20px;min-width:0">
+<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+<div><div style="font-size:13px;font-weight:700;color:#5B6678">Financials /</div><h1 style="margin:4px 0 0;font-size:28px;font-weight:800">Chart of accounts</h1><div style="color:#5B6678;font-size:14px;margin-top:4px">Balances as of Oct 8, 2026. Income and expenses are year to date.</div></div>
+<div style="margin-left:auto;display:flex;gap:10px"><button style="height:44px;padding:0 18px;border-radius:12px;border:1px solid #D5DBE5;background:#fff;font:700 14px 'Manrope',sans-serif">Export</button><button style="height:44px;padding:0 18px;border-radius:12px;border:0;background:#0E7C66;color:#fff;font:700 14px 'Manrope',sans-serif">New account</button></div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><button class="chip" style="background:#0F1B2D;color:#fff;border-color:#0F1B2D">All</button><button class="chip" style="">Assets</button><button class="chip" style="">Liabilities</button><button class="chip" style="">Equity</button><button class="chip" style="">Income</button><button class="chip" style="">Expenses</button>
+<label style="margin-left:auto;min-width:200px"><span style="position:absolute;left:-9999px">Search accounts</span><input placeholder="Search by code or name" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid #D5DBE5;padding:0 16px;font:500 14px 'Manrope',sans-serif;background:#fff"></label></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;align-items:start">
+<div class="card tbl" style="grid-column:span 2;min-width:0;padding:8px 8px 4px">
+<table style="width:100%;border-collapse:collapse;min-width:620px"><thead><tr><th style="width:80px">Code</th><th>Account</th><th>Detail type</th><th style="text-align:right">Balance</th><th></th></tr></thead><tbody>
+<tr style="background:#F8FAFC"><td colspan="5" style="font-weight:800;font-size:13px;padding:10px 12px">Assets</td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">1000</td><td><b>Operating Account</b> </td><td>Bank</td><td style="text-align:right;font-weight:700">$42,380.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">1010</td><td><b>Savings Account</b> </td><td>Bank</td><td style="text-align:right;font-weight:700">$15,000.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">1100</td><td><b>Accounts Receivable</b> <span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#E1EAFB;color:#1B3F9A;font-size:12px;font-weight:700;white-space:nowrap">System</span></td><td>Receivable</td><td style="text-align:right;font-weight:700">$4,250.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style="background:#F8FAFC"><td colspan="5" style="font-weight:800;font-size:13px;padding:10px 12px">Liabilities</td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">2000</td><td><b>Accounts Payable</b> <span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#E1EAFB;color:#1B3F9A;font-size:12px;font-weight:700;white-space:nowrap">System</span></td><td>Payable</td><td style="text-align:right;font-weight:700">$420.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">2100</td><td><b>Security Deposits Held</b> </td><td>Tenant deposits</td><td style="text-align:right;font-weight:700">$17,350.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">2200</td><td><b>Tenant Credits</b> <span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#E1EAFB;color:#1B3F9A;font-size:12px;font-weight:700;white-space:nowrap">System</span></td><td>Credit notes</td><td style="text-align:right;font-weight:700">$1,250.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">2300</td><td><b>Mortgage Payable</b> </td><td>Long-term debt</td><td style="text-align:right;font-weight:700">$612,000.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style="background:#F8FAFC"><td colspan="5" style="font-weight:800;font-size:13px;padding:10px 12px">Equity</td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">3000</td><td><b>Owner's Equity</b> </td><td>Equity</td><td style="text-align:right;font-weight:700">$150,000.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">3900</td><td><b>Retained Earnings</b> <span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#E1EAFB;color:#1B3F9A;font-size:12px;font-weight:700;white-space:nowrap">System</span></td><td>Equity</td><td style="text-align:right;font-weight:700">$28,640.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style="background:#F8FAFC"><td colspan="5" style="font-weight:800;font-size:13px;padding:10px 12px">Income</td></tr>
+<tr style="background:#F1F8F6;"><td style="color:#5B6678;font-weight:700">4000</td><td><b>Rental Income</b> <span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#E1EAFB;color:#1B3F9A;font-size:12px;font-weight:700;white-space:nowrap">System</span></td><td>Rent</td><td style="text-align:right;font-weight:700">$191,250.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">4100</td><td><b>Late Fee Income</b> </td><td>Fees</td><td style="text-align:right;font-weight:700">$150.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">4900</td><td><b>Rent Adjustments</b> </td><td>Contra income</td><td style="text-align:right;font-weight:700">-$500.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style="background:#F8FAFC"><td colspan="5" style="font-weight:800;font-size:13px;padding:10px 12px">Expenses</td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">5000</td><td><b>Repairs and Maintenance</b> </td><td>Operating</td><td style="text-align:right;font-weight:700">$9,840.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">5100</td><td><b>Utilities</b> </td><td>Operating</td><td style="text-align:right;font-weight:700">$11,260.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">5200</td><td><b>Insurance</b> </td><td>Operating</td><td style="text-align:right;font-weight:700">$6,300.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">5300</td><td><b>Property Tax</b> </td><td>Operating</td><td style="text-align:right;font-weight:700">$14,400.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">5400</td><td><b>Mortgage Interest</b> </td><td>Financing</td><td style="text-align:right;font-weight:700">$18,720.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">5500</td><td><b>Landscaping</b> </td><td>Operating</td><td style="text-align:right;font-weight:700">$2,700.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">5600</td><td><b>Management Fees</b> </td><td>Operating</td><td style="text-align:right;font-weight:700">$4,500.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+<tr style=""><td style="color:#5B6678;font-weight:700">5700</td><td><b>Accounting Fees</b> </td><td>Business</td><td style="text-align:right;font-weight:700">$1,500.00</td><td><a href="#" style="font-size:13px;font-weight:700;color:#0E7C66">Ledger</a></td></tr>
+</tbody></table>
+</div>
+<aside class="card" style="align-self:start;display:flex;flex-direction:column;gap:16px;min-width:0"><div><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><div style="font-weight:800;font-size:18px">4000 &middot; Rental Income</div><span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#E1EAFB;color:#1B3F9A;font-size:12px;font-weight:700;white-space:nowrap">System</span></div><div style="font-size:13px;color:#5B6678;margin-top:2px">Used automatically by rent charges</div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div><div style="font-size:12px;color:#5B6678;font-weight:600">Type</div><div style="font-weight:700;font-size:14px;margin-top:2px">Income</div></div><div><div style="font-size:12px;color:#5B6678;font-weight:600">Year to date</div><div style="font-weight:700;font-size:14px;margin-top:2px">$191,250.00</div></div><div><div style="font-size:12px;color:#5B6678;font-weight:600">Normal balance</div><div style="font-weight:700;font-size:14px;margin-top:2px">Credit</div></div><div><div style="font-size:12px;color:#5B6678;font-weight:600">Status</div><div style="font-weight:700;font-size:14px;margin-top:2px">Active</div></div></div>
+<div style="border-top:1px solid #E6EAF0;padding-top:14px"></div>
+<div style="font-weight:800;font-size:14px">Year to date by property</div>
+<div><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:5px"><span>123 Main Street</span><span>$76,050.00</span></div><div style="height:8px;border-radius:4px;background:#E6EAF0"><div style="height:8px;border-radius:4px;width:40%;background:#0E7C66"></div></div></div><div><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:5px"><span>456 King Street</span><span>$64,800.00</span></div><div style="height:8px;border-radius:4px;background:#E6EAF0"><div style="height:8px;border-radius:4px;width:34%;background:#0E7C66"></div></div></div><div><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:5px"><span>789 Queen Street</span><span>$50,400.00</span></div><div style="height:8px;border-radius:4px;background:#E6EAF0"><div style="height:8px;border-radius:4px;width:26%;background:#0E7C66"></div></div></div>
+<div style="font-size:12px;color:#5B6678">Every posting carries its property and unit, so one account serves both the business and each property.</div>
+<div style="display:flex;gap:10px"><button style="flex:1;height:44px;border-radius:12px;border:0;background:#0E7C66;color:#fff;font:700 14px 'Manrope',sans-serif">View ledger</button><button style="flex:1;height:44px;border-radius:12px;border:1px solid #D5DBE5;background:#fff;font:700 14px 'Manrope',sans-serif">Edit account</button></div>
+<div style="font-size:12px;color:#5B6678">System accounts are used by automatic postings, so they can be renamed but not deleted.</div></aside>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1250}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

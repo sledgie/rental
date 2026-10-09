@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tenant statement</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0}
+.n{text-align:right;white-space:nowrap}
+th{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;text-align:left;padding:8px 6px;border-top:2px solid #1B2433;border-bottom:1px solid #1B2433}
+th.n{text-align:right}
+td{font-size:13px;padding:9px 6px;border-bottom:1px solid #D5DAE2}
+</style>
+</helmet>
+<div style="width:816px;height:1056px;box-sizing:border-box;padding:64px;background:#fff;color:#1B2433;font-family:'Manrope',system-ui,sans-serif;display:flex;flex-direction:column;gap:26px">
+<div style="display:flex;justify-content:space-between;align-items:flex-start">
+<div><div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:18px"><div style="width:22px;height:22px;border-radius:6px;background:#1B2433"></div>Keystone</div><div style="font-size:12px;color:#4A5568;margin-top:6px;line-height:1.5">[Your business address]<br>[Phone] &middot; [Email]</div></div>
+<div style="text-align:right"><h1 style="margin:0;font-size:28px;font-weight:800;letter-spacing:.5px">STATEMENT</h1><div style="font-size:12px;color:#4A5568;margin-top:4px">Generated Oct 8, 2026</div></div>
+</div>
+<div style="display:flex;justify-content:space-between;gap:24px;font-size:13px;line-height:1.5">
+<div><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#4A5568">Tenant</div><b>John Smith</b><br>123 Main Street, Unit 101<br>john.smith@example.com</div>
+<div style="text-align:right"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#4A5568">Statement period</div><b>Jan 1, 2026 to Oct 8, 2026</b><br>Year to date</div>
+</div>
+<div style="display:flex;gap:10px"><div style="flex:1;border:1px solid #1B2433;padding:10px 12px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#4A5568">Opening balance</div><div style="font-size:18px;font-weight:800;margin-top:4px">$0.00</div></div><div style="flex:1;border:1px solid #1B2433;padding:10px 12px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#4A5568">Charges</div><div style="font-size:18px;font-weight:800;margin-top:4px">$4,200.00</div></div><div style="flex:1;border:1px solid #1B2433;padding:10px 12px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#4A5568">Payments and credits</div><div style="font-size:18px;font-weight:800;margin-top:4px">$3,700.00</div></div><div style="flex:1;border:1px solid #1B2433;padding:10px 12px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#4A5568">Balance due</div><div style="font-size:18px;font-weight:800;margin-top:4px">$500.00</div></div></div>
+<table style="width:100%;border-collapse:collapse"><thead><tr><th>Date</th><th>Type</th><th>Reference</th><th>Description</th><th class="n">Charges</th><th class="n">Credits</th><th class="n">Balance</th></tr></thead><tbody>
+<tr><td>Sep 1, 2026</td><td>Charge</td><td>Rent charge</td><td>September rent</td><td class="n">$2,100.00</td><td class="n"></td><td class="n"><b>$2,100.00</b></td></tr><tr><td>Sep 1, 2026</td><td>Credit note</td><td>CN-0001</td><td>Move-in discount</td><td class="n"></td><td class="n">$100.00</td><td class="n"><b>$2,000.00</b></td></tr><tr><td>Sep 3, 2026</td><td>Payment</td><td>Bank transfer</td><td>September rent</td><td class="n"></td><td class="n">$2,000.00</td><td class="n"><b>$0.00</b></td></tr><tr><td>Oct 1, 2026</td><td>Invoice</td><td>INV-0001</td><td>October rent</td><td class="n">$2,100.00</td><td class="n"></td><td class="n"><b>$2,100.00</b></td></tr><tr><td>Oct 5, 2026</td><td>Payment</td><td>Bank transfer</td><td>October rent, partial</td><td class="n"></td><td class="n">$1,600.00</td><td class="n"><b>$500.00</b></td></tr></tbody></table>
+<div style="margin-top:auto;display:flex;flex-direction:column;gap:14px">
+<div style="border-top:1px solid #1B2433;padding-top:12px;font-size:12px;line-height:1.6"><b>Payment instructions</b><br>[Your bank transfer or e-transfer details]. Please include your unit number as the reference.</div>
+<div style="display:flex;justify-content:space-between;font-size:11px;color:#4A5568"><span>Keystone &middot; Tenant statement &middot; John Smith, Unit 101</span><span>Page 1 of 1</span></div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":816,"height":1056}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
