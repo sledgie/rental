@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, qs } from '../api.js';
 import { money } from '../format.js';
-import { Badge, Field, FormError, FormFooter, Modal, Status, Table, useForm, useLoad } from '../ui.jsx';
+import { Badge, Chips, Field, FormError, FormFooter, Modal, PageHeader, SearchBox, Status, Table, useForm, useLoad } from '../ui.jsx';
 
 const TYPES = [['asset', 'Assets', 'Asset'], ['liability', 'Liabilities', 'Liability'], ['equity', 'Equity', 'Equity'], ['income', 'Income', 'Income'], ['expense', 'Expenses', 'Expense']];
 const RANGE = { asset: 1000, liability: 2000, equity: 3000, income: 4000, expense: 5000 };
@@ -87,11 +87,11 @@ export default function Accounts({ property, notify }) {
   const saved = (m) => { setModal(null); notify(m); reload(); };
   return (
     <>
-      <div className="bar"><div><h1>Chart of accounts</h1><div className="sub">Balances up to today{property ? ' for the selected property' : ''}</div></div><button className="btn pri" style={{ marginLeft: 'auto' }} onClick={() => setModal({ kind: 'form' })}>New account</button></div>
+      <PageHeader title="Chart of accounts" sub={`Balances up to today${property ? ' for the selected property' : ''}`} action="New account" onAction={() => setModal({ kind: 'form' })} />
       <div className="bar">
-        {[['all', 'All'], ...TYPES.map((t) => [t[0], t[1]])].map(([k, l]) => <button key={k} className={`chip${tab === k ? ' on' : ''}`} onClick={() => setTab(k)}>{l}</button>)}
+        <Chips options={[['all', 'All'], ...TYPES.map((t) => [t[0], t[1]])]} value={tab} onChange={setTab} />
         <label className="chk" style={{ marginLeft: 'auto', fontWeight: 600 }}><input type="checkbox" checked={inactive} onChange={(e) => setInactive(e.target.checked)} />Show inactive</label>
-        <label style={{ minWidth: 200 }}><span style={{ position: 'absolute', left: -9999 }}>Search accounts</span><input className="inp" placeholder="Search by code or name" value={q} onChange={(e) => setQ(e.target.value)} /></label>
+        <SearchBox label="Search accounts" placeholder="Search by code or name" value={q} onChange={setQ} />
       </div>
       <Status loading={loading} error={error} onRetry={reload} />
       {accounts && (

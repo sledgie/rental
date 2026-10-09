@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { api, qs } from '../api.js';
 import { money, money0 } from '../format.js';
-import { Badge, Field, FormError, FormFooter, Modal, Status, useForm, useLoad } from '../ui.jsx';
+import { Badge, Chips, Field, FormError, FormFooter, Modal, PageHeader, SearchBox, Status, useForm, useLoad } from '../ui.jsx';
 
 const TSTATUS = { applicant: ['Applicant', 'b-sys'], active: ['Active', 'b-ok'], pending_in: ['Pending move-in', 'b-warn'], pending_out: ['Pending move-out', 'b-warn'], past: ['Past tenant', 'b-off'] };
+const TABS = [['all', 'All'], ['active', 'Active'], ['applicant', 'Applicants'], ['pending_in', 'Pending move-in'], ['pending_out', 'Pending move-out'], ['past', 'Past']];
 
 function TenantForm({ tenant, units, onClose, onSaved }) {
   const form = useForm(
@@ -41,10 +42,10 @@ export default function Tenants({ property, notify, refreshProps }) {
   const active = (data || []).filter((t) => t.status === 'active').length;
   return (
     <>
-      <div className="bar"><div><h1>Tenants</h1><div className="sub">{active} active &middot; {(data || []).length} total</div></div><button className="btn pri" style={{ marginLeft: 'auto' }} onClick={() => setModal({})}>Add tenant</button></div>
+      <PageHeader title="Tenants" sub={<>{active} active &middot; {(data || []).length} total</>} action="Add tenant" onAction={() => setModal({})} />
       <div className="bar">
-        {[['all', 'All'], ['active', 'Active'], ['applicant', 'Applicants'], ['pending_in', 'Pending move-in'], ['pending_out', 'Pending move-out'], ['past', 'Past']].map(([k, l]) => <button key={k} className={`chip${tab === k ? ' on' : ''}`} onClick={() => setTab(k)}>{l}</button>)}
-        <label style={{ marginLeft: 'auto', minWidth: 200 }}><span style={{ position: 'absolute', left: -9999 }}>Search tenants</span><input className="inp" placeholder="Search tenants" value={q} onChange={(e) => setQ(e.target.value)} /></label>
+        <Chips options={TABS} value={tab} onChange={setTab} />
+        <SearchBox label="Search tenants" value={q} onChange={setQ} style={{ marginLeft: 'auto' }} />
       </div>
       <Status loading={loading && !data} error={error} onRetry={reload} />
       {data && (

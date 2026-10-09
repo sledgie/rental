@@ -42,6 +42,15 @@ export async function update(conn, table, id, fields) {
   await conn.execute(`UPDATE ${table} SET ${set} WHERE id=HEXTORAW(:rid)`, { ...Object.fromEntries(cols.map((c) => [c, fields[c]])), rid: id });
 }
 
+// A lease that ties a tenant to a unit (signed or not yet started).
+export const CURRENT_LEASE = "('ACTIVE','DRAFT')";
+// Optional " AND <col>=:p" clause for queries that can be narrowed to one property; adds :p to binds.
+export function byProperty(col, property, binds) {
+  if (!property) return '';
+  binds.p = property;
+  return ` AND ${col}=HEXTORAW(:p)`;
+}
+
 let bid;
 export async function businessId() {
   if (!bid) {

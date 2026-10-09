@@ -79,6 +79,27 @@ export function PropertyBar({ properties, property, onProperty, period, onPeriod
   );
 }
 
+export function PageHeader({ title, sub, action, onAction }) {
+  return (
+    <div className="bar">
+      <div><h1>{title}</h1><div className="sub">{sub}</div></div>
+      {action && <button className="btn pri" style={{ marginLeft: 'auto' }} onClick={onAction}>{action}</button>}
+    </div>
+  );
+}
+
+// options: [[value, label], ...]
+export const Chips = ({ options, value, onChange }) => options.map(([k, l]) => <button key={k} className={`chip${value === k ? ' on' : ''}`} onClick={() => onChange(k)}>{l}</button>);
+
+export function SearchBox({ label, placeholder = label, value, onChange, style }) {
+  return (
+    <label style={{ minWidth: 200, ...style }}>
+      <span style={{ position: 'absolute', left: -9999 }}>{label}</span>
+      <input className="inp" placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
+    </label>
+  );
+}
+
 export function useForm(initial, save, onDone) {
   const [f, setF] = useState(initial);
   const [errors, setErrors] = useState({});

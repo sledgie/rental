@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { api, qs } from '../api.js';
 import { money0 } from '../format.js';
-import { Badge, Field, FormError, FormFooter, Modal, Status, useForm, useLoad } from '../ui.jsx';
+import { Badge, Field, FormError, FormFooter, Modal, PageHeader, Status, useForm, useLoad } from '../ui.jsx';
 
 const PTYPES = ['Single family', 'Multi-family', 'Apartment building', 'Condo', 'Commercial', 'Mixed use', 'Other'];
 const USTATUS = { occupied: ['Occupied', 'b-ok'], vacant: ['Vacant', 'b-warn'], reserved: ['Reserved', 'b-sys'], maintenance: ['Maintenance', 'b-bad'], unavailable: ['Unavailable', 'b-off'] };
+
+const Stat = ({ label, children }) => <div><div className="sub" style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>{label}</div>{children}</div>;
 
 function PropertyForm({ property, onClose, onSaved }) {
   const form = useForm(
@@ -62,16 +64,16 @@ export default function Properties({ property, notify, refreshProps }) {
   const occ = units.filter((u) => u.status === 'occupied').length;
   return (
     <>
-      <div className="bar"><div><h1>Properties</h1><div className="sub">{list.length} {list.length === 1 ? 'property' : 'properties'} &middot; {units.length} units &middot; {occ} occupied</div></div><button className="btn pri" style={{ marginLeft: 'auto' }} onClick={() => setModal({ kind: 'prop' })}>Add property</button></div>
+      <PageHeader title="Properties" sub={<>{list.length} {list.length === 1 ? 'property' : 'properties'} &middot; {units.length} units &middot; {occ} occupied</>} action="Add property" onAction={() => setModal({ kind: 'prop' })} />
       <Status loading={ps.loading && !ps.data} error={ps.error} onRetry={ps.reload} />
       <div className="grid two">
         {list.map((p) => { const pc = p.unitCount ? Math.round((p.occupied / p.unitCount) * 100) : 0; return (
           <div className="card" key={p.id}>
             <div className="bar" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}><div><b style={{ fontSize: 17 }}>{p.name}</b><div className="sub" style={{ margin: '2px 0 0' }}>{p.address}, {p.city}</div></div><Badge cls="b-sys">{p.type}</Badge></div>
             <div className="grid" style={{ gridTemplateColumns: 'repeat(3,1fr)', margin: '16px 0' }}>
-              <div><div className="sub" style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>Income</div><b>{money0(p.income)}</b></div>
-              <div><div className="sub" style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>NOI</div><b className="good">{money0(p.noi)}</b></div>
-              <div><div className="sub" style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>Units</div><b>{p.unitCount}</b></div>
+              <Stat label="Income"><b>{money0(p.income)}</b></Stat>
+              <Stat label="NOI"><b className="good">{money0(p.noi)}</b></Stat>
+              <Stat label="Units"><b>{p.unitCount}</b></Stat>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 12 }}><span>Occupancy &middot; {p.occupied} of {p.unitCount} units</span><span>{pc}%</span></div>
             <div className="hb"><i style={{ width: `${pc}%` }} /></div>

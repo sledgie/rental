@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { rows, tx, insert, update, newId, businessId } from './db.js';
-import { loadLines, loadNames, nat } from './reports.js';
-import { fail, HttpError, ACCOUNT_TYPES, wrap } from './util.js';
+import { loadLines, loadNames } from './reports.js';
+import { nat, NO_PROPERTY } from './ledger.js';
+import { fail, HttpError, ACCOUNT_TYPES, wrap, text, optText } from './util.js';
 
 export const router = Router();
-const RANGE = { asset: 1000, liability: 2000, equity: 3000, income: 4000, expense: 5000 };
 
 async function listAccounts(property = null) {
   const b = await businessId();
@@ -21,9 +21,9 @@ const descendants = (accs, id) => accs.filter((a) => a.parentId === id).flatMap(
 function validate(d, id, accs) {
   const e = {}; const self = id ? accs.find((a) => a.id === id) : null;
   if (!ACCOUNT_TYPES.includes(d.type)) e.type = 'Choose an account type.';
-  const name = (d.name || '').trim();
+  const name = text(d.name);
   if (!name) e.name = 'Enter an account name.'; else if (name.length > 80) e.name = 'Keep the name under 80 characters.';
-  const code = (d.code || '').trim();
+  const code = text(d.code);
   if (!code) e.code = 'Enter an account code.';
   else if (!/^[A-Za-z0-9.-]{1,12}$/.test(code)) e.code = 'Use letters, numbers, dots or dashes (max 12).';
   else if (accs.some((a) => a.code === code && a.id !== id)) e.code = 'That code is already used.';
@@ -38,19 +38,20 @@ function validate(d, id, accs) {
   if (self && d.type !== self.type && accs.some((a) => a.parentId === id)) e.type = 'Move or remove the sub-accounts first.';
   return e;
 }
+const fields = (d) => ({ code: text(d.code), name: text(d.name), type: d.type.toUpperCase(), parent_id: d.sub ? d.parentId : null, description: optText(d.description) });
 
 router.get('/', wrap(async (req, res) => res.json(await listAccounts(req.query.property || null))));
 router.post('/', wrap(async (req, res) => {
   const d = req.body || {}; const accs = await listAccounts(); fail(validate(d, null, accs));
   const b = await businessId(); const id = newId();
-  await tx((c) => insert(c, 'account', { id, business_id: b, code: d.code.trim(), name: d.name.trim(), type: d.type.toUpperCase(), subtype: null, system_key: null, parent_id: d.sub ? d.parentId : null, is_active: 1, description: (d.description || '').trim() || null }));
+  await tx((c) => insert(c, 'account', { id, business_id: b, ...fields(d), subtype: null, system_key: null, is_active: 1 }));
   res.status(201).json({ id });
 }));
 router.put('/:id', wrap(async (req, res) => {
   const d = req.body || {}; const id = req.params.id; const accs = await listAccounts();
   if (!accs.some((a) => a.id === id)) throw new HttpError(404, 'Account not found.');
   fail(validate(d, id, accs));
-  await tx((c) => update(c, 'account', id, { code: d.code.trim(), name: d.name.trim(), type: d.type.toUpperCase(), parent_id: d.sub ? d.parentId : null, description: (d.description || '').trim() || null }));
+  await tx((c) => update(c, 'account', id, fields(d)));
   res.json({ id });
 }));
 router.post('/:id/active', wrap(async (req, res) => {
@@ -66,6 +67,6 @@ router.post('/:id/active', wrap(async (req, res) => {
 }));
 router.get('/:id/ledger', wrap(async (req, res) => {
   const [ls, names] = await Promise.all([loadLines({ property: req.query.property || null }), loadNames()]);
-  const out = ls.filter((l) => l.accountId === req.params.id).map((l) => ({ date: l.date, memo: l.memo, property: l.propertyId ? names.properties[l.propertyId] : 'Business (no property)', debit: l.dr, credit: l.cr }));
+  const out = ls.filter((l) => l.accountId === req.params.id).map((l) => ({ date: l.date, memo: l.memo, property: l.propertyId ? names.properties[l.propertyId] : NO_PROPERTY, debit: l.dr, credit: l.cr }));
   res.json(out.reverse());
 }));
