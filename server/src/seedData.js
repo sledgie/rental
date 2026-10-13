@@ -10,12 +10,15 @@ export function buildSeed() {
     ['2000', 'Accounts Payable', 'LIABILITY', 'Payable', 'AP'], ['2100', 'Security Deposits Held', 'LIABILITY', 'Tenant deposits', null],
     ['2200', 'Tenant Credits', 'LIABILITY', 'Credit notes', 'TENANT_CREDITS'], ['2300', 'Mortgage Payable', 'LIABILITY', 'Long-term debt', null],
     ['3000', "Owner's Equity", 'EQUITY', 'Equity', null], ['3900', 'Retained Earnings', 'EQUITY', 'Equity', 'RETAINED_EARNINGS'],
-    ['4000', 'Rental Income', 'INCOME', 'Rent', 'RENT_INCOME'], ['4100', 'Late Fee Income', 'INCOME', 'Fees', null], ['4900', 'Rent Adjustments', 'INCOME', 'Contra income', null],
+    ['4000', 'Rental Income', 'INCOME', 'Rent', 'RENT_INCOME'], ['4100', 'Late Fee Income', 'INCOME', 'Fees', null], ['4900', 'Rent Adjustments', 'INCOME', 'Contra income', 'RENT_ADJUSTMENTS'],
     ['5000', 'Repairs and Maintenance', 'EXPENSE', 'Operating', null], ['5100', 'Utilities', 'EXPENSE', 'Operating', null], ['5200', 'Insurance', 'EXPENSE', 'Operating', null],
     ['5300', 'Property Tax', 'EXPENSE', 'Operating', null], ['5400', 'Mortgage Interest', 'EXPENSE', 'Financing', null], ['5500', 'Landscaping', 'EXPENSE', 'Operating', null],
     ['5600', 'Management Fees', 'EXPENSE', 'Operating', null], ['5700', 'Accounting Fees', 'EXPENSE', 'Business', null],
   ];
   const accounts = A.map(([code, name, type, subtype, systemKey]) => ({ id: id(), business_id: business.id, code, name, type, subtype, system_key: systemKey, parent_id: null, is_active: 1, description: null }));
+  // One expense sub-account per property bill type (see bills.js BILL_TYPES).
+  [['5110', 'Electricity', 'BILL_ELECTRICITY', '5100'], ['5120', 'Water', 'BILL_WATER', '5100'], ['5130', 'Internet', 'BILL_INTERNET', '5100'], ['5010', 'Maintenance', 'BILL_MAINTENANCE', '5000'], ['5020', 'Repairs', 'BILL_REPAIRS', '5000']]
+    .forEach(([code, name, systemKey, parent]) => accounts.push({ id: id(), business_id: business.id, code, name, type: 'EXPENSE', subtype: 'Operating', system_key: systemKey, parent_id: accounts.find((a) => a.code === parent).id, is_active: 1, description: null }));
   const acc = (code) => accounts.find((a) => a.code === code).id;
 
   const P = [['p1', '123 Main Street', 'MULTI_FAMILY'], ['p2', '456 King Street', 'APARTMENT_BUILDING'], ['p3', '789 Queen Street', 'MULTI_FAMILY']];

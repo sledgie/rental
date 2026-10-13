@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { api, qs } from '../api.js';
 import { money, money0 } from '../format.js';
 import { Modal, Status, Table, useLoad } from '../ui.jsx';
+import { ScheduleRow, useScheduleActions } from '../billing.jsx';
 
 const tone = { danger: 'var(--danger)', warn: 'var(--expense)', blue: 'var(--blue)' };
 
@@ -36,6 +37,7 @@ function Chart({ series }) {
 export default function Dashboard({ property, period, notify }) {
   const { data, error, loading, reload } = useLoad(() => api.get(`/dashboard${qs({ property, period })}`), [property, period]);
   const [drill, setDrill] = useState(null);
+  const actions = useScheduleActions(notify, reload);
   const open = async (kind) => { try { setDrill(await api.get(`/drill${qs({ kind, property, period })}`)); } catch (e) { notify(e.message); } };
   if (loading || error) return <><h1>Business overview</h1><Status loading={loading} error={error} onRetry={reload} /></>;
   const k = data.kpis;
@@ -67,6 +69,10 @@ export default function Dashboard({ property, period, notify }) {
             <div className="alert" key={i}><span className="dot" style={{ background: tone[a.tone] }} /><div><b>{a.t}</b><div className="sub" style={{ fontSize: 13, margin: 0 }}>{a.s}</div></div></div>
           )) : <div className="sub">Nothing needs attention.</div>}
         </div>
+      </div>
+      <div className="card">
+        <div className="bar" style={{ justifyContent: 'space-between' }}><b style={{ fontSize: 16 }}>Bill schedule</b><a className="sub" href="#/bill-schedule" style={{ margin: 0, fontWeight: 700 }}>Manage</a></div>
+        {data.schedule.length ? data.schedule.map((s) => <ScheduleRow key={s.id} s={s} actions={actions} showProperty />) : <div className="sub">No scheduled bills are overdue or due in the next 7 days.</div>}
       </div>
       <div className="card">
         <b style={{ fontSize: 16, display: 'block', marginBottom: 14 }}>NOI by property &middot; {data.label}</b>

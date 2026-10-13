@@ -12,7 +12,7 @@ try {
   if (existing[0].n > 0 && !reset) { console.log('Data already exists. Use "npm run seed:reset" to wipe and reseed.'); process.exit(0); }
   const s = buildSeed();
   await tx(async (c) => {
-    if (reset) for (const t of ['journal_entry_line', 'journal_entry', 'lease', 'tenant', 'unit', 'property', 'account', 'business']) await c.execute(`DELETE FROM ${t}`);
+    if (reset) for (const t of ['credit_note_line', 'credit_note', 'journal_entry_line', 'journal_entry', 'bill_schedule_run', 'bill_schedule', 'vendor', 'lease', 'tenant', 'unit', 'property', 'account', 'business']) await c.execute(`DELETE FROM ${t}`);
     await insert(c, 'business', s.business);
     for (const a of s.accounts) await insert(c, 'account', a);
     for (const p of s.properties) await insert(c, 'property', strip(p));
@@ -25,6 +25,6 @@ try {
       VALUES (HEXTORAW(:id), HEXTORAW(:eid), HEXTORAW(:bid), HEXTORAW(:aid), :dr, :cr, HEXTORAW(:pid), HEXTORAW(:unitid), HEXTORAW(:tid), TO_DATE(:d,'YYYY-MM-DD'), :memo)`, binds,
       { bindDefs: { id: { type: oracledb.STRING, maxSize: 32 }, eid: { type: oracledb.STRING, maxSize: 32 }, bid: { type: oracledb.STRING, maxSize: 32 }, aid: { type: oracledb.STRING, maxSize: 32 }, dr: { type: oracledb.NUMBER }, cr: { type: oracledb.NUMBER }, pid: { type: oracledb.STRING, maxSize: 32 }, unitid: { type: oracledb.STRING, maxSize: 32 }, tid: { type: oracledb.STRING, maxSize: 32 }, d: { type: oracledb.STRING, maxSize: 10 }, memo: { type: oracledb.STRING, maxSize: 255 } } });
   });
-  console.log('Seeded demo data: 1 business, 21 accounts, 3 properties, 9 units, 7 tenants, 7 leases, ledger entries.');
+  console.log('Seeded demo data: 1 business, 26 accounts, 3 properties, 9 units, 7 tenants, 7 leases, ledger entries.');
 } catch (e) { console.error('Seed failed:', e.message); process.exitCode = 1; }
 finally { await closePool().catch(() => {}); }

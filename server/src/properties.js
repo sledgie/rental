@@ -1,16 +1,17 @@
 import { Router } from 'express';
 import { rows, tx, insert, update, newId, businessId, byProperty, CURRENT_LEASE } from './db.js';
 import { loadLines } from './reports.js';
-import { summarize, inPeriod } from './ledger.js';
-import { fail, HttpError, wrap, PROPERTY_TYPE, UNIT_STATUSES, inv, text, optText } from './util.js';
+import { summarize, inPeriod, nat } from './ledger.js';
+import { fail, HttpError, wrap, PROPERTY_TYPE, UNIT_STATUSES, TENANT_STATUS, inv, text, optText } from './util.js';
 
 export const properties = Router();
 export const units = Router();
 const PT = inv(PROPERTY_TYPE);
+const TI = inv(TENANT_STATUS);
 
 properties.get('/', wrap(async (req, res) => {
   const b = await businessId();
-  const ps = await rows(`SELECT RAWTOHEX(id) "id", name "name", type "type", address_line1 "address", city "city", region "region", postal_code "postalCode" FROM property WHERE business_id=HEXTORAW(:b) ORDER BY name`, { b });
+  const ps = await rows(`SELECT RAWTOHEX(id) "id", name "name", type "type", address_line1 "address", city "city", region "region", postal_code "postalCode", image_data "image" FROM property WHERE business_id=HEXTORAW(:b) ORDER BY name`, { b });
   const us = await rows(`SELECT RAWTOHEX(property_id) "pid", COUNT(*) "n", SUM(CASE WHEN status='OCCUPIED' THEN 1 ELSE 0 END) "occ" FROM unit WHERE business_id=HEXTORAW(:b) GROUP BY property_id`, { b });
   const ls = inPeriod(await loadLines(), 'month');
   res.json(ps.map((p) => { const u = us.find((x) => x.pid === p.id) || { n: 0, occ: 0 }; const s = summarize(ls.filter((l) => l.propertyId === p.id)); return { ...p, type: PT[p.type], unitCount: u.n, occupied: u.occ, income: s.income, noi: s.noi }; }));
@@ -22,9 +23,11 @@ async function validateProperty(d, id) {
   else if ((await rows(`SELECT RAWTOHEX(id) "id" FROM property WHERE business_id=HEXTORAW(:b) AND LOWER(name)=LOWER(:n)`, { b, n: name })).some((x) => x.id !== id)) e.name = 'A property with this name already exists.';
   if (!PROPERTY_TYPE[d.type]) e.type = 'Choose a property type.';
   for (const [k, msg] of Object.entries(ADDRESS_REQUIRED)) if (!text(d[k])) e[k] = msg;
+  if (d.image && (typeof d.image !== 'string' || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(d.image))) e.image = 'Use a JPEG, PNG or WebP picture.';
+  else if (d.image && d.image.length > 700000) e.image = 'That picture is too large. Choose a smaller one.';
   fail(e);
 }
-const propFields = (d) => ({ name: text(d.name), type: PROPERTY_TYPE[d.type], address_line1: text(d.address), city: text(d.city), region: text(d.region), postal_code: text(d.postalCode) });
+const propFields = (d) => ({ name: text(d.name), type: PROPERTY_TYPE[d.type], address_line1: text(d.address), city: text(d.city), region: text(d.region), postal_code: text(d.postalCode), ...(d.image === undefined ? {} : { image_data: d.image || null }) });
 properties.post('/', wrap(async (req, res) => {
   const d = req.body || {}; await validateProperty(d, null); const id = newId(); const b = await businessId();
   await tx((c) => insert(c, 'property', { id, business_id: b, ...propFields(d) })); res.status(201).json({ id });
@@ -39,10 +42,16 @@ units.get('/', wrap(async (req, res) => {
   const b = await businessId(); const binds = { b };
   const w = byProperty('u.property_id', req.query.property, binds);
   const r = await rows(`SELECT RAWTOHEX(u.id) "id", RAWTOHEX(u.property_id) "propertyId", p.name "propertyName", u.unit_number "number", u.unit_type "type",
-      u.bedrooms "bedrooms", u.bathrooms "bathrooms", u.market_rent_cents "rent", u.status "status", RAWTOHEX(l.tenant_id) "tenantId", t.first_name || ' ' || t.last_name "tenantName"
-    FROM unit u JOIN property p ON p.id=u.property_id LEFT JOIN lease l ON l.unit_id=u.id AND l.status IN ${CURRENT_LEASE} LEFT JOIN tenant t ON t.id=l.tenant_id
-    WHERE u.business_id=HEXTORAW(:b)${w} ORDER BY p.name, u.unit_number`, binds);
-  res.json(r.map((x) => ({ ...x, status: x.status.toLowerCase() })));
+      u.bedrooms "bedrooms", u.bathrooms "bathrooms", u.market_rent_cents "rent", u.status "status"
+    FROM unit u JOIN property p ON p.id=u.property_id WHERE u.business_id=HEXTORAW(:b)${w} ORDER BY p.name, u.unit_number`, binds);
+  // Every current tenant of each unit (a unit can have several), and the unpaid rent per unit and per tenant.
+  const ts = await rows(`SELECT RAWTOHEX(l.unit_id) "unitId", RAWTOHEX(t.id) "id", t.first_name || ' ' || t.last_name "name", t.status "status", t.email "email", t.phone "phone", t.photo_data "photo", TO_CHAR(t.move_in_date,'YYYY-MM-DD') "moveIn"
+    FROM lease l JOIN tenant t ON t.id=l.tenant_id WHERE l.business_id=HEXTORAW(:b) AND l.status IN ${CURRENT_LEASE} ORDER BY t.last_name, t.first_name`, { b });
+  const ar = (await loadLines({ property: req.query.property || null })).filter((l) => l.systemKey === 'AR');
+  const byUnit = {}; const byTenant = {};
+  ar.forEach((l) => { if (l.unitId) byUnit[l.unitId] = (byUnit[l.unitId] || 0) + nat(l); if (l.tenantId) byTenant[l.tenantId] = (byTenant[l.tenantId] || 0) + nat(l); });
+  res.json(r.map((x) => ({ ...x, status: x.status.toLowerCase(), pending: byUnit[x.id] || 0,
+    tenants: ts.filter((t) => t.unitId === x.id).map((t) => ({ id: t.id, name: t.name, status: TI[t.status], email: t.email, phone: t.phone, photo: t.photo, moveIn: t.moveIn, balance: byTenant[t.id] || 0 })) })));
 }));
 async function validateUnit(d, id) {
   const e = {}; const b = await businessId(); const num = text(d.number);

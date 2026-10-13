@@ -11,7 +11,7 @@ The browser never talks to the database. Database credentials live only in serve
 | Folder | What it is |
 |---|---|
 | database/ | schema_oracle.sql (47 tables) and drop_all_oracle.sql, to run in FreeSQL |
-| server/ | API: dashboard, chart of accounts, properties, units, tenants. Seed script and connection check |
+| server/ | API: dashboard, chart of accounts, properties, units, tenants, credit notes, vendors, property bills and bill schedules. Seed script and connection check |
 | web/ | React + Vite app: Dashboard, Properties, Tenants, Chart of accounts |
 | docs/schema.prisma | The data model in readable form. tools/prisma_to_oracle.py turns it into database/schema_oracle.sql |
 | prototype/, design/ | The earlier single-file prototype and the design pages (reference only) |
@@ -38,5 +38,5 @@ NOT tested: the SQL against a real Oracle database, npm install, or running the 
 
 ## Not built yet
 Login and roles (the API serves the single demo business with no authentication), rent charges and payments,
-invoices, credit notes, bills, banking, documents, e-signatures, notifications. The database tables for them exist.
+invoices, applying credit notes to rent charges, bills, banking, documents, e-signatures, notifications. The database tables for them exist.
 Do not store real tenant data until login is added and you have checked FreeSQL's terms.

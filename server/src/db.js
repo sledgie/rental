@@ -29,7 +29,7 @@ export async function tx(fn) {
 
 export const newId = () => randomUUID().replace(/-/g, '').toUpperCase();
 const RAWCOL = /(^id$|_id$)/;
-const DATECOL = new Set(['entry_date', 'start_date', 'end_date', 'move_in_date', 'move_out_date', 'terminated_at', 'available_on']);
+const DATECOL = new Set(['entry_date', 'start_date', 'end_date', 'move_in_date', 'move_out_date', 'terminated_at', 'available_on', 'issue_date', 'due_date']);
 const ph = (c) => (RAWCOL.test(c) ? `HEXTORAW(:${c})` : DATECOL.has(c) ? `TO_DATE(:${c},'YYYY-MM-DD')` : `:${c}`);
 export async function insert(conn, table, row) {
   const cols = Object.keys(row).filter((k) => row[k] !== undefined);

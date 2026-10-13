@@ -10,5 +10,6 @@ export const api = {
   get: (p) => req(p),
   post: (p, b = {}) => req(p, 'POST', b),
   put: (p, b) => req(p, 'PUT', b),
+  del: (p) => req(p, 'DELETE'),
 };
 export const qs = (o) => { const p = new URLSearchParams(Object.entries(o).filter(([, v]) => v)); const s = p.toString(); return s ? `?${s}` : ''; };

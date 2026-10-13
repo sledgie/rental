@@ -1,13 +1,14 @@
 // Database access for reports. The aggregation itself lives in ledger.js.
 import { rows, businessId, byProperty } from './db.js';
 import { today } from './util.js';
+import { listSchedules, ATTENTION } from './schedules.js';
 import { balanceBy, buildDashboard, buildDrill } from './ledger.js';
 
 export async function loadLines({ to = today(), property = null } = {}) {
   const b = await businessId(); const binds = { b, t: to };
   const w = "l.business_id=HEXTORAW(:b) AND l.entry_date<=TO_DATE(:t,'YYYY-MM-DD')" + byProperty('l.property_id', property, binds);
   return rows(`SELECT RAWTOHEX(l.account_id) "accountId", a.code "code", a.name "accountName", a.type "type", a.subtype "subtype", a.system_key "systemKey",
-      l.debit_cents "dr", l.credit_cents "cr", RAWTOHEX(l.property_id) "propertyId", u.unit_number "unit", RAWTOHEX(l.tenant_id) "tenantId",
+      l.debit_cents "dr", l.credit_cents "cr", RAWTOHEX(l.property_id) "propertyId", u.unit_number "unit", RAWTOHEX(l.unit_id) "unitId", RAWTOHEX(l.tenant_id) "tenantId",
       TO_CHAR(l.entry_date,'YYYY-MM-DD') "date", e.memo "memo", e.source "source"
     FROM journal_entry_line l JOIN journal_entry e ON e.id=l.entry_id JOIN account a ON a.id=l.account_id LEFT JOIN unit u ON u.id=l.unit_id
     WHERE ${w} ORDER BY l.entry_date, e.entry_number`, binds);
@@ -33,7 +34,14 @@ export async function loadEndingLeases(property = null, days = 60) {
 export async function dashboard(property, period) {
   const [lines, units, names, leases] = await Promise.all([loadLines({ property }), loadUnits(property), loadNames(), loadEndingLeases(property)]);
   const props = names.propertyList.filter((p) => !property || p.id === property);
-  return buildDashboard({ lines, period, units, props, leases });
+  const out = buildDashboard({ lines, period, units, props, leases });
+  // Scheduled bills that are overdue or coming up soon.
+  const sched = (await listSchedules(property)).filter((x) => ATTENTION.has(x.state)).sort((a, b) => (a.next < b.next ? -1 : 1));
+  out.schedule = sched;
+  sched.forEach((x) => out.alerts.push(x.state === 'overdue'
+    ? { tone: 'danger', t: 'Scheduled bill overdue', s: `${x.label}, ${x.vendorName}, ${x.propertyName}: ${x.overdue} overdue since ${x.oldestOverdue}` }
+    : { tone: 'warn', t: 'Scheduled bill due soon', s: `${x.label}, ${x.vendorName}, ${x.propertyName}: due ${x.next}${x.daysUntil === 0 ? ' (today)' : ` in ${x.daysUntil} day${x.daysUntil === 1 ? '' : 's'}`}` }));
+  return out;
 }
 export async function drill(kind, property, period) {
   const [lines, names] = await Promise.all([loadLines({ property }), loadNames()]);

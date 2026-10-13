@@ -7,10 +7,14 @@ import { dashboard, drill, loadNames } from './reports.js';
 import { router as accounts } from './accounts.js';
 import { properties, units } from './properties.js';
 import { router as tenants } from './tenants.js';
+import { router as creditNotes } from './creditNotes.js';
+import { router as bills } from './bills.js';
+import { router as vendors } from './vendors.js';
+import { router as schedules } from './schedules.js';
 
 const app = express();
 app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173' }));
-app.use(express.json({ limit: '100kb' }));
+app.use(express.json({ limit: '1mb' }));
 
 app.get('/api/health', wrap(async (req, res) => { await query('SELECT 1 FROM dual'); res.json({ ok: true }); }));
 app.get('/api/dashboard', wrap(async (req, res) => res.json(await dashboard(req.query.property || null, periodParam(req.query.period)))));
@@ -22,6 +26,10 @@ app.use('/api/accounts', accounts);
 app.use('/api/properties', properties);
 app.use('/api/units', units);
 app.use('/api/tenants', tenants);
+app.use('/api/credit-notes', creditNotes);
+app.use('/api/bills', bills);
+app.use('/api/vendors', vendors);
+app.use('/api/bill-schedules', schedules);
 app.get('/api/names', wrap(async (req, res) => res.json((await loadNames()).propertyList)));
 
 app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
