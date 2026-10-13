@@ -65,29 +65,15 @@ function Schedules({ list, actions }) {
   );
 }
 
-function BillMenu({ onPick }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="menu">
-      <button className="btn sm" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>Add bill &#9662;</button>
-      {open && <>
-        <div className="menu-back" onClick={() => setOpen(false)} />
-        <div className="menu-list" role="menu">{BILL_TYPES.map(([k, l]) => <button key={k} role="menuitem" onClick={() => { setOpen(false); onPick(k); }}>{l}</button>)}</div>
-      </>}
-    </div>
-  );
-}
-
 function BillForm({ property, type, vendors, onClose, onSaved }) {
-  const label = BILL_TYPES.find(([k]) => k === type)?.[1];
   const form = useForm(
     { type, propertyId: property.id, vendorId: null, payee: '', date: todayStr(), due: todayStr(), amount: '', notes: '' },
-    (f) => api.post('/bills', f),
-    () => onSaved(`${label} bill added to ${property.name}`),
+    (f) => api.post('/bills', f).then((r) => ({ ...r, type: f.type })),
+    (r) => onSaved(`${BILL_TYPES.find(([k]) => k === r.type)?.[1] || 'Expense'} added to ${property.name}`),
   );
   const { f, set, setF, errors } = form;
   return (
-    <Modal title={`New ${label.toLowerCase()} bill`} onClose={onClose} footer={<FormFooter busy={form.busy} onSave={form.submit} onClose={onClose} />}>
+    <Modal title={`Add expense · ${property.name}`} onClose={onClose} footer={<FormFooter busy={form.busy} onSave={form.submit} onClose={onClose} />}>
       <FormError errors={errors} />
       <Field label="Bill type" required error={errors.type}><select className="inp" value={f.type} onChange={set('type')}>{BILL_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
       <Field label="Property"><input className="inp" value={property.name} disabled /></Field>
@@ -242,7 +228,7 @@ function PropertyCard({ p, units, schedules, actions, onEdit, onAddUnit, onEditU
 
         <div className="pfoot">
           <button className="btn sm" onClick={onEdit}><Icon name="pencil" size={13} /> Edit property</button>
-          <BillMenu onPick={onBill} />
+          <button className="btn sm" onClick={onBill}><Icon name="receipt" size={13} /> Add Expenses</button>
           <button className="btn sm" onClick={onSchedule}>Schedule bill</button>
         </div>
         <Schedules list={schedules} actions={actions} />
@@ -301,7 +287,7 @@ export default function Properties({ property, notify, refreshProps }) {
       <Carousel items={list} labels={list.map((p) => p.name)} render={(p) => (
         <PropertyCard p={p} units={units.filter((u) => u.propertyId === p.id)} schedules={(ss.data || []).filter((x) => x.propertyId === p.id)} actions={actions}
           onEdit={() => setModal({ kind: 'prop', p })} onAddUnit={() => setModal({ kind: 'unit', defaultProperty: p.id })} onEditUnit={(u) => setModal({ kind: 'unit', u })}
-          onBill={(type) => setModal({ kind: 'bill', p, type })} onSchedule={() => setModal({ kind: 'schedule', p })} />
+          onBill={() => setModal({ kind: 'bill', p, type: 'electricity' })} onSchedule={() => setModal({ kind: 'schedule', p })} />
       )} />
       {modal?.kind === 'prop' && <PropertyForm property={modal.p} onClose={() => setModal(null)} onSaved={saved} />}
       {modal?.kind === 'bill' && <BillForm property={modal.p} type={modal.type} vendors={vs.data || []} onClose={() => setModal(null)} onSaved={saved} />}
