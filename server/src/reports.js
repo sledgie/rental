@@ -1,5 +1,5 @@
 // Database access for reports. The aggregation itself lives in ledger.js.
-import { rows, businessId, byProperty } from './db.js';
+import { rows, businessId, byProperty, CURRENT_LEASE } from './db.js';
 import { today } from './util.js';
 import { listSchedules, ATTENTION } from './schedules.js';
 import { balanceBy, buildDashboard, buildDrill } from './ledger.js';
@@ -49,3 +49,16 @@ export async function drill(kind, property, period) {
   return buildDrill({ kind, lines, period, names });
 }
 export async function arByTenant(property = null) { return balanceBy(await loadLines({ property }), 'AR', (l) => l.tenantId || ''); }
+
+// Rent owed by a household = the receivable of everyone on the current lease (primary, co-tenants and occupants).
+// Returns { byTenant, byUnit } for people on a lease and { own } (the person's own receivable) for everyone else.
+export async function householdBalances(property = null) {
+  const b = await businessId();
+  const [own, ms] = await Promise.all([arByTenant(property), rows(`SELECT RAWTOHEX(lt.lease_id) "leaseId", RAWTOHEX(l.unit_id) "unitId", RAWTOHEX(lt.tenant_id) "tenantId"
+    FROM lease_tenant lt JOIN lease l ON l.id=lt.lease_id WHERE l.business_id=HEXTORAW(:b) AND l.status IN ${CURRENT_LEASE}`, { b })]);
+  const byLease = {};
+  ms.forEach((m) => { byLease[m.leaseId] = (byLease[m.leaseId] || 0) + (own[m.tenantId] || 0); });
+  const byTenant = {}; const byUnit = {};
+  ms.forEach((m) => { byTenant[m.tenantId] = byLease[m.leaseId]; byUnit[m.unitId] = byLease[m.leaseId]; });
+  return { byTenant, byUnit, own };
+}

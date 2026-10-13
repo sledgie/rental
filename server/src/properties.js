@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import { rows, tx, insert, update, newId, businessId, byProperty, CURRENT_LEASE } from './db.js';
-import { loadLines } from './reports.js';
-import { summarize, inPeriod, nat } from './ledger.js';
+import { loadLines, householdBalances } from './reports.js';
+import { summarize, inPeriod } from './ledger.js';
 import { fail, HttpError, wrap, PROPERTY_TYPE, UNIT_STATUSES, TENANT_STATUS, inv, text, optText } from './util.js';
 
 export const properties = Router();
 export const units = Router();
 const PT = inv(PROPERTY_TYPE);
 const TI = inv(TENANT_STATUS);
+const RI = { PRIMARY: 'primary', CO_TENANT: 'co_tenant', OCCUPANT: 'occupant' };
 
 properties.get('/', wrap(async (req, res) => {
   const b = await businessId();
@@ -44,14 +45,13 @@ units.get('/', wrap(async (req, res) => {
   const r = await rows(`SELECT RAWTOHEX(u.id) "id", RAWTOHEX(u.property_id) "propertyId", p.name "propertyName", u.unit_number "number", u.unit_type "type",
       u.bedrooms "bedrooms", u.bathrooms "bathrooms", u.market_rent_cents "rent", u.status "status"
     FROM unit u JOIN property p ON p.id=u.property_id WHERE u.business_id=HEXTORAW(:b)${w} ORDER BY p.name, u.unit_number`, binds);
-  // Every current tenant of each unit (a unit can have several), and the unpaid rent per unit and per tenant.
-  const ts = await rows(`SELECT RAWTOHEX(l.unit_id) "unitId", RAWTOHEX(t.id) "id", t.first_name || ' ' || t.last_name "name", t.status "status", t.email "email", t.phone "phone", t.photo_data "photo", TO_CHAR(t.move_in_date,'YYYY-MM-DD') "moveIn"
-    FROM lease l JOIN tenant t ON t.id=l.tenant_id WHERE l.business_id=HEXTORAW(:b) AND l.status IN ${CURRENT_LEASE} ORDER BY t.last_name, t.first_name`, { b });
-  const ar = (await loadLines({ property: req.query.property || null })).filter((l) => l.systemKey === 'AR');
-  const byUnit = {}; const byTenant = {};
-  ar.forEach((l) => { if (l.unitId) byUnit[l.unitId] = (byUnit[l.unitId] || 0) + nat(l); if (l.tenantId) byTenant[l.tenantId] = (byTenant[l.tenantId] || 0) + nat(l); });
-  res.json(r.map((x) => ({ ...x, status: x.status.toLowerCase(), pending: byUnit[x.id] || 0,
-    tenants: ts.filter((t) => t.unitId === x.id).map((t) => ({ id: t.id, name: t.name, status: TI[t.status], email: t.email, phone: t.phone, photo: t.photo, moveIn: t.moveIn, balance: byTenant[t.id] || 0 })) })));
+  // Everyone on each unit's lease (primary first, then co-tenants, then occupants) and the household's unpaid rent.
+  const ts = await rows(`SELECT RAWTOHEX(l.unit_id) "unitId", RAWTOHEX(t.id) "id", t.first_name || ' ' || t.last_name "name", t.status "status", lt.role "role", t.email "email", t.phone "phone", t.photo_data "photo", TO_CHAR(t.move_in_date,'YYYY-MM-DD') "moveIn"
+    FROM lease_tenant lt JOIN lease l ON l.id=lt.lease_id JOIN tenant t ON t.id=lt.tenant_id WHERE l.business_id=HEXTORAW(:b) AND l.status IN ${CURRENT_LEASE}
+    ORDER BY CASE lt.role WHEN 'PRIMARY' THEN 0 WHEN 'CO_TENANT' THEN 1 ELSE 2 END, t.last_name, t.first_name`, { b });
+  const hh = await householdBalances(req.query.property || null);
+  res.json(r.map((x) => ({ ...x, status: x.status.toLowerCase(), pending: hh.byUnit[x.id] || 0,
+    tenants: ts.filter((t) => t.unitId === x.id).map((t) => ({ id: t.id, name: t.name, status: TI[t.status], role: RI[t.role], email: t.email, phone: t.phone, photo: t.photo, moveIn: t.moveIn, balance: t.role === 'OCCUPANT' ? 0 : (hh.byTenant[t.id] || 0) })) })));
 }));
 async function validateUnit(d, id) {
   const e = {}; const b = await businessId(); const num = text(d.number);

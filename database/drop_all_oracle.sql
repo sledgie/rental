@@ -1,4 +1,5 @@
 -- Removes every table created by schema_oracle.sql (data is lost).
+DROP TABLE lease_tenant CASCADE CONSTRAINTS PURGE;
 DROP TABLE bill_schedule_run CASCADE CONSTRAINTS PURGE;
 DROP TABLE bill_schedule CASCADE CONSTRAINTS PURGE;
 DROP TABLE webhook_delivery CASCADE CONSTRAINTS PURGE;

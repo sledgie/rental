@@ -1052,3 +1052,16 @@ CREATE TABLE bill_schedule_run (
   CONSTRAINT uq_bill_schedule_run UNIQUE (schedule_id, due_date)
 );
 ALTER TABLE bill_schedule_run ADD CONSTRAINT fk_bill_schedule_run FOREIGN KEY (schedule_id) REFERENCES bill_schedule (id) ON DELETE CASCADE;
+
+-- Households: who is on each lease (also available on its own as add_lease_tenant.sql)
+CREATE TABLE lease_tenant (
+  id RAW(16) DEFAULT SYS_GUID() NOT NULL,
+  lease_id RAW(16) NOT NULL,
+  tenant_id RAW(16) NOT NULL,
+  role VARCHAR2(20 CHAR) NOT NULL,
+  created_at TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,
+  CONSTRAINT pk_lease_tenant PRIMARY KEY (id),
+  CONSTRAINT ck_lease_tenant_role CHECK (role IN ('PRIMARY','CO_TENANT','OCCUPANT')),
+  CONSTRAINT uq_lease_tenant UNIQUE (lease_id, tenant_id)
+);
+ALTER TABLE lease_tenant ADD CONSTRAINT fk_lease_tenant_lease FOREIGN KEY (lease_id) REFERENCES lease (id) ON DELETE CASCADE;

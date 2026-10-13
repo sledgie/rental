@@ -5,11 +5,30 @@ import { Avatar, PhotoField } from '../photo.jsx';
 import { Badge, Chips, Field, FormError, FormFooter, Modal, PageHeader, SearchBox, Status, useForm, useLoad } from '../ui.jsx';
 
 const TSTATUS = { applicant: ['Applicant', 'b-sys'], active: ['Active', 'b-ok'], pending_in: ['Pending move-in', 'b-warn'], pending_out: ['Pending move-out', 'b-warn'], past: ['Past tenant', 'b-off'] };
+const ROLES = { primary: ['Primary tenant', 'b-sys'], co_tenant: ['Co-tenant', 'b-ok'], occupant: ['Occupant', 'b-off'] };
 const TABS = [['all', 'All'], ['active', 'Active'], ['applicant', 'Applicants'], ['pending_in', 'Pending move-in'], ['pending_out', 'Pending move-out'], ['past', 'Past']];
+
+// Who is responsible for the unit: shown when someone else already lives there.
+function RoleField({ unit, tenantId, value, onChange, error }) {
+  if (!unit) return null;
+  const others = unit.tenants.filter((t) => t.id !== tenantId);
+  if (!others.length) return <div className="sub" style={{ marginTop: -4 }}>The first person on a unit becomes its primary tenant, responsible for the rent.</div>;
+  const primary = others.find((t) => t.role === 'primary');
+  return (
+    <Field label="Role on this unit" required error={error}
+      hint={`${primary ? `${primary.name} is the primary tenant. ` : ''}The balance is shared by the whole household. Occupants (for example children) are not on the lease and owe nothing.`}>
+      <select className="inp" value={value} onChange={onChange}>
+        <option value="co_tenant">Co-tenant (on the lease, can pay)</option>
+        <option value="occupant">Occupant (not on the lease)</option>
+        <option value="primary">Primary tenant (responsible for the rent)</option>
+      </select>
+    </Field>
+  );
+}
 
 function TenantForm({ tenant, units, presetUnit, onClose, onSaved }) {
   const form = useForm(
-    { first: tenant?.first || '', last: tenant?.last || '', email: tenant?.email || '', phone: tenant?.phone || '', status: tenant?.status || (presetUnit ? 'active' : 'applicant'), unitId: tenant?.unitId || presetUnit || '', photo: tenant?.photo || '', moveIn: tenant?.moveIn || (presetUnit ? new Date().toISOString().slice(0, 10) : '') },
+    { first: tenant?.first || '', last: tenant?.last || '', email: tenant?.email || '', phone: tenant?.phone || '', status: tenant?.status || (presetUnit ? 'active' : 'applicant'), unitId: tenant?.unitId || presetUnit || '', role: tenant?.role || 'co_tenant', photo: tenant?.photo || '', moveIn: tenant?.moveIn || (presetUnit ? new Date().toISOString().slice(0, 10) : '') },
     (f) => (tenant ? api.put(`/tenants/${tenant.id}`, f) : api.post('/tenants', f)),
     () => onSaved(tenant ? 'Tenant saved' : 'Tenant added'),
   );
@@ -29,6 +48,7 @@ function TenantForm({ tenant, units, presetUnit, onClose, onSaved }) {
       <Field label="Unit" hint="A unit can have more than one tenant. Choosing one creates the lease." error={errors.unit}>
         <select className="inp" value={f.unitId} onChange={set('unitId')}><option value="">None</option>{options.map((u) => <option key={u.id} value={u.id}>{u.propertyName} &middot; {u.number} &middot; {money0(u.rent || 0)}/mo</option>)}</select>
       </Field>
+      <RoleField unit={units.find((u) => u.id === f.unitId)} tenantId={tenant?.id} value={f.role} onChange={set('role')} error={errors.role} />
       <Field label="Move-in date" error={errors.moveIn}><input className="inp" type="date" value={f.moveIn} onChange={set('moveIn')} /></Field>
     </Modal>
   );
@@ -58,14 +78,14 @@ export default function Tenants({ property, notify, refreshProps, params = {} })
       <Status loading={loading && !data} error={error} onRetry={reload} />
       {data && (
         <div className="card" style={{ padding: 8 }}><div className="tw"><table>
-          <thead><tr><th>Tenant</th><th>Unit</th><th className="r">Rent</th><th className="r">Balance</th><th>Status</th><th /></tr></thead>
+          <thead><tr><th>Tenant</th><th>Unit</th><th className="r">Rent</th><th className="r">Household balance</th><th>Status</th><th /></tr></thead>
           <tbody>
             {list.map((t) => (
               <tr key={t.id}>
-                <td><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Avatar photo={t.photo} size={34} name={`${t.first} ${t.last}`} /><div><b>{t.first} {t.last}</b><div className="sub" style={{ margin: 0, fontSize: 12 }}>{t.email || 'No email'}</div></div></div></td>
+                <td><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Avatar photo={t.photo} size={34} name={`${t.first} ${t.last}`} /><div><b>{t.first} {t.last}</b> {t.role && t.unitNumber && <Badge cls={ROLES[t.role][1]}>{ROLES[t.role][0]}</Badge>}<div className="sub" style={{ margin: 0, fontSize: 12 }}>{t.email || 'No email'}</div></div></div></td>
                 <td>{t.unitNumber ? `${t.propertyName} \u00b7 ${t.unitNumber}` : '-'}</td>
-                <td className="r">{t.rent ? money0(t.rent) : '-'}</td>
-                <td className="r">{t.balance > 0 ? <b className="bad">{money(t.balance)}</b> : money(t.balance)}</td>
+                <td className="r">{t.rent && t.role !== 'occupant' ? money0(t.rent) : '-'}</td>
+                <td className="r" title={t.role ? 'Balance of the whole household' : undefined}>{t.role === 'occupant' ? '-' : t.balance > 0 ? <b className="bad">{money(t.balance)}</b> : money(t.balance)}</td>
                 <td><Badge cls={TSTATUS[t.status][1]}>{TSTATUS[t.status][0]}</Badge></td>
                 <td className="r" style={{ whiteSpace: 'nowrap' }}><button className="btn link" onClick={() => setModal({ t })}>Edit</button>{(t.status === 'active' || t.status === 'pending_out') && <button className="btn link dng" onClick={() => moveOut(t)}>Move out</button>}</td>
               </tr>

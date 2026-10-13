@@ -3,6 +3,7 @@ import { api, qs } from '../api.js';
 import { money, money0 } from '../format.js';
 import { Icon, propertyHues } from '../icons.jsx';
 import { Avatar, shrinkImage } from '../photo.jsx';
+import { ContactDialog } from '../contact.jsx';
 import { BILL_TYPES, ScheduleForm, ScheduleRow, VendorPicker, todayStr, useScheduleActions } from '../billing.jsx';
 import { Badge, Chips, Field, FormError, FormFooter, Modal, PageHeader, Status, useForm, useLoad } from '../ui.jsx';
 
@@ -114,33 +115,42 @@ function UnitForm({ unit, properties, defaultProperty, onClose, onSaved }) {
 
 const TYPE_ICON = { 'Single family': 'house', Condo: 'building' };
 
+const ROLE_LABEL = { primary: 'Primary tenant', co_tenant: 'Co-tenant', occupant: 'Occupant' };
 const TENANT_STATUS = { applicant: 'Applicant', active: 'Active', pending_in: 'Pending move-in', pending_out: 'Pending move-out', past: 'Past tenant' };
 
 // Tenant name that links to the Tenants page and shows a details card (with picture) on hover or keyboard focus.
 function TenantLink({ t, unit }) {
-  const [pos, setPos] = useState(null);
+  const [pos, setPos] = useState(null); const [dialog, setDialog] = useState(null); const timer = useRef();
+  // The card stays open while the pointer or keyboard focus is on the name or on the card itself, so its links can be clicked.
+  const keep = () => clearTimeout(timer.current);
+  const hide = () => { keep(); timer.current = setTimeout(() => setPos(null), 200); };
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const open = (kind) => { keep(); setPos(null); setDialog(kind); };
   const show = (e) => {
+    keep();
     const r = e.currentTarget.getBoundingClientRect();
     const left = Math.min(Math.max(8, r.left), window.innerWidth - 300);
     setPos(r.top > 260 ? { left, bottom: window.innerHeight - r.top + 8 } : { left, top: r.bottom + 8 });
   };
   return (
     <>
-      <a className="tlink" href={`#/tenants?tenant=${t.id}`} onMouseEnter={show} onMouseLeave={() => setPos(null)} onFocus={show} onBlur={() => setPos(null)} aria-describedby={pos ? `tp-${t.id}` : undefined}>{t.name}</a>
+      <a className="tlink" href={`#/tenants?tenant=${t.id}`} onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide} aria-describedby={pos ? `tp-${t.id}` : undefined}>{t.name}</a>
       {pos && (
-        <div className="tpop" id={`tp-${t.id}`} role="tooltip" style={pos}>
+        <div className="tpop" id={`tp-${t.id}`} role="dialog" aria-label={`${t.name} details`} style={pos} onMouseEnter={keep} onMouseLeave={hide} onFocus={keep} onBlur={hide}>
           <div className="tpop-head">
             <Avatar photo={t.photo} size={64} name={t.name} />
             <div style={{ minWidth: 0 }}><b style={{ fontSize: 16 }}>{t.name}</b><div><Badge cls={t.status === 'active' ? 'b-ok' : t.status === 'past' ? 'b-off' : 'b-warn'}>{TENANT_STATUS[t.status] || t.status}</Badge></div></div>
           </div>
           <div className="tpop-row"><span>Unit</span><b>{unit}</b></div>
-          <div className="tpop-row"><span>Email</span><b>{t.email || '-'}</b></div>
-          <div className="tpop-row"><span>Phone</span><b>{t.phone || '-'}</b></div>
+          <div className="tpop-row"><span>Role</span><b>{ROLE_LABEL[t.role] || '-'}</b></div>
+          <div className="tpop-row"><span>Email</span>{t.email ? <button type="button" className="tcontact" onClick={() => open('email')}>{t.email}</button> : <b>-</b>}</div>
+          <div className="tpop-row"><span>Phone</span>{t.phone ? <button type="button" className="tcontact" onClick={() => open('phone')}>{t.phone}</button> : <b>-</b>}</div>
           <div className="tpop-row"><span>Moved in</span><b>{t.moveIn || '-'}</b></div>
-          <div className="tpop-row"><span>Balance</span><b className={t.balance > 0 ? 'bad' : ''}>{t.balance > 0 ? `${money(t.balance)} owing` : 'Paid up'}</b></div>
+          <div className="tpop-row"><span>Household balance</span>{t.role === 'occupant' ? <b>Not on the lease</b> : <b className={t.balance > 0 ? 'bad' : ''}>{t.balance > 0 ? `${money(t.balance)} owing` : 'Paid up'}</b>}</div>
           <div className="sub" style={{ margin: '8px 0 0', fontSize: 11 }}>Click the name to open in Tenants</div>
         </div>
       )}
+      {dialog && <ContactDialog kind={dialog} tenant={t} onClose={() => setDialog(null)} />}
     </>
   );
 }
@@ -166,14 +176,14 @@ function UnitTile({ u, onEdit }) {
         <Icon name="user" size={15} style={{ marginTop: 3, color: 'var(--muted)' }} />
         <div>
           {u.tenants.length ? u.tenants.map((t, i) => (
-            <span key={t.id}>{i > 0 && <span className="sep"> / </span>}<TenantLink t={t} unit={`${u.propertyName} \u00b7 ${u.number}`} /></span>
+            <span key={t.id}>{i > 0 && <span className="sep"> / </span>}<TenantLink t={t} unit={`${u.propertyName} \u00b7 ${u.number}`} />{t.role === 'primary' && u.tenants.length > 1 && <span className="rtag">Primary</span>}{t.role === 'occupant' && <span className="rtag o">Occupant</span>}</span>
           )) : <span className="sub" style={{ margin: 0 }}>No tenant</span>}
           {u.status !== 'maintenance' && u.status !== 'unavailable' && <a className="tadd" href={`#/tenants?add=${u.id}`}><Icon name="plus" size={12} /> Add tenant</a>}
         </div>
       </div>
       <div className={`upay ${owing ? 'owe' : 'ok'}`}>
         <Icon name={owing ? 'alert' : 'check'} size={14} />
-        {owing ? `Pending payment ${money(u.pending)}` : 'No pending payment'}
+        {owing ? `Pending payment ${money(u.pending)}${u.tenants.length > 1 ? ' (household)' : ''}` : 'No pending payment'}
       </div>
     </div>
   );

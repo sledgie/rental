@@ -40,7 +40,7 @@ async function accountId(b, where) {
 router.post('/', wrap(async (req, res) => {
   const d = req.body || {}; const cents = await validate(d); const b = await businessId();
   const [credits, adjust] = await Promise.all([accountId(b, "system_key='TENANT_CREDITS'"), accountId(b, "system_key='RENT_ADJUSTMENTS' OR code='4900'")]);
-  const lease = (await rows(`SELECT RAWTOHEX(id) "id", RAWTOHEX(unit_id) "unitId", RAWTOHEX(property_id) "propertyId" FROM lease WHERE tenant_id=HEXTORAW(:t) AND status IN ${CURRENT_LEASE}`, { t: d.tenantId }))[0] || {};
+  const lease = (await rows(`SELECT RAWTOHEX(id) "id", RAWTOHEX(unit_id) "unitId", RAWTOHEX(property_id) "propertyId" FROM lease WHERE status IN ${CURRENT_LEASE} AND id IN (SELECT lease_id FROM lease_tenant WHERE tenant_id=HEXTORAW(:t))`, { t: d.tenantId }))[0] || {};
   const id = newId(); const entryId = newId(); let number;
   await tx(async (c) => {
     const nEntry = (await c.execute('SELECT NVL(MAX(entry_number),0)+1 "n" FROM journal_entry WHERE business_id=HEXTORAW(:b)', { b })).rows[0].n;

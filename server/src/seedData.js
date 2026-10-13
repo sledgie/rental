@@ -34,6 +34,8 @@ export function buildSeed() {
   const T = [['t1', 'John', 'Smith', 'u101', '2026-09-01', '2027-08-31'], ['t2', 'Jane', 'Doe', 'u102', '2025-11-08', '2026-11-07'], ['t3', 'Bob', 'Wilson', 'u103', '2026-03-01', '2027-02-28'],
     ['t4', 'Maria', 'Lopez', 'u201', '2025-06-01', '2027-05-31'], ['t5', 'David', 'Chen', 'u202', '2025-08-01', '2027-07-31'], ['t6', 'Amir', 'Hassan', 'u301', '2024-10-01', '2027-09-30'], ['t7', 'Sofia', 'Rossi', 'u302', '2025-02-01', '2027-01-31']];
   const tenants = T.map(([key, f, l, , moveIn]) => ({ key, id: id(), business_id: business.id, first_name: f, last_name: l, email: `${f}.${l}@example.com`.toLowerCase(), status: 'ACTIVE', move_in_date: moveIn }));
+  // Household extras: Jane Doe's family. Mark is on the lease as a co-tenant; Lily is an occupant (not on the lease).
+  [['t8', 'Mark', 'Doe', 't2'], ['t9', 'Lily', 'Doe', 't2']].forEach(([key, f, l, of]) => tenants.push({ key, id: id(), business_id: business.id, first_name: f, last_name: l, email: `${f}.${l}@example.com`.toLowerCase(), status: 'ACTIVE', move_in_date: tenants.find((t) => t.key === of).move_in_date }));
   const tid = (k) => tenants.find((t) => t.key === k).id;
   const leases = T.map(([key, , , u, start, end]) => { const un = units.find((x) => x.key === u); return { id: id(), business_id: business.id, property_id: un.property_id, unit_id: un.id, tenant_id: tid(key), status: 'ACTIVE', start_date: start, end_date: end, monthly_rent_cents: un.market_rent_cents }; });
 
@@ -57,5 +59,8 @@ export function buildSeed() {
   entries.push(E('2026-09-20', 'Electricity bill, overdue', 'BILL', [L('5100', 42000, 0, 'p1'), L('2000', 0, 42000, 'p1')]));
   entries.push(E('2026-09-20', 'Credit notes CN-0001 and CN-0003', 'MANUAL', [L('4900', 50000, 0, 'p1'), L('2200', 0, 50000, 'p1')]));
   entries.push(E('2026-10-08', 'Credit note CN-0002, overpayment', 'MANUAL', [L('1000', 75000, 0, 'p1'), L('2200', 0, 75000, 'p1')]));
-  return { business, accounts, properties, units, tenants, leases, entries };
+  const members = leases.map((l) => ({ lease_id: l.id, tenant_id: l.tenant_id, role: 'PRIMARY' }));
+  const doeLease = leases.find((l) => l.tenant_id === tid('t2')).id;
+  members.push({ lease_id: doeLease, tenant_id: tid('t8'), role: 'CO_TENANT' }, { lease_id: doeLease, tenant_id: tid('t9'), role: 'OCCUPANT' });
+  return { business, accounts, properties, units, tenants, leases, members, entries };
 }
