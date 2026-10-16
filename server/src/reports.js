@@ -6,30 +6,30 @@ import { balanceBy, buildDashboard, buildDrill } from './ledger.js';
 
 export async function loadLines({ to = today(), property = null } = {}) {
   const b = await businessId(); const binds = { b, t: to };
-  const w = "l.business_id=HEXTORAW(:b) AND l.entry_date<=TO_DATE(:t,'YYYY-MM-DD')" + byProperty('l.property_id', property, binds);
-  return rows(`SELECT RAWTOHEX(l.account_id) "accountId", a.code "code", a.name "accountName", a.type "type", a.subtype "subtype", a.system_key "systemKey",
-      l.debit_cents "dr", l.credit_cents "cr", RAWTOHEX(l.property_id) "propertyId", u.unit_number "unit", RAWTOHEX(l.unit_id) "unitId", RAWTOHEX(l.tenant_id) "tenantId",
+  const w = "l.business_id=:b AND l.entry_date<=TO_DATE(:t,'YYYY-MM-DD')" + byProperty('l.property_id', property, binds);
+  return rows(`SELECT l.account_id::text "accountId", a.code "code", a.name "accountName", a.type "type", a.subtype "subtype", a.system_key "systemKey",
+      l.debit_cents "dr", l.credit_cents "cr", l.property_id::text "propertyId", u.unit_number "unit", l.unit_id::text "unitId", l.tenant_id::text "tenantId",
       TO_CHAR(l.entry_date,'YYYY-MM-DD') "date", e.memo "memo", e.source "source"
     FROM journal_entry_line l JOIN journal_entry e ON e.id=l.entry_id JOIN account a ON a.id=l.account_id LEFT JOIN unit u ON u.id=l.unit_id
     WHERE ${w} ORDER BY l.entry_date, e.entry_number`, binds);
 }
 export async function loadNames() {
   const b = await businessId();
-  const ps = await rows('SELECT RAWTOHEX(id) "id", name "name" FROM property WHERE business_id=HEXTORAW(:b) ORDER BY name', { b });
-  const ts = await rows('SELECT RAWTOHEX(id) "id", first_name || \' \' || last_name "name" FROM tenant WHERE business_id=HEXTORAW(:b)', { b });
+  const ps = await rows('SELECT id::text "id", name "name" FROM property WHERE business_id=:b ORDER BY name', { b });
+  const ts = await rows('SELECT id::text "id", first_name || \' \' || last_name "name" FROM tenant WHERE business_id=:b', { b });
   return { properties: Object.fromEntries(ps.map((p) => [p.id, p.name])), tenants: Object.fromEntries(ts.map((x) => [x.id, x.name])), propertyList: ps };
 }
 export async function loadUnits(property = null) {
   const b = await businessId(); const binds = { b };
   const w = byProperty('property_id', property, binds);
-  return rows(`SELECT RAWTOHEX(id) "id", RAWTOHEX(property_id) "propertyId", status "status" FROM unit WHERE business_id=HEXTORAW(:b)${w}`, binds);
+  return rows(`SELECT id::text "id", property_id::text "propertyId", status "status" FROM unit WHERE business_id=:b${w}`, binds);
 }
 export async function loadEndingLeases(property = null, days = 60) {
   const b = await businessId(); const binds = { b, d: days };
   const w = byProperty('l.property_id', property, binds);
   return rows(`SELECT p.name "propertyName", u.unit_number "unitNumber", t.first_name || ' ' || t.last_name "tenantName", TO_CHAR(l.end_date,'YYYY-MM-DD') "endDate"
     FROM lease l JOIN unit u ON u.id=l.unit_id JOIN property p ON p.id=l.property_id JOIN tenant t ON t.id=l.tenant_id
-    WHERE l.business_id=HEXTORAW(:b) AND l.status='ACTIVE' AND l.end_date BETWEEN TRUNC(SYSDATE) AND TRUNC(SYSDATE)+:d${w} ORDER BY l.end_date`, binds);
+    WHERE l.business_id=:b AND l.status='ACTIVE' AND l.end_date BETWEEN CURRENT_DATE AND CURRENT_DATE+(:d)::int${w} ORDER BY l.end_date`, binds);
 }
 export async function dashboard(property, period) {
   const [lines, units, names, leases] = await Promise.all([loadLines({ property }), loadUnits(property), loadNames(), loadEndingLeases(property)]);
@@ -54,8 +54,8 @@ export async function arByTenant(property = null) { return balanceBy(await loadL
 // Returns { byTenant, byUnit } for people on a lease and { own } (the person's own receivable) for everyone else.
 export async function householdBalances(property = null) {
   const b = await businessId();
-  const [own, ms] = await Promise.all([arByTenant(property), rows(`SELECT RAWTOHEX(lt.lease_id) "leaseId", RAWTOHEX(l.unit_id) "unitId", RAWTOHEX(lt.tenant_id) "tenantId"
-    FROM lease_tenant lt JOIN lease l ON l.id=lt.lease_id WHERE l.business_id=HEXTORAW(:b) AND l.status IN ${CURRENT_LEASE}`, { b })]);
+  const [own, ms] = await Promise.all([arByTenant(property), rows(`SELECT lt.lease_id::text "leaseId", l.unit_id::text "unitId", lt.tenant_id::text "tenantId"
+    FROM lease_tenant lt JOIN lease l ON l.id=lt.lease_id WHERE l.business_id=:b AND l.status IN ${CURRENT_LEASE}`, { b })]);
   const byLease = {};
   ms.forEach((m) => { byLease[m.leaseId] = (byLease[m.leaseId] || 0) + (own[m.tenantId] || 0); });
   const byTenant = {}; const byUnit = {};

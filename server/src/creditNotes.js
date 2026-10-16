@@ -11,18 +11,18 @@ const MAX_CENTS = 10000000; // $100,000 per credit note
 router.get('/', wrap(async (req, res) => {
   const b = await businessId(); const binds = { b };
   const w = byProperty('l.property_id', req.query.property, binds);
-  const r = await rows(`SELECT RAWTOHEX(cn.id) "id", cn.doc_number "number", cn.subject "subject", cn.reason "reason", cn.status "status",
-      TO_CHAR(cn.issue_date,'YYYY-MM-DD') "date", cn.amount_cents "amount", cn.applied_cents "applied", RAWTOHEX(cn.tenant_id) "tenantId",
+  const r = await rows(`SELECT cn.id::text "id", cn.doc_number "number", cn.subject "subject", cn.reason "reason", cn.status "status",
+      TO_CHAR(cn.issue_date,'YYYY-MM-DD') "date", cn.amount_cents "amount", cn.applied_cents "applied", cn.tenant_id::text "tenantId",
       t.first_name || ' ' || t.last_name "tenantName", p.name "propertyName", u.unit_number "unitNumber"
     FROM credit_note cn JOIN tenant t ON t.id=cn.tenant_id LEFT JOIN lease l ON l.id=cn.lease_id LEFT JOIN property p ON p.id=l.property_id LEFT JOIN unit u ON u.id=l.unit_id
-    WHERE cn.business_id=HEXTORAW(:b)${w} ORDER BY cn.issue_date DESC, cn.doc_number DESC`, binds);
+    WHERE cn.business_id=:b${w} ORDER BY cn.issue_date DESC, cn.doc_number DESC`, binds);
   res.json(r.map((x) => ({ ...x, status: STATUS[x.status], available: x.status === 'VOID' || x.status === 'DRAFT' ? 0 : x.amount - x.applied })));
 }));
 
 async function validate(d) {
   const e = {};
   if (!d.tenantId) e.tenant = 'Choose a tenant.';
-  else if (!(await rows('SELECT 1 "x" FROM tenant WHERE id=HEXTORAW(:t)', { t: d.tenantId })).length) e.tenant = 'Tenant not found.';
+  else if (!(await rows('SELECT 1 "x" FROM tenant WHERE id=:t', { t: d.tenantId })).length) e.tenant = 'Tenant not found.';
   const cents = Math.round(Number(d.amount) * 100);
   if (!d.amount || !Number.isFinite(cents) || cents <= 0) e.amount = 'Enter an amount greater than zero.';
   else if (cents > MAX_CENTS) e.amount = 'Keep the amount under $100,000.';
@@ -32,7 +32,7 @@ async function validate(d) {
   return cents;
 }
 async function accountId(b, where) {
-  const r = await rows(`SELECT RAWTOHEX(id) "id" FROM account WHERE business_id=HEXTORAW(:b) AND is_active=1 AND (${where}) ORDER BY code FETCH FIRST 1 ROWS ONLY`, { b });
+  const r = await rows(`SELECT id::text "id" FROM account WHERE business_id=:b AND is_active=1 AND (${where}) ORDER BY code LIMIT 1`, { b });
   if (!r.length) throw new HttpError(400, 'A required system account is missing from the chart of accounts (Tenant Credits or Rent Adjustments).');
   return r[0].id;
 }
@@ -40,11 +40,11 @@ async function accountId(b, where) {
 router.post('/', wrap(async (req, res) => {
   const d = req.body || {}; const cents = await validate(d); const b = await businessId();
   const [credits, adjust] = await Promise.all([accountId(b, "system_key='TENANT_CREDITS'"), accountId(b, "system_key='RENT_ADJUSTMENTS' OR code='4900'")]);
-  const lease = (await rows(`SELECT RAWTOHEX(id) "id", RAWTOHEX(unit_id) "unitId", RAWTOHEX(property_id) "propertyId" FROM lease WHERE status IN ${CURRENT_LEASE} AND id IN (SELECT lease_id FROM lease_tenant WHERE tenant_id=HEXTORAW(:t))`, { t: d.tenantId }))[0] || {};
+  const lease = (await rows(`SELECT id::text "id", unit_id::text "unitId", property_id::text "propertyId" FROM lease WHERE status IN ${CURRENT_LEASE} AND id IN (SELECT lease_id FROM lease_tenant WHERE tenant_id=:t)`, { t: d.tenantId }))[0] || {};
   const id = newId(); const entryId = newId(); let number;
   await tx(async (c) => {
-    const nEntry = (await c.execute('SELECT NVL(MAX(entry_number),0)+1 "n" FROM journal_entry WHERE business_id=HEXTORAW(:b)', { b })).rows[0].n;
-    const nCn = (await c.execute(`SELECT NVL(MAX(TO_NUMBER(SUBSTR(doc_number,4))),0)+1 "n" FROM credit_note WHERE business_id=HEXTORAW(:b) AND REGEXP_LIKE(doc_number,'^CN-[0-9]+$')`, { b })).rows[0].n;
+    const nEntry = (await c.execute('SELECT COALESCE(MAX(entry_number),0)+1 "n" FROM journal_entry WHERE business_id=:b', { b })).rows[0].n;
+    const nCn = (await c.execute(`SELECT COALESCE(MAX(CASE WHEN doc_number ~ '^CN-[0-9]+$' THEN SUBSTR(doc_number,4)::int END),0)+1 "n" FROM credit_note WHERE business_id=:b`, { b })).rows[0].n;
     number = `CN-${String(nCn).padStart(4, '0')}`;
     const memo = `Credit note ${number}: ${text(d.reason)}`.slice(0, 255);
     await insert(c, 'journal_entry', { id: entryId, business_id: b, entry_number: nEntry, entry_date: d.date, memo, source: 'MANUAL', source_type: 'credit_note', source_id: id });
@@ -61,19 +61,19 @@ router.post('/', wrap(async (req, res) => {
 // Cancels an unused credit note by posting the opposite entry.
 router.post('/:id/void', wrap(async (req, res) => {
   const id = req.params.id; const b = await businessId();
-  const cn = (await rows(`SELECT status "status", applied_cents "applied", RAWTOHEX(journal_entry_id) "entryId", doc_number "number" FROM credit_note WHERE id=HEXTORAW(:i) AND business_id=HEXTORAW(:b)`, { i: id, b }))[0];
+  const cn = (await rows(`SELECT status "status", applied_cents "applied", journal_entry_id::text "entryId", doc_number "number" FROM credit_note WHERE id=:i AND business_id=:b`, { i: id, b }))[0];
   if (!cn) throw new HttpError(404, 'Credit note not found.');
   if (cn.status === 'VOID') throw new HttpError(400, 'This credit note is already void.');
   if (cn.applied > 0) throw new HttpError(400, 'Part of this credit has already been used, so it cannot be voided.');
-  const ls = await rows(`SELECT RAWTOHEX(account_id) "accountId", debit_cents "dr", credit_cents "cr", RAWTOHEX(property_id) "propertyId", RAWTOHEX(unit_id) "unitId", RAWTOHEX(tenant_id) "tenantId", RAWTOHEX(lease_id) "leaseId"
-    FROM journal_entry_line WHERE entry_id=HEXTORAW(:e)`, { e: cn.entryId });
+  const ls = await rows(`SELECT account_id::text "accountId", debit_cents "dr", credit_cents "cr", property_id::text "propertyId", unit_id::text "unitId", tenant_id::text "tenantId", lease_id::text "leaseId"
+    FROM journal_entry_line WHERE entry_id=:e`, { e: cn.entryId });
   const rev = newId();
   await tx(async (c) => {
-    const n = (await c.execute('SELECT NVL(MAX(entry_number),0)+1 "n" FROM journal_entry WHERE business_id=HEXTORAW(:b)', { b })).rows[0].n;
+    const n = (await c.execute('SELECT COALESCE(MAX(entry_number),0)+1 "n" FROM journal_entry WHERE business_id=:b', { b })).rows[0].n;
     await insert(c, 'journal_entry', { id: rev, business_id: b, entry_number: n, entry_date: today(), memo: `Void credit note ${cn.number}`, source: 'REVERSAL', source_type: 'credit_note', source_id: id, reversal_of_id: cn.entryId });
     for (const l of ls) await insert(c, 'journal_entry_line', { id: newId(), business_id: b, entry_id: rev, account_id: l.accountId, debit_cents: l.cr, credit_cents: l.dr, entry_date: today(), property_id: l.propertyId, unit_id: l.unitId, tenant_id: l.tenantId, lease_id: l.leaseId });
-    await c.execute(`UPDATE journal_entry SET status='REVERSED' WHERE id=HEXTORAW(:e)`, { e: cn.entryId });
-    await c.execute(`UPDATE credit_note SET status='VOID', voided_at=SYSTIMESTAMP WHERE id=HEXTORAW(:i)`, { i: id });
+    await c.execute(`UPDATE journal_entry SET status='REVERSED' WHERE id=:e`, { e: cn.entryId });
+    await c.execute(`UPDATE credit_note SET status='VOID', voided_at=now() WHERE id=:i`, { i: id });
   });
   res.json({ id });
 }));

@@ -16,7 +16,7 @@ const app = express();
 app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173' }));
 app.use(express.json({ limit: '1mb' }));
 
-app.get('/api/health', wrap(async (req, res) => { await query('SELECT 1 FROM dual'); res.json({ ok: true }); }));
+app.get('/api/health', wrap(async (req, res) => { await query('SELECT 1'); res.json({ ok: true }); }));
 app.get('/api/dashboard', wrap(async (req, res) => res.json(await dashboard(req.query.property || null, periodParam(req.query.period)))));
 app.get('/api/drill', wrap(async (req, res) => {
   const out = await drill(String(req.query.kind || ''), req.query.property || null, periodParam(req.query.period));

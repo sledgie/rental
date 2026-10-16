@@ -1,6 +1,6 @@
 // Pure demo-data builder (no database access). Mirrors the ledger used by the earlier prototype.
 import { randomUUID } from 'node:crypto';
-const id = () => randomUUID().replace(/-/g, '').toUpperCase();
+const id = () => randomUUID();
 
 export function buildSeed() {
   const business = { id: id(), name: 'Demo Rental Business' };
