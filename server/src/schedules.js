@@ -13,7 +13,7 @@ const UNITS = ['DAY', 'WEEK', 'MONTH'];
 const MAX_CENTS = 10000000;
 const isDate = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v || '');
 
-const SELECT = `SELECT RAWTOHEX(s.id) "id", s.bill_type "type", RAWTOHEX(s.property_id) "propertyId", p.name "propertyName", RAWTOHEX(s.vendor_id) "vendorId", v.company "vendorName",
+const SELECT = `SELECT s.id::text "id", s.bill_type "type", s.property_id::text "propertyId", p.name "propertyName", s.vendor_id::text "vendorId", v.company "vendorName",
     s.amount_cents "amount", s.frequency "frequency", s.repeat_every "every", s.repeat_unit "unit", TO_CHAR(s.start_date,'YYYY-MM-DD') "start", TO_CHAR(s.end_date,'YYYY-MM-DD') "end",
     s.notes "notes", s.is_active "active"
   FROM bill_schedule s JOIN property p ON p.id=s.property_id JOIN vendor v ON v.id=s.vendor_id`;
@@ -22,7 +22,7 @@ async function handledDates(ids) {
   const m = {}; ids.forEach((i) => { m[i] = new Set(); });
   if (!ids.length) return m;
   const binds = Object.fromEntries(ids.map((id, i) => [`i${i}`, id]));
-  const r = await rows(`SELECT RAWTOHEX(schedule_id) "id", TO_CHAR(due_date,'YYYY-MM-DD') "d" FROM bill_schedule_run WHERE schedule_id IN (${ids.map((_, i) => `HEXTORAW(:i${i})`).join(',')})`, binds);
+  const r = await rows(`SELECT schedule_id::text "id", TO_CHAR(due_date,'YYYY-MM-DD') "d" FROM bill_schedule_run WHERE schedule_id IN (${ids.map((_, i) => `:i${i}`).join(',')})`, binds);
   r.forEach((x) => m[x.id].add(x.d));
   return m;
 }
@@ -35,7 +35,7 @@ const shape = (x, handled, t) => {
 export async function listSchedules(property = null, t = today()) {
   const b = await businessId(); const binds = { b };
   const w = byProperty('s.property_id', property, binds);
-  const list = await rows(`${SELECT} WHERE s.business_id=HEXTORAW(:b)${w} ORDER BY p.name, v.company`, binds);
+  const list = await rows(`${SELECT} WHERE s.business_id=:b${w} ORDER BY p.name, v.company`, binds);
   const handled = await handledDates(list.map((x) => x.id));
   return list.map((x) => shape(x, handled[x.id], t));
 }
@@ -46,7 +46,7 @@ router.get('/', wrap(async (req, res) => res.json(await listSchedules(req.query.
 async function validate(d) {
   const e = {};
   if (!BILL_TYPES[d.type]) e.type = 'Choose a bill type.';
-  if (!d.propertyId || !(await rows('SELECT 1 "x" FROM property WHERE id=HEXTORAW(:p)', { p: d.propertyId })).length) e.propertyId = 'Choose a property.';
+  if (!d.propertyId || !(await rows('SELECT 1 "x" FROM property WHERE id=:p', { p: d.propertyId })).length) e.propertyId = 'Choose a property.';
   if (!d.vendorId && !text(d.payee)) e.payee = 'Choose or enter a vendor.';
   const cents = Math.round(Number(d.amount) * 100);
   if (!d.amount || !Number.isFinite(cents) || cents <= 0) e.amount = 'Enter an amount greater than zero.';
@@ -68,11 +68,11 @@ async function validate(d) {
 }
 async function vendorFor(c, b, d) {
   if (d.vendorId) {
-    if (!(await c.execute('SELECT 1 "x" FROM vendor WHERE id=HEXTORAW(:v) AND business_id=HEXTORAW(:b)', { v: d.vendorId, b })).rows.length) throw new HttpError(400, 'Vendor not found.');
+    if (!(await c.execute('SELECT 1 "x" FROM vendor WHERE id=:v AND business_id=:b', { v: d.vendorId, b })).rows.length) throw new HttpError(400, 'Vendor not found.');
     return d.vendorId;
   }
   const name = text(d.payee);
-  const same = (await c.execute(`SELECT RAWTOHEX(id) "id" FROM vendor WHERE business_id=HEXTORAW(:b) AND archived_at IS NULL AND LOWER(company)=LOWER(:n)`, { b, n: name })).rows[0];
+  const same = (await c.execute(`SELECT id::text "id" FROM vendor WHERE business_id=:b AND archived_at IS NULL AND LOWER(company)=LOWER(:n)`, { b, n: name })).rows[0];
   if (same) return same.id;
   const id = newId(); await insert(c, 'vendor', { id, business_id: b, company: name }); return id;
 }
@@ -95,12 +95,12 @@ router.post('/:id/active', wrap(async (req, res) => {
 }));
 router.delete('/:id', wrap(async (req, res) => {
   const id = req.params.id; await findOne(id);
-  await tx((c) => c.execute('DELETE FROM bill_schedule WHERE id=HEXTORAW(:i)', { i: id })); res.json({ id });
+  await tx((c) => c.execute('DELETE FROM bill_schedule WHERE id=:i', { i: id })); res.json({ id });
 }));
 
 async function findOne(id) {
   const b = await businessId();
-  const x = (await rows(`${SELECT} WHERE s.id=HEXTORAW(:i) AND s.business_id=HEXTORAW(:b)`, { i: id, b }))[0];
+  const x = (await rows(`${SELECT} WHERE s.id=:i AND s.business_id=:b`, { i: id, b }))[0];
   if (!x) throw new HttpError(404, 'Schedule not found.');
   return x;
 }

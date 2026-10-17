@@ -8,8 +8,8 @@ export const router = Router();
 
 async function listAccounts(property = null) {
   const b = await businessId();
-  const accs = await rows(`SELECT RAWTOHEX(id) "id", code "code", name "name", type "type", subtype "subtype", system_key "systemKey",
-      RAWTOHEX(parent_id) "parentId", is_active "active", description "description" FROM account WHERE business_id=HEXTORAW(:b) ORDER BY code`, { b });
+  const accs = await rows(`SELECT id::text "id", code "code", name "name", type "type", subtype "subtype", system_key "systemKey",
+      parent_id::text "parentId", is_active "active", description "description" FROM account WHERE business_id=:b ORDER BY code`, { b });
   const own = {};
   (await loadLines({ property })).forEach((l) => { own[l.accountId] = (own[l.accountId] || 0) + nat(l); });
   const kids = (id) => accs.filter((a) => a.parentId === id);

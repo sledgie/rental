@@ -16,29 +16,29 @@ const run = (c, sql, binds) => (c ? c.execute(sql, binds) : query(sql, binds)); 
 
 // A unit's status follows its current lease: signed -> occupied, draft -> reserved, none -> vacant (maintenance/unavailable are left alone).
 async function syncUnit(c, unitId) {
-  const r = (await c.execute(`SELECT NVL(SUM(CASE WHEN status='ACTIVE' THEN 1 ELSE 0 END),0) "a", COUNT(*) "n" FROM lease WHERE unit_id=HEXTORAW(:u) AND status IN ${CURRENT_LEASE}`, { u: unitId })).rows[0];
-  await c.execute(`UPDATE unit SET status=:s WHERE id=HEXTORAW(:u) AND status NOT IN ('MAINTENANCE','UNAVAILABLE')`, { s: r.a > 0 ? 'OCCUPIED' : r.n > 0 ? 'RESERVED' : 'VACANT', u: unitId });
+  const r = (await c.execute(`SELECT COALESCE(SUM(CASE WHEN status='ACTIVE' THEN 1 ELSE 0 END),0) "a", COUNT(*) "n" FROM lease WHERE unit_id=:u AND status IN ${CURRENT_LEASE}`, { u: unitId })).rows[0];
+  await c.execute(`UPDATE unit SET status=:s WHERE id=:u AND status NOT IN ('MAINTENANCE','UNAVAILABLE')`, { s: r.a > 0 ? 'OCCUPIED' : r.n > 0 ? 'RESERVED' : 'VACANT', u: unitId });
 }
 // The lease is signed (ACTIVE) when its primary tenant is active or leaving, otherwise still a draft.
 async function refreshLease(c, leaseId) {
-  const r = (await c.execute(`SELECT t.status "status", RAWTOHEX(l.unit_id) "unitId" FROM lease l JOIN tenant t ON t.id=l.tenant_id WHERE l.id=HEXTORAW(:l)`, { l: leaseId })).rows[0];
+  const r = (await c.execute(`SELECT t.status "status", l.unit_id::text "unitId" FROM lease l JOIN tenant t ON t.id=l.tenant_id WHERE l.id=:l`, { l: leaseId })).rows[0];
   if (!r) return;
-  await c.execute(`UPDATE lease SET status=:s WHERE id=HEXTORAW(:l) AND status IN ${CURRENT_LEASE}`, { s: r.status === 'ACTIVE' || r.status === 'PENDING_MOVE_OUT' ? 'ACTIVE' : 'DRAFT', l: leaseId });
+  await c.execute(`UPDATE lease SET status=:s WHERE id=:l AND status IN ${CURRENT_LEASE}`, { s: r.status === 'ACTIVE' || r.status === 'PENDING_MOVE_OUT' ? 'ACTIVE' : 'DRAFT', l: leaseId });
   await syncUnit(c, r.unitId);
 }
 
-const memberOf = async (c, tenantId) => (await run(c, `SELECT RAWTOHEX(l.id) "leaseId", RAWTOHEX(l.unit_id) "unitId", lt.role "role" FROM lease_tenant lt JOIN lease l ON l.id=lt.lease_id
-  WHERE lt.tenant_id=HEXTORAW(:t) AND l.status IN ${CURRENT_LEASE}`, { t: tenantId })).rows[0] || null;
-const leaseOnUnit = async (c, unitId) => (await run(c, `SELECT RAWTOHEX(id) "id" FROM lease WHERE unit_id=HEXTORAW(:u) AND status IN ${CURRENT_LEASE}`, { u: unitId })).rows[0] || null;
-const coTenants = async (c, leaseId) => (await run(c, `SELECT RAWTOHEX(tenant_id) "id" FROM lease_tenant WHERE lease_id=HEXTORAW(:l) AND role='CO_TENANT' ORDER BY created_at, tenant_id`, { l: leaseId })).rows;
-const setRole = (c, leaseId, tenantId, role) => c.execute('UPDATE lease_tenant SET role=:r WHERE lease_id=HEXTORAW(:l) AND tenant_id=HEXTORAW(:t)', { r: role, l: leaseId, t: tenantId });
+const memberOf = async (c, tenantId) => (await run(c, `SELECT l.id::text "leaseId", l.unit_id::text "unitId", lt.role "role" FROM lease_tenant lt JOIN lease l ON l.id=lt.lease_id
+  WHERE lt.tenant_id=:t AND l.status IN ${CURRENT_LEASE}`, { t: tenantId })).rows[0] || null;
+const leaseOnUnit = async (c, unitId) => (await run(c, `SELECT id::text "id" FROM lease WHERE unit_id=:u AND status IN ${CURRENT_LEASE}`, { u: unitId })).rows[0] || null;
+const coTenants = async (c, leaseId) => (await run(c, `SELECT tenant_id::text "id" FROM lease_tenant WHERE lease_id=:l AND role='CO_TENANT' ORDER BY created_at, tenant_id`, { l: leaseId })).rows;
+const setRole = (c, leaseId, tenantId, role) => c.execute('UPDATE lease_tenant SET role=:r WHERE lease_id=:l AND tenant_id=:t', { r: role, l: leaseId, t: tenantId });
 
 // Makes `tenantId` the household's primary; the previous primary becomes a co-tenant.
 async function setPrimary(c, leaseId, tenantId) {
-  const old = (await c.execute('SELECT RAWTOHEX(tenant_id) "id" FROM lease WHERE id=HEXTORAW(:l)', { l: leaseId })).rows[0].id;
+  const old = (await c.execute('SELECT tenant_id::text "id" FROM lease WHERE id=:l', { l: leaseId })).rows[0].id;
   if (old === tenantId) return;
   await setRole(c, leaseId, old, 'CO_TENANT');
-  await c.execute('UPDATE lease SET tenant_id=HEXTORAW(:t) WHERE id=HEXTORAW(:l)', { t: tenantId, l: leaseId });
+  await c.execute('UPDATE lease SET tenant_id=:t WHERE id=:l', { t: tenantId, l: leaseId });
   if (!(await setRole(c, leaseId, tenantId, 'PRIMARY')).rowsAffected) await insert(c, 'lease_tenant', { id: newId(), lease_id: leaseId, tenant_id: tenantId, role: 'PRIMARY' });
 }
 
@@ -59,14 +59,14 @@ async function join(c, b, tenantId, d) {
 // Takes a tenant off their unit. A leaving primary hands over to the first co-tenant; if nobody liable is left the lease ends.
 async function leave(c, tenantId) {
   const m = await memberOf(c, tenantId); if (!m) return;
-  await c.execute('DELETE FROM lease_tenant WHERE lease_id=HEXTORAW(:l) AND tenant_id=HEXTORAW(:t)', { l: m.leaseId, t: tenantId });
+  await c.execute('DELETE FROM lease_tenant WHERE lease_id=:l AND tenant_id=:t', { l: m.leaseId, t: tenantId });
   if (m.role === 'PRIMARY') {
     const next = (await coTenants(c, m.leaseId))[0];
     if (next) await setPrimary(c, m.leaseId, next.id);
     else {
-      await c.execute(`UPDATE lease SET status='TERMINATED', terminated_at=TO_DATE(:d,'YYYY-MM-DD') WHERE id=HEXTORAW(:l)`, { d: today(), l: m.leaseId });
-      const left = (await c.execute('SELECT RAWTOHEX(tenant_id) "id" FROM lease_tenant WHERE lease_id=HEXTORAW(:l)', { l: m.leaseId })).rows; // occupants move out with the household
-      await c.execute('DELETE FROM lease_tenant WHERE lease_id=HEXTORAW(:l)', { l: m.leaseId });
+      await c.execute(`UPDATE lease SET status='TERMINATED', terminated_at=TO_DATE(:d,'YYYY-MM-DD') WHERE id=:l`, { d: today(), l: m.leaseId });
+      const left = (await c.execute('SELECT tenant_id::text "id" FROM lease_tenant WHERE lease_id=:l', { l: m.leaseId })).rows; // occupants move out with the household
+      await c.execute('DELETE FROM lease_tenant WHERE lease_id=:l', { l: m.leaseId });
       for (const o of left) await update(c, 'tenant', o.id, { status: 'PAST', move_out_date: today() });
       await syncUnit(c, m.unitId);
       return;
@@ -78,20 +78,20 @@ async function leave(c, tenantId) {
 router.get('/', wrap(async (req, res) => {
   const b = await businessId(); const binds = { b };
   const w = byProperty('l.property_id', req.query.property, binds);
-  const r = await rows(`SELECT RAWTOHEX(t.id) "id", t.first_name "first", t.last_name "last", t.email "email", t.phone "phone", t.photo_data "photo", t.status "status",
-      TO_CHAR(t.move_in_date,'YYYY-MM-DD') "moveIn", RAWTOHEX(l.id) "leaseId", lt.role "role", RAWTOHEX(l.unit_id) "unitId", u.unit_number "unitNumber", RAWTOHEX(l.property_id) "propertyId", pr.name "propertyName", l.monthly_rent_cents "rent"
+  const r = await rows(`SELECT t.id::text "id", t.first_name "first", t.last_name "last", t.email "email", t.phone "phone", t.photo_data "photo", t.status "status",
+      TO_CHAR(t.move_in_date,'YYYY-MM-DD') "moveIn", l.id::text "leaseId", lt.role "role", l.unit_id::text "unitId", u.unit_number "unitNumber", l.property_id::text "propertyId", pr.name "propertyName", l.monthly_rent_cents "rent"
     FROM tenant t LEFT JOIN lease_tenant lt ON lt.tenant_id=t.id LEFT JOIN lease l ON l.id=lt.lease_id AND l.status IN ${CURRENT_LEASE}
       LEFT JOIN unit u ON u.id=l.unit_id LEFT JOIN property pr ON pr.id=l.property_id
-    WHERE t.business_id=HEXTORAW(:b)${w} ORDER BY t.last_name, t.first_name`, binds);
+    WHERE t.business_id=:b${w} ORDER BY t.last_name, t.first_name`, binds);
   const hh = await householdBalances(req.query.property || null);
   // Occupants are not liable, so they show no balance; everyone else on a lease shows the household's.
   res.json(r.map((x) => ({ ...x, status: TI[x.status], role: x.role ? RI[x.role] : null, balance: x.role === 'OCCUPANT' ? 0 : (hh.byTenant[x.id] ?? hh.own[x.id] ?? 0) })));
 }));
 
 async function unitState(unitId) {
-  const r = await rows(`SELECT RAWTOHEX(property_id) "propertyId", status "status", market_rent_cents "rent" FROM unit WHERE id=HEXTORAW(:u)`, { u: unitId });
+  const r = await rows(`SELECT property_id::text "propertyId", status "status", market_rent_cents "rent" FROM unit WHERE id=:u`, { u: unitId });
   if (!r.length) return null;
-  const t = await rows(`SELECT RAWTOHEX(lt.tenant_id) "tenantId" FROM lease_tenant lt JOIN lease l ON l.id=lt.lease_id WHERE l.unit_id=HEXTORAW(:u) AND l.status IN ${CURRENT_LEASE}`, { u: unitId });
+  const t = await rows(`SELECT lt.tenant_id::text "tenantId" FROM lease_tenant lt JOIN lease l ON l.id=lt.lease_id WHERE l.unit_id=:u AND l.status IN ${CURRENT_LEASE}`, { u: unitId });
   return { ...r[0], tenantIds: t.map((x) => x.tenantId) };
 }
 async function validate(d, id) {
@@ -147,7 +147,7 @@ router.put('/:id', wrap(async (req, res) => {
 }));
 router.post('/:id/move-out', wrap(async (req, res) => {
   const id = req.params.id;
-  const t = await rows('SELECT RAWTOHEX(id) "id" FROM tenant WHERE id=HEXTORAW(:i)', { i: id }); if (!t.length) throw new HttpError(404, 'Tenant not found.');
+  const t = await rows('SELECT id::text "id" FROM tenant WHERE id=:i', { i: id }); if (!t.length) throw new HttpError(404, 'Tenant not found.');
   await tx(async (c) => { await leave(c, id); await update(c, 'tenant', id, { status: 'PAST', move_out_date: today() }); });
   res.json({ id });
 }));
