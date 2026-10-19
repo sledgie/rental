@@ -3,7 +3,6 @@ import { api } from './api.js';
 import { PropertyBar, useLoad } from './ui.jsx';
 import Dashboard from './dashboard/Dashboard';
 import './dashboard/dashboard.css';
-import Tenants from './tenants/TenantsPage.jsx';
 import './shell/shell.css';
 import Sidebar from './shell/Sidebar.jsx';
 import TopBar from './shell/TopBar.jsx';
@@ -12,12 +11,14 @@ import { NAV_IDS } from './shell/navConfig.js';
 import Properties from './properties/Properties';
 import Invoices, { NewInvoice } from './invoices/Invoices';
 import { InvoiceStoreProvider } from '@inv/store/InvoiceStore';
+import Tenants from './tenants/Tenants';
+import './tenants/tenants.css';
 import Accounts from './pages/Accounts.jsx';
 import CreditNotes from './pages/CreditNotes.jsx';
 import Vendors from './pages/Vendors.jsx';
 import BillSchedule from './pages/BillSchedule.jsx';
 
-const PAGES = { dashboard: Dashboard, properties: Properties, invoices: Invoices, 'invoice-new': NewInvoice, tenants: Tenants, accounts: Accounts, 'credit-notes': CreditNotes, vendors: Vendors, 'bill-schedule': BillSchedule };
+const PAGES = { dashboard: Dashboard, tenants: Tenants, properties: Properties, invoices: Invoices, 'invoice-new': NewInvoice, accounts: Accounts, 'credit-notes': CreditNotes, vendors: Vendors, 'bill-schedule': BillSchedule };
 const readHash = () => { const [h, q = ''] = window.location.hash.replace('#/', '').split('?'); return { route: PAGES[h] || NAV_IDS.includes(h) ? h : 'dashboard', params: Object.fromEntries(new URLSearchParams(q)) }; };
 const store = { get: (k, d) => { try { return localStorage.getItem(k) || d; } catch { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* ignore */ } } };
 

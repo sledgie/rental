@@ -1,27 +1,26 @@
 // Top bar: global tenant search, quick-create menu, and the help / mail / notifications / account buttons.
-import { useRef, useState } from 'react';
-import { api } from '../api.js';
+import { useState } from 'react';
+import { useTenantDb, searchTenants } from '../tenants/store';
 import { Icon } from '../icons.jsx';
-import { MenuItem, Pop } from '../tenants/Pop.jsx';
+import { MenuItem, Pop } from './Pop.jsx';
 
 const RECORDS = [['Tenant', '#/tenants?new=1'], ['Property', '#/properties?new=1'], ['Vendor', '#/vendors']];
 const ACTIVITIES = [['Invoice', null], ['Payments', null], ['Credit Notes', '#/credit-notes'], ['Bill Schedules', '#/bill-schedule']];
 
 function Search() {
-  const [q, setQ] = useState(''); const [list, setList] = useState(null); const [open, setOpen] = useState(false); const loaded = useRef(false);
-  const load = () => { if (loaded.current) return; loaded.current = true; api.get('/tenants').then(setList).catch(() => { loaded.current = false; }); };
-  const t = q.trim().toLowerCase();
-  const hits = t && list ? list.filter((x) => `${x.first} ${x.last} ${x.phone || ''} ${x.email || ''}`.toLowerCase().includes(t)).slice(0, 8) : [];
+  const [q, setQ] = useState(''); const [open, setOpen] = useState(false);
+  const [db] = useTenantDb();
+  const t = q.trim();
+  const hits = t ? searchTenants(db, t).slice(0, 8) : [];
   return (
     <div className="tv-search">
       <Icon name="search" size={15} />
       <input type="search" value={q} placeholder="Search By Name, Phone Number, Email" aria-label="Search tenants by name, phone number or email"
-        onFocus={() => { load(); setOpen(true); }} onBlur={() => setTimeout(() => setOpen(false), 150)} onChange={(e) => { setQ(e.target.value); setOpen(true); }} />
+        onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} onChange={(e) => { setQ(e.target.value); setOpen(true); }} />
       {open && t && (
         <div className="tv-results">
-          {hits.map((x) => <a key={x.id} href={`#/tenants?tenant=${x.id}`} onClick={() => { setQ(''); setOpen(false); }}><b>{x.first} {x.last}</b><span>{[x.phone, x.email].filter(Boolean).join(' · ') || 'No contact details'}</span></a>)}
-          {list && !hits.length && <div className="tv-empty">No tenants match &ldquo;{q.trim()}&rdquo;.</div>}
-          {!list && <div className="tv-empty">Searching...</div>}
+          {hits.map((x) => <a key={x.id} href={`#/tenants?tenant=${x.id}`} onClick={() => { setQ(''); setOpen(false); }}><b>{x.firstName} {x.lastName}</b><span>{[x.phone, x.email].filter(Boolean).join(' \u00b7 ') || 'No contact details'}</span></a>)}
+          {!hits.length && <div className="tv-empty">No tenants match &ldquo;{t}&rdquo;.</div>}
         </div>
       )}
     </div>

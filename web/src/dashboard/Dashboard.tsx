@@ -28,8 +28,20 @@ import { KpiCards } from "./components/KpiCards";
 import { DonutChart, TrendChart, WeekdayBars, type WeekdayMetric } from "./components/charts";
 import { PropertiesTable } from "./components/PropertiesTable";
 import PropertyKpis from "../properties/PropertyKpis";
+import PropertyArrears from "../properties/PropertyArrears";
+import { useInvoices } from "@inv/store/InvoiceStore";
+import { useInvoiceKpis } from "@inv/kpis";
+import { formatCAD } from "@inv/lib/format";
+import { useTenantDb, useWarningDays } from "../tenants/store";
+import { dashboardSummary, leaseStatus, money as tenantMoney } from "../tenants/lib/domain";
 
 export default function Dashboard({ notify }: { notify?: (message: string) => void }) {
+  const { invoices } = useInvoices();
+  const invoiceKpis = useInvoiceKpis(invoices);
+  const [tenantDb] = useTenantDb();
+  const warningDays = useWarningDays();
+  const tenantSummary = useMemo(() => dashboardSummary(tenantDb), [tenantDb]);
+  const expiringLeases = tenantDb.leases.filter((l) => leaseStatus(l, warningDays) === "Expiring").length;
   /* ---------------------------------------------------------------- filters */
   const [preset, setPreset] = useState<RangePreset>("30d");
   const [range, setRange] = useState<DateRange>(() => presetRange("30d"));
@@ -341,6 +353,109 @@ export default function Dashboard({ notify }: { notify?: (message: string) => vo
             </div>
             <div className="mt-3">
               <PropertyKpis />
+            </div>
+            <div className="mt-3">
+              <PropertyArrears />
+            </div>
+
+            {/* invoices group (register totals) */}
+            <div className="mt-8 flex items-end justify-between gap-3">
+              <div>
+                <h2 className="font-display text-[15px] font-semibold text-ink">Invoices</h2>
+                <p className="mt-0.5 text-[11px] text-muted">What is owed, what is late and what has been collected</p>
+              </div>
+              <a
+                href="#/invoices"
+                className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-brand transition hover:underline"
+              >
+                View invoices
+                <Icon name="arrowRight" size={11} />
+              </a>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                { label: "Outstanding", value: formatCAD(invoiceKpis.outstanding), hint: `${invoiceKpis.openCount} open invoices`, icon: "wallet" as const, tone: "text-ink" },
+                { label: "Overdue", value: formatCAD(invoiceKpis.overdueTotal), hint: `${invoiceKpis.overdue} invoices past due`, icon: "clock" as const, tone: "text-negative" },
+                { label: "Collected to date", value: formatCAD(invoiceKpis.collected), hint: "All recorded payments", icon: "check" as const, tone: "text-positive" },
+                { label: "In register", value: String(invoiceKpis.total), hint: `${invoiceKpis.drafts} drafts pending`, icon: "report" as const, tone: "text-ink" },
+              ].map((k) => (
+                <a key={k.label} href="#/invoices" className="group block">
+                  <Card className="fade-rise p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-[11.5px] font-medium text-muted">{k.label}</p>
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-muted transition-colors group-hover:bg-brand-soft group-hover:text-brand">
+                        <Icon name={k.icon} size={15} />
+                      </span>
+                    </div>
+                    <p className={cn("mt-2.5 font-display text-[27px] font-semibold leading-none tracking-[-0.035em] tnum", k.tone)}>
+                      {k.value}
+                    </p>
+                    <p className="mt-3 border-t border-line-soft pt-2.5 text-[10.5px] text-muted">{k.hint}</p>
+                  </Card>
+                </a>
+              ))}
+            </div>
+
+            {/* tenants group (directory totals) */}
+            <div className="mt-8 flex items-end justify-between gap-3">
+              <div>
+                <h2 className="font-display text-[15px] font-semibold text-ink">Tenants</h2>
+                <p className="mt-0.5 text-[11px] text-muted">Tenants, active leases and what is still owed</p>
+              </div>
+              <a
+                href="#/tenants"
+                className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-brand transition hover:underline"
+              >
+                View tenants
+                <Icon name="arrowRight" size={11} />
+              </a>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {[
+                {
+                  label: "Total tenants",
+                  value: String(tenantSummary.tenants),
+                  unit: "tenants",
+                  hint: `Across ${tenantDb.properties.length} properties in your portfolio`,
+                  icon: "users" as const,
+                  href: "#/tenants",
+                  tone: "text-ink",
+                },
+                {
+                  label: "Active leases",
+                  value: String(tenantSummary.activeLeases),
+                  unit: "leases",
+                  hint: `${expiringLeases} expiring in the next ${warningDays} days`,
+                  icon: "report" as const,
+                  href: "#/tenants?expiring=1",
+                  tone: "text-ink",
+                },
+                {
+                  label: "Outstanding balances",
+                  value: tenantMoney(tenantSummary.outstanding),
+                  unit: "CAD",
+                  hint: `${tenantSummary.outstandingAccounts} accounts with an outstanding balance`,
+                  icon: "wallet" as const,
+                  href: "#/tenants?outstanding=1",
+                  tone: tenantSummary.outstanding > 0 ? "text-amber" : "text-ink",
+                },
+              ].map((k) => (
+                <a key={k.label} href={k.href} className="group block">
+                  <Card className="fade-rise p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-[11.5px] font-medium text-muted">{k.label}</p>
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-muted transition-colors group-hover:bg-brand-soft group-hover:text-brand">
+                        <Icon name={k.icon} size={15} />
+                      </span>
+                    </div>
+                    <p className={cn("mt-2.5 font-display text-[27px] font-semibold leading-none tracking-[-0.035em] tnum", k.tone)}>
+                      {k.value}
+                      <span className="ml-1.5 text-[11px] font-medium tracking-normal text-muted">{k.unit}</span>
+                    </p>
+                    <p className="mt-3 border-t border-line-soft pt-2.5 text-[10.5px] text-muted">{k.hint}</p>
+                  </Card>
+                </a>
+              ))}
             </div>
 
             {/* trend + channel mix */}

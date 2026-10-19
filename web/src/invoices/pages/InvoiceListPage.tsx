@@ -163,22 +163,6 @@ export default function InvoiceListPage({ startCreate = false }: { startCreate?:
   const safePage = Math.min(page, totalPages);
   const pageRows = filtered.slice((safePage - 1) * pageSize, safePage * pageSize).map((r) => r.inv);
 
-  /* ---------- KPI strip ---------- */
-  const kpis = useMemo(() => {
-    const open = enriched.filter(
-      ({ inv, balance }) =>
-        balance > 0 && !["draft", "void", "pending_approval"].includes(inv.status)
-    );
-    const outstanding = open.reduce((s, r) => s + r.balance, 0);
-    const overdue = open.filter(({ inv }) => inv.dueDate < todayISO());
-    const overdueTotal = overdue.reduce((s, r) => s + r.balance, 0);
-    const collected = invoices.reduce(
-      (s, inv) => s + inv.payments.reduce((ps, p) => ps + p.amount, 0),
-      0
-    );
-    const drafts = invoices.filter((i) => i.status === "draft").length;
-    return { outstanding, overdue: overdue.length, overdueTotal, collected, drafts };
-  }, [enriched, invoices]);
 
   /* ---------- modals ---------- */
   const [createOpen, setCreateOpen] = useState(startCreate);
@@ -303,19 +287,6 @@ export default function InvoiceListPage({ startCreate = false }: { startCreate?:
             </Button>
           </>
         }
-        meta={
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-4">
-            <Kpi label="Outstanding" value={formatCAD(kpis.outstanding)} hint={`${openCount(enriched)} open invoices`} />
-            <Kpi
-              label="Overdue"
-              value={formatCAD(kpis.overdueTotal)}
-              hint={`${kpis.overdue} invoices past due`}
-              tone="overdue"
-            />
-            <Kpi label="Collected to date" value={formatCAD(kpis.collected)} hint="All recorded payments" tone="paid" />
-            <Kpi label="In register" value={String(invoices.length)} hint={`${kpis.drafts} drafts pending`} />
-          </div>
-        }
       />
 
       <div className="space-y-4">
@@ -439,37 +410,3 @@ export default function InvoiceListPage({ startCreate = false }: { startCreate?:
   );
 }
 
-function openCount(rows: { inv: Invoice; balance: number }[]) {
-  return rows.filter(
-    ({ inv, balance }) =>
-      balance > 0 && !["draft", "void", "pending_approval"].includes(inv.status)
-  ).length;
-}
-
-
-
-function Kpi({
-  label,
-  value,
-  hint,
-  tone,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-  tone?: "paid" | "overdue";
-}) {
-  return (
-    <div className="bg-surface px-3.5 py-2.5">
-      <p className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-faint">{label}</p>
-      <p
-        className={`mt-1 text-[17px] font-semibold leading-none tabular-nums ${
-          tone === "paid" ? "text-paid" : tone === "overdue" ? "text-overdue" : "text-ink"
-        }`}
-      >
-        {value}
-      </p>
-      <p className="mt-1 text-[11px] text-ink-faint">{hint}</p>
-    </div>
-  );
-}

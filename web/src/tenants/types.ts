@@ -1,61 +1,170 @@
-// Types for the Tenants list page. The app itself is plain JSX; these document the shapes the components pass around.
-// Row shape matches GET /api/tenants.
-export type TenantStatus = 'applicant' | 'active' | 'pending_in' | 'pending_out' | 'past';
-export type TenantRole = 'primary' | 'co_tenant' | 'occupant';
+export type TenantStatus = "Active" | "Pending" | "Inactive" | "Former";
+export type LeaseStatus =
+  "Draft" | "Pending" | "Active" | "Expiring" | "Expired" | "Terminated";
+export type PartyRole = "Main Tenant" | "Co-Tenant" | "Occupant";
 
-export interface TenantRow {
+export interface Tenant {
   id: string;
-  first: string;
-  last: string;
-  email: string | null;
-  phone: string | null;
-  photo: string | null;
-  status: TenantStatus;
-  moveIn: string | null; // YYYY-MM-DD
-  leaseId: string | null;
-  role: TenantRole | null;
-  unitId: string | null;
-  unitNumber: string | null;
-  propertyId: string | null;
-  propertyName: string | null;
-  rent: number | null; // cents
-  balance: number; // cents, whole household
+  tenantNumber: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  preferredName?: string;
+  photoUrl?: string;
+  dateOfBirth?: string;
+  phone: string;
+  email: string;
+  mailingAddress?: string;
+  emergencyContact?: string;
+  notes?: string;
+  classification: "Main tenant" | "Individual";
+  tenantStatus: TenantStatus;
+  createdAt: string;
+  updatedAt: string;
+  archivedAt?: string;
+  avatarColor: string;
 }
 
-export type FieldType = 'text' | 'enum' | 'number' | 'money' | 'date';
-export type FieldGroup = 'Tenant Fields' | 'Property Fields';
+export interface Property {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+}
 
-export interface ColumnDef {
-  key: string;
+export interface Unit {
+  id: string;
+  propertyId: string;
+  unitNumber: string;
+  unitStatus: "Occupied" | "Available" | "Reserved";
+  bedrooms: number;
+  area: number;
+}
+
+export interface LeaseDocument {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface Lease {
+  id: string;
+  leaseNumber: string;
+  startDate: string;
+  endDate: string;
+  leaseStatus: Exclude<LeaseStatus, "Expiring">;
+  totalContractRent: number;
+  securityDeposit: number;
+  terms: string;
+  documentReferences: LeaseDocument[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeaseUnit {
+  id: string;
+  leaseId: string;
+  unitId: string;
+  rentAllocation: number;
+  occupancyStartDate: string;
+  occupancyEndDate?: string;
+}
+
+export interface LeaseParty {
+  id: string;
+  leaseId: string;
+  tenantId: string;
+  role: PartyRole;
+  isSignatory: boolean;
+  effectiveStartDate: string;
+  effectiveEndDate?: string;
+}
+
+export interface PartyUnit {
+  id: string;
+  partyId: string;
+  unitId: string;
+}
+
+export interface Account {
+  id: string;
   label: string;
-  group: FieldGroup;
-  type: FieldType;
-  width: number;
-  options?: [value: string, label: string][]; // for enum fields
-  value: (row: TenantRow) => string | number | null; // raw value used for sort and filter
-  alwaysVisible?: boolean; // Name cannot be hidden
+  accountType: "Tenant" | "Lease" | "Unit";
+  tenantId: string;
+  leaseId?: string;
+  unitId?: string;
+  currency: "CAD";
+  nettingRule: "within-account-only";
 }
 
-export interface ColumnState {
-  key: string;
-  width: number;
-  pin: 'left' | 'right' | null;
-  visible: boolean;
-}
-
-export type Operator =
-  | 'is' | 'is_not' | 'contains' | 'not_contains' | 'empty' | 'not_empty'
-  | 'eq' | 'gt' | 'lt' | 'between'
-  | 'before' | 'after';
-
-export interface Filter {
+export interface Transaction {
   id: string;
-  field: string;
-  op: Operator;
-  value: string;
-  value2?: string; // upper bound for "between"
+  accountId: string;
+  accountType: Account["accountType"];
+  leaseId?: string;
+  unitId?: string;
+  tenantId: string;
+  transactionType: "Charge" | "Payment" | "Credit" | "Adjustment";
+  description: string;
+  amount: number;
+  transactionDate: string;
+  dueDate?: string;
+  paymentStatus: "Posted" | "Draft" | "Voided" | "Cancelled";
 }
 
-export interface SavedSearch { id: string; name: string; filters: Filter[] }
-export interface SortState { key: string; dir: 'asc' | 'desc' }
-export type ViewKey = 'all' | TenantStatus;
+export interface Activity {
+  id: string;
+  tenantId: string;
+  at: string;
+  label: string;
+  description: string;
+}
+
+export interface Database {
+  tenants: Tenant[];
+  properties: Property[];
+  units: Unit[];
+  leases: Lease[];
+  leaseUnits: LeaseUnit[];
+  leaseParties: LeaseParty[];
+  partyUnits: PartyUnit[];
+  accounts: Account[];
+  transactions: Transaction[];
+  activities: Activity[];
+}
+
+export interface NewLeaseInput {
+  startDate: string;
+  endDate: string;
+  rent: number;
+  deposit: number;
+  unitIds: string[];
+}
+
+export interface LeaseAssociation {
+  mode: "none" | "existing" | "new";
+  leaseId?: string;
+  role: PartyRole;
+  isSignatory: boolean;
+  unitIds: string[];
+  newLease?: NewLeaseInput;
+}
+
+export type TenantInput = Omit<
+  Tenant,
+  | "id"
+  | "tenantNumber"
+  | "createdAt"
+  | "updatedAt"
+  | "avatarColor"
+  | "archivedAt"
+>;
+export type ProfileTab =
+  | "Overview"
+  | "Personal information"
+  | "Leases"
+  | "Units"
+  | "People"
+  | "Financial ledger"
+  | "Documents"
+  | "Activity history";
