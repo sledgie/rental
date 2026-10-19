@@ -11,6 +11,7 @@ import { router as creditNotes } from './creditNotes.js';
 import { router as bills } from './bills.js';
 import { router as vendors } from './vendors.js';
 import { router as schedules } from './schedules.js';
+import { router as leases } from './leases.js';
 
 const app = express();
 app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173' }));
@@ -30,6 +31,7 @@ app.use('/api/credit-notes', creditNotes);
 app.use('/api/bills', bills);
 app.use('/api/vendors', vendors);
 app.use('/api/bill-schedules', schedules);
+app.use('/api/leases', leases);
 app.get('/api/names', wrap(async (req, res) => res.json((await loadNames()).propertyList)));
 
 app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars

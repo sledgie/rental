@@ -1,7 +1,10 @@
 // Property bills (electricity, water, ...). Posting a bill books  Dr <expense account> / Cr Accounts Payable,
 // tagged with the property, so it shows on the dashboard (expenses, bills due) and in the Chart of Accounts.
+// If the lease says the tenants pay this utility (all of it, a percentage, or split between tenants), the tenants' part is also
+// charged to their ledgers:  Dr Accounts Receivable (per tenant) / Cr <expense account>, so the expense only keeps the landlord's part.
 import { Router } from 'express';
 import { rows, tx, insert, newId, businessId } from './db.js';
+import { tenantShares } from './recharge.js';
 import { fail, HttpError, wrap, text } from './util.js';
 
 export const router = Router();
@@ -13,6 +16,7 @@ export const BILL_TYPES = {
   maintenance: { label: 'Maintenance', key: 'BILL_MAINTENANCE', code: '5010', parent: '5000' },
   repairs: { label: 'Repairs', key: 'BILL_REPAIRS', code: '5020', parent: '5000' },
 };
+export const UTILITY_TYPES = ['electricity', 'water', 'internet']; // bill types a lease can pass on to tenants
 const MAX_CENTS = 10000000; // $100,000 per bill
 
 export async function ensureBillAccount(c, b, t) {
@@ -38,6 +42,7 @@ export async function postBill(d, after) {
   const isDate = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v || '');
   if (!isDate(d.date)) e.date = 'Enter the bill date.';
   if (!isDate(d.due)) e.due = 'Enter the due date.'; else if (isDate(d.date) && d.due < d.date) e.due = 'The due date cannot be before the bill date.';
+  if (d.unitId && !(await rows('SELECT 1 "x" FROM unit WHERE id=HEXTORAW(:u) AND property_id=HEXTORAW(:p)', { u: d.unitId, p: d.propertyId || '' })).length) e.unitId = 'That unit is not in this property.';
   fail(e);
   const b = await businessId();
   const ap = (await rows(`SELECT RAWTOHEX(id) "id" FROM account WHERE business_id=HEXTORAW(:b) AND system_key='AP' AND is_active=1`, { b }))[0];
@@ -59,6 +64,14 @@ export async function postBill(d, after) {
     const tag = { business_id: b, entry_id: entryId, entry_date: d.date, property_id: d.propertyId, vendor_id: vendorId };
     await insert(c, 'journal_entry_line', { id: newId(), account_id: expense, debit_cents: cents, credit_cents: 0, ...tag });
     await insert(c, 'journal_entry_line', { id: newId(), account_id: ap.id, debit_cents: 0, credit_cents: cents, ...tag });
+    const recharge = UTILITY_TYPES.includes(d.type) ? await tenantShares(c, b, { propertyId: d.propertyId, unitId: d.unitId || null, type: d.type, cents }) : null;
+    if (recharge) {
+      const ar = (await c.execute(`SELECT RAWTOHEX(id) "id" FROM account WHERE business_id=HEXTORAW(:b) AND system_key='AR' AND is_active=1`, { b })).rows[0];
+      if (!ar) throw new HttpError(400, 'Accounts Receivable is missing from the chart of accounts.');
+      const rt = { business_id: b, entry_id: entryId, entry_date: d.date, property_id: d.propertyId, unit_id: recharge.unitId, lease_id: recharge.leaseId };
+      for (const s of recharge.shares) await insert(c, 'journal_entry_line', { id: newId(), account_id: ar.id, debit_cents: s.cents, credit_cents: 0, tenant_id: s.tenantId, ...rt });
+      await insert(c, 'journal_entry_line', { id: newId(), account_id: expense, debit_cents: 0, credit_cents: recharge.tenantCents, ...rt });
+    }
     if (after) await after(c, entryId);
   });
   return entryId;

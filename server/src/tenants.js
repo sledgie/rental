@@ -2,6 +2,7 @@
 //   primary    responsible for the rent (lease.tenant_id points at this person), receives statements
 //   co_tenant  also on the lease and liable; can pay
 //   occupant   lives there (e.g. a child) but is not on the lease and owes nothing
+// A lease can cover several units (lease_unit), e.g. a family renting three units or the whole house; lease.unit_id is its lead unit.
 // lease_tenant only holds people on a current lease. The balance belongs to the household (see householdBalances).
 import { Router } from 'express';
 import { rows, query, tx, insert, update, newId, businessId, byProperty, CURRENT_LEASE } from './db.js';
@@ -15,8 +16,8 @@ const RI = inv(ROLE);
 const run = (c, sql, binds) => (c ? c.execute(sql, binds) : query(sql, binds)); // inside a transaction when `c` is given
 
 // A unit's status follows its current lease: signed -> occupied, draft -> reserved, none -> vacant (maintenance/unavailable are left alone).
-async function syncUnit(c, unitId) {
-  const r = (await c.execute(`SELECT NVL(SUM(CASE WHEN status='ACTIVE' THEN 1 ELSE 0 END),0) "a", COUNT(*) "n" FROM lease WHERE unit_id=HEXTORAW(:u) AND status IN ${CURRENT_LEASE}`, { u: unitId })).rows[0];
+export async function syncUnit(c, unitId) {
+  const r = (await c.execute(`SELECT NVL(SUM(CASE WHEN l.status='ACTIVE' THEN 1 ELSE 0 END),0) "a", COUNT(*) "n" FROM lease l JOIN lease_unit lu ON lu.lease_id=l.id WHERE lu.unit_id=HEXTORAW(:u) AND l.status IN ${CURRENT_LEASE}`, { u: unitId })).rows[0];
   await c.execute(`UPDATE unit SET status=:s WHERE id=HEXTORAW(:u) AND status NOT IN ('MAINTENANCE','UNAVAILABLE')`, { s: r.a > 0 ? 'OCCUPIED' : r.n > 0 ? 'RESERVED' : 'VACANT', u: unitId });
 }
 // The lease is signed (ACTIVE) when its primary tenant is active or leaving, otherwise still a draft.
@@ -24,12 +25,14 @@ async function refreshLease(c, leaseId) {
   const r = (await c.execute(`SELECT t.status "status", RAWTOHEX(l.unit_id) "unitId" FROM lease l JOIN tenant t ON t.id=l.tenant_id WHERE l.id=HEXTORAW(:l)`, { l: leaseId })).rows[0];
   if (!r) return;
   await c.execute(`UPDATE lease SET status=:s WHERE id=HEXTORAW(:l) AND status IN ${CURRENT_LEASE}`, { s: r.status === 'ACTIVE' || r.status === 'PENDING_MOVE_OUT' ? 'ACTIVE' : 'DRAFT', l: leaseId });
-  await syncUnit(c, r.unitId);
+  await syncUnits(c, leaseId);
 }
 
+const leaseUnits = async (c, leaseId) => (await run(c, `SELECT RAWTOHEX(unit_id) "id" FROM lease_unit WHERE lease_id=HEXTORAW(:l)`, { l: leaseId })).rows.map((x) => x.id);
+const syncUnits = async (c, leaseId) => { for (const u of await leaseUnits(c, leaseId)) await syncUnit(c, u); };
 const memberOf = async (c, tenantId) => (await run(c, `SELECT RAWTOHEX(l.id) "leaseId", RAWTOHEX(l.unit_id) "unitId", lt.role "role" FROM lease_tenant lt JOIN lease l ON l.id=lt.lease_id
   WHERE lt.tenant_id=HEXTORAW(:t) AND l.status IN ${CURRENT_LEASE}`, { t: tenantId })).rows[0] || null;
-const leaseOnUnit = async (c, unitId) => (await run(c, `SELECT RAWTOHEX(id) "id" FROM lease WHERE unit_id=HEXTORAW(:u) AND status IN ${CURRENT_LEASE}`, { u: unitId })).rows[0] || null;
+const leaseOnUnit = async (c, unitId) => (await run(c, `SELECT RAWTOHEX(l.id) "id" FROM lease l JOIN lease_unit lu ON lu.lease_id=l.id WHERE lu.unit_id=HEXTORAW(:u) AND l.status IN ${CURRENT_LEASE}`, { u: unitId })).rows[0] || null;
 const coTenants = async (c, leaseId) => (await run(c, `SELECT RAWTOHEX(tenant_id) "id" FROM lease_tenant WHERE lease_id=HEXTORAW(:l) AND role='CO_TENANT' ORDER BY created_at, tenant_id`, { l: leaseId })).rows;
 const setRole = (c, leaseId, tenantId, role) => c.execute('UPDATE lease_tenant SET role=:r WHERE lease_id=HEXTORAW(:l) AND tenant_id=HEXTORAW(:t)', { r: role, l: leaseId, t: tenantId });
 
@@ -49,6 +52,7 @@ async function join(c, b, tenantId, d) {
     const u = await unitState(d.unitId); const start = d.moveIn || today(); const id = newId();
     await insert(c, 'lease', { id, business_id: b, property_id: u.propertyId, unit_id: d.unitId, tenant_id: tenantId, status: 'DRAFT', start_date: start, end_date: addYear(start), monthly_rent_cents: u.rent || 0 });
     await insert(c, 'lease_tenant', { id: newId(), lease_id: id, tenant_id: tenantId, role: 'PRIMARY' });
+    await insert(c, 'lease_unit', { id: newId(), lease_id: id, unit_id: d.unitId });
     return id;
   }
   const want = ROLE[d.role] ? d.role : 'co_tenant';
@@ -68,7 +72,7 @@ async function leave(c, tenantId) {
       const left = (await c.execute('SELECT RAWTOHEX(tenant_id) "id" FROM lease_tenant WHERE lease_id=HEXTORAW(:l)', { l: m.leaseId })).rows; // occupants move out with the household
       await c.execute('DELETE FROM lease_tenant WHERE lease_id=HEXTORAW(:l)', { l: m.leaseId });
       for (const o of left) await update(c, 'tenant', o.id, { status: 'PAST', move_out_date: today() });
-      await syncUnit(c, m.unitId);
+      await syncUnits(c, m.leaseId);
       return;
     }
   }
@@ -91,7 +95,7 @@ router.get('/', wrap(async (req, res) => {
 async function unitState(unitId) {
   const r = await rows(`SELECT RAWTOHEX(property_id) "propertyId", status "status", market_rent_cents "rent" FROM unit WHERE id=HEXTORAW(:u)`, { u: unitId });
   if (!r.length) return null;
-  const t = await rows(`SELECT RAWTOHEX(lt.tenant_id) "tenantId" FROM lease_tenant lt JOIN lease l ON l.id=lt.lease_id WHERE l.unit_id=HEXTORAW(:u) AND l.status IN ${CURRENT_LEASE}`, { u: unitId });
+  const t = await rows(`SELECT RAWTOHEX(lt.tenant_id) "tenantId" FROM lease_tenant lt JOIN lease l ON l.id=lt.lease_id JOIN lease_unit lu ON lu.lease_id=l.id WHERE lu.unit_id=HEXTORAW(:u) AND l.status IN ${CURRENT_LEASE}`, { u: unitId });
   return { ...r[0], tenantIds: t.map((x) => x.tenantId) };
 }
 async function validate(d, id) {
@@ -108,7 +112,7 @@ async function validate(d, id) {
     else if ((u.status === 'MAINTENANCE' || u.status === 'UNAVAILABLE') && !u.tenantIds.includes(id)) e.unit = 'That unit is not available.';
     // The only primary cannot step down unless a co-tenant can take over.
     const m = id ? await memberOf(null, id) : null;
-    if (m && m.unitId === d.unitId && m.role === 'PRIMARY' && ROLE[d.role] && d.role !== 'primary' && !(await coTenants(null, m.leaseId)).length) e.role = 'Every unit needs a primary tenant. Make another person a co-tenant first.';
+    if (m && (await leaseUnits(null, m.leaseId)).includes(d.unitId) && m.role === 'PRIMARY' && ROLE[d.role] && d.role !== 'primary' && !(await coTenants(null, m.leaseId)).length) e.role = 'Every unit needs a primary tenant. Make another person a co-tenant first.';
   }
   if (d.status === 'active' && !d.moveIn) e.moveIn = 'Enter the move-in date.';
   if (d.photo && (typeof d.photo !== 'string' || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(d.photo))) e.photo = 'Use a JPEG, PNG or WebP picture.';
@@ -130,7 +134,7 @@ router.put('/:id', wrap(async (req, res) => {
   await tx(async (c) => {
     const m = await memberOf(c, id);
     if (d.status === 'past') await leave(c, id);
-    else if (m && d.unitId === m.unitId) {
+    else if (m && (await leaseUnits(c, m.leaseId)).includes(d.unitId)) {
       const want = ROLE[d.role] ? d.role : RI[m.role];
       if (want !== RI[m.role]) {
         if (want === 'primary') await setPrimary(c, m.leaseId, id);

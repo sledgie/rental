@@ -1,15 +1,15 @@
 {
   "database/drop_all_oracle.sql": {
-    "mtime": 1791901066.2352362,
-    "seen": 1791905543.8870752,
-    "ast_hash": "174c42387382dc17f84e707bd0786a23",
-    "semantic_hash": "174c42387382dc17f84e707bd0786a23"
+    "mtime": 1791918871.4409988,
+    "seen": 1791985217.0030015,
+    "ast_hash": "2bdef15ce5cfab8af8bbe63d2018276b",
+    "semantic_hash": "2bdef15ce5cfab8af8bbe63d2018276b"
   },
   "database/schema_oracle.sql": {
-    "mtime": 1791901066.243851,
-    "seen": 1791905543.887081,
-    "ast_hash": "5340b4533b9d2b2d63ca434fa0f6a83e",
-    "semantic_hash": "5340b4533b9d2b2d63ca434fa0f6a83e"
+    "mtime": 1791918871.4399958,
+    "seen": 1791985217.0030034,
+    "ast_hash": "db4af241caa3cae19ef5a6de39f4c131",
+    "semantic_hash": "db4af241caa3cae19ef5a6de39f4c131"
   },
   "design/canvas.json": {
     "mtime": 1791901066.4185536,
@@ -42,16 +42,16 @@
     "semantic_hash": "4cb21bef117dba44586b43839cbc7696"
   },
   "server/src/db.js": {
-    "mtime": 1791901066.4647188,
-    "seen": 1791905543.8870912,
-    "ast_hash": "f743b0cc9ba574f2f75f4b358e872fc5",
-    "semantic_hash": "f743b0cc9ba574f2f75f4b358e872fc5"
+    "mtime": 1791914786.0174491,
+    "seen": 1791985217.0030198,
+    "ast_hash": "7dc7a6c330a5df23a2e636c4c658b85e",
+    "semantic_hash": "7dc7a6c330a5df23a2e636c4c658b85e"
   },
   "server/src/index.js": {
-    "mtime": 1791901066.4697185,
-    "seen": 1791905543.8870926,
-    "ast_hash": "327b00033bb1a247361431f0a049c93a",
-    "semantic_hash": "327b00033bb1a247361431f0a049c93a"
+    "mtime": 1791915974.8064704,
+    "seen": 1791985217.003021,
+    "ast_hash": "c19c5081a198f14cc1794ef4c76d8d88",
+    "semantic_hash": "c19c5081a198f14cc1794ef4c76d8d88"
   },
   "server/src/ledger.js": {
     "mtime": 1791901066.4762504,
@@ -60,34 +60,34 @@
     "semantic_hash": "c2162ad98c47e772c6a43664409916ce"
   },
   "server/src/properties.js": {
-    "mtime": 1791901066.4824266,
-    "seen": 1791905543.8870947,
-    "ast_hash": "4ba78c8b488d511df7b2c57ee3200a30",
-    "semantic_hash": "4ba78c8b488d511df7b2c57ee3200a30"
+    "mtime": 1791918871.4379396,
+    "seen": 1791985217.003024,
+    "ast_hash": "371b18a307241f539f9692a5090bc1fc",
+    "semantic_hash": "371b18a307241f539f9692a5090bc1fc"
   },
   "server/src/reports.js": {
-    "mtime": 1791901066.495478,
-    "seen": 1791905543.8870964,
-    "ast_hash": "0a67315cbacb671b2cb7b3c1c8d70a42",
-    "semantic_hash": "0a67315cbacb671b2cb7b3c1c8d70a42"
+    "mtime": 1791918871.4369404,
+    "seen": 1791985217.0030267,
+    "ast_hash": "fe73906a4376b799c7751dbb00fde0b3",
+    "semantic_hash": "fe73906a4376b799c7751dbb00fde0b3"
   },
   "server/src/seed.js": {
-    "mtime": 1791901066.5024703,
-    "seen": 1791905543.8870976,
-    "ast_hash": "eb030695aacbdd28e8ab312c2e8944d6",
-    "semantic_hash": "eb030695aacbdd28e8ab312c2e8944d6"
+    "mtime": 1791918871.4419987,
+    "seen": 1791985217.0030296,
+    "ast_hash": "64c56c023493e589328b3e733c47fb7d",
+    "semantic_hash": "64c56c023493e589328b3e733c47fb7d"
   },
   "server/src/seedData.js": {
-    "mtime": 1791901066.5084915,
-    "seen": 1791905543.8870988,
-    "ast_hash": "4f44dadb2d5a0dbf37c227ebd5b862b0",
-    "semantic_hash": "4f44dadb2d5a0dbf37c227ebd5b862b0"
+    "mtime": 1791918871.4409988,
+    "seen": 1791985217.0030308,
+    "ast_hash": "17e21e1dbb358c83363b0690dc902fd0",
+    "semantic_hash": "17e21e1dbb358c83363b0690dc902fd0"
   },
   "server/src/tenants.js": {
-    "mtime": 1791901066.5155013,
-    "seen": 1791905543.8871002,
-    "ast_hash": "de85f7930ad2bb0eabec219aeb9cd1ed",
-    "semantic_hash": "de85f7930ad2bb0eabec219aeb9cd1ed"
+    "mtime": 1791918851.1324031,
+    "seen": 1791985217.003032,
+    "ast_hash": "c77d53bab40db9b0df2338b1a829a9ac",
+    "semantic_hash": "c77d53bab40db9b0df2338b1a829a9ac"
   },
   "server/src/util.js": {
     "mtime": 1791901066.5234976,
@@ -114,16 +114,16 @@
     "semantic_hash": "98059a1172716f8720195ac97f6736bf"
   },
   "web/src/App.jsx": {
-    "mtime": 1791901066.5637915,
-    "seen": 1791905543.8871064,
-    "ast_hash": "233907271def0c06478ac61d7e517123",
-    "semantic_hash": "233907271def0c06478ac61d7e517123"
+    "mtime": 1791915673.3012419,
+    "seen": 1791985217.0030417,
+    "ast_hash": "7e1b2837131a66cdf9345d2bad417e0a",
+    "semantic_hash": "7e1b2837131a66cdf9345d2bad417e0a"
   },
   "web/src/api.js": {
-    "mtime": 1791901066.5717924,
-    "seen": 1791905543.8871076,
-    "ast_hash": "54d9b0a544cd88aa12d1bc2476f97c59",
-    "semantic_hash": "54d9b0a544cd88aa12d1bc2476f97c59"
+    "mtime": 1791914890.8764825,
+    "seen": 1791985217.0030432,
+    "ast_hash": "368733d4076daaca2f34e37d4efdf641",
+    "semantic_hash": "368733d4076daaca2f34e37d4efdf641"
   },
   "web/src/format.js": {
     "mtime": 1791901066.5798328,
@@ -144,22 +144,22 @@
     "semantic_hash": "87aebd0b06a989d974f504f302be566d"
   },
   "web/src/pages/Dashboard.jsx": {
-    "mtime": 1791901066.6019313,
-    "seen": 1791905543.8871129,
-    "ast_hash": "17311b749103ad5fe294fa42dea610b7",
-    "semantic_hash": "17311b749103ad5fe294fa42dea610b7"
+    "mtime": 1791914890.8790188,
+    "seen": 1791985217.0030558,
+    "ast_hash": "792434ad700ba37cd0000dd56405cd06",
+    "semantic_hash": "792434ad700ba37cd0000dd56405cd06"
   },
   "web/src/pages/Properties.jsx": {
-    "mtime": 1791901066.606933,
-    "seen": 1791905543.8871143,
-    "ast_hash": "e939ef58708b96bbcf8644573087d46d",
-    "semantic_hash": "e939ef58708b96bbcf8644573087d46d"
+    "mtime": 1791918887.364956,
+    "seen": 1791985217.0030572,
+    "ast_hash": "c5f9f3ced54ace72ce5e40714ce00746",
+    "semantic_hash": "c5f9f3ced54ace72ce5e40714ce00746"
   },
   "web/src/pages/Tenants.jsx": {
-    "mtime": 1791901066.614939,
-    "seen": 1791905543.8871157,
-    "ast_hash": "0987ce0a9a4e37e5e51b6e98b082950d",
-    "semantic_hash": "0987ce0a9a4e37e5e51b6e98b082950d"
+    "mtime": 1791918887.349926,
+    "seen": 1791985217.0030584,
+    "ast_hash": "294fdc48300c966e1988006b44fae4ee",
+    "semantic_hash": "294fdc48300c966e1988006b44fae4ee"
   },
   "web/src/ui.jsx": {
     "mtime": 1791901066.6279635,
@@ -174,10 +174,10 @@
     "semantic_hash": "9920ebda1e518b62b5e0d894573a75d3"
   },
   "README.md": {
-    "mtime": 1791901066.227224,
-    "seen": 1791905543.8871193,
-    "ast_hash": "2766ae674fbb932518c71509a95d72af",
-    "semantic_hash": "2766ae674fbb932518c71509a95d72af"
+    "mtime": 1791914902.0660796,
+    "seen": 1791985217.0030656,
+    "ast_hash": "66ab5968a3aac317e573b2dcc622b756",
+    "semantic_hash": "66ab5968a3aac317e573b2dcc622b756"
   },
   "design/AddTenant.dc.html": {
     "mtime": 1791901066.2448492,
@@ -274,5 +274,101 @@
     "seen": 1791905543.88714,
     "ast_hash": "82d4612f790374b3e7bf64e9d3895ff5",
     "semantic_hash": "82d4612f790374b3e7bf64e9d3895ff5"
+  },
+  "database/add_bill_schedule.sql": {
+    "mtime": 1791914769.5845685,
+    "seen": 1791985217.0029888,
+    "ast_hash": "d93d2065c85a32df70fd9600ea7d1957",
+    "semantic_hash": "d93d2065c85a32df70fd9600ea7d1957"
+  },
+  "database/add_lease_tenant.sql": {
+    "mtime": 1791918850.8562834,
+    "seen": 1791985217.0029945,
+    "ast_hash": "352fc5a5c8f9bfb4989cc0449a9b168a",
+    "semantic_hash": "352fc5a5c8f9bfb4989cc0449a9b168a"
+  },
+  "database/add_property_image.sql": {
+    "mtime": 1791915974.8039432,
+    "seen": 1791985217.0029967,
+    "ast_hash": "582ef62e46087b2ae365722f59d98e82",
+    "semantic_hash": "582ef62e46087b2ae365722f59d98e82"
+  },
+  "database/add_tenant_photo.sql": {
+    "mtime": 1791917438.1425781,
+    "seen": 1791985217.0029984,
+    "ast_hash": "85c6348b1b30f2faf9d2d00a38e4ca7a",
+    "semantic_hash": "85c6348b1b30f2faf9d2d00a38e4ca7a"
+  },
+  "server/src/bills.js": {
+    "mtime": 1791914785.9126382,
+    "seen": 1791985217.0030146,
+    "ast_hash": "883ca827730acbf0148c61db9854384e",
+    "semantic_hash": "883ca827730acbf0148c61db9854384e"
+  },
+  "server/src/creditNotes.js": {
+    "mtime": 1791918871.4389386,
+    "seen": 1791985217.003018,
+    "ast_hash": "9e826bbef6591f6499dd194b2a3fd26a",
+    "semantic_hash": "9e826bbef6591f6499dd194b2a3fd26a"
+  },
+  "server/src/recurrence.js": {
+    "mtime": 1791914778.8752375,
+    "seen": 1791985217.0030253,
+    "ast_hash": "722472e327a0d9981671ef567a8f36a1",
+    "semantic_hash": "722472e327a0d9981671ef567a8f36a1"
+  },
+  "server/src/schedules.js": {
+    "mtime": 1791914820.1291354,
+    "seen": 1791985217.0030282,
+    "ast_hash": "ecb093ca64c6230705e2e71f9f7b607c",
+    "semantic_hash": "ecb093ca64c6230705e2e71f9f7b607c"
+  },
+  "server/src/vendors.js": {
+    "mtime": 1791914034.991915,
+    "seen": 1791985217.003035,
+    "ast_hash": "23e382fd5b6982173d518fd7b74393a7",
+    "semantic_hash": "23e382fd5b6982173d518fd7b74393a7"
+  },
+  "web/src/billing.jsx": {
+    "mtime": 1791914842.2392104,
+    "seen": 1791985217.0030444,
+    "ast_hash": "d94074b35c1c06b2b759dfda89af722a",
+    "semantic_hash": "d94074b35c1c06b2b759dfda89af722a"
+  },
+  "web/src/contact.jsx": {
+    "mtime": 1791918662.1551363,
+    "seen": 1791985217.0030456,
+    "ast_hash": "930e8f9dbb2b818ef60a408e493b216b",
+    "semantic_hash": "930e8f9dbb2b818ef60a408e493b216b"
+  },
+  "web/src/icons.jsx": {
+    "mtime": 1791918167.8352892,
+    "seen": 1791985217.0030487,
+    "ast_hash": "26de8591ee2ed9cb467af2d273e118ac",
+    "semantic_hash": "26de8591ee2ed9cb467af2d273e118ac"
+  },
+  "web/src/pages/BillSchedule.jsx": {
+    "mtime": 1791914887.642435,
+    "seen": 1791985217.0030534,
+    "ast_hash": "eb27dd5ccd86664aa69ccd29585851a3",
+    "semantic_hash": "eb27dd5ccd86664aa69ccd29585851a3"
+  },
+  "web/src/pages/CreditNotes.jsx": {
+    "mtime": 1791913539.0678823,
+    "seen": 1791985217.0030546,
+    "ast_hash": "1476ee3fd870bcbe3bb7f46e3ea4a92e",
+    "semantic_hash": "1476ee3fd870bcbe3bb7f46e3ea4a92e"
+  },
+  "web/src/pages/Vendors.jsx": {
+    "mtime": 1791914890.8790188,
+    "seen": 1791985217.0030596,
+    "ast_hash": "d58d564d2c270b211e0c79b33ebf338c",
+    "semantic_hash": "d58d564d2c270b211e0c79b33ebf338c"
+  },
+  "web/src/photo.jsx": {
+    "mtime": 1791917414.2567313,
+    "seen": 1791985217.003061,
+    "ast_hash": "6bfe270d133cb2e3c6180e5b41b1ed51",
+    "semantic_hash": "6bfe270d133cb2e3c6180e5b41b1ed51"
   }
 }

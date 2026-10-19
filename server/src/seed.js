@@ -12,7 +12,7 @@ try {
   if (existing[0].n > 0 && !reset) { console.log('Data already exists. Use "npm run seed:reset" to wipe and reseed.'); process.exit(0); }
   const s = buildSeed();
   await tx(async (c) => {
-    if (reset) for (const t of ['credit_note_line', 'credit_note', 'journal_entry_line', 'journal_entry', 'bill_schedule_run', 'bill_schedule', 'vendor', 'lease_tenant', 'lease', 'tenant', 'unit', 'property', 'account', 'business']) await c.execute(`DELETE FROM ${t}`);
+    if (reset) for (const t of ['credit_note_line', 'credit_note', 'journal_entry_line', 'journal_entry', 'bill_schedule_run', 'bill_schedule', 'vendor', 'lease_utility_share', 'lease_utility', 'lease_unit', 'lease_tenant', 'lease', 'tenant', 'unit', 'property', 'account', 'business']) await c.execute(`DELETE FROM ${t}`);
     await insert(c, 'business', s.business);
     for (const a of s.accounts) await insert(c, 'account', a);
     for (const p of s.properties) await insert(c, 'property', strip(p));
@@ -20,6 +20,7 @@ try {
     for (const t of s.tenants) await insert(c, 'tenant', strip(t));
     for (const l of s.leases) await insert(c, 'lease', l);
     for (const m of s.members) await insert(c, 'lease_tenant', { id: newId(), ...m });
+    for (const l of s.leases) await insert(c, 'lease_unit', { id: newId(), lease_id: l.id, unit_id: l.unit_id });
     for (const e of s.entries) await insert(c, 'journal_entry', { id: e.id, business_id: s.business.id, entry_number: e.entry_number, entry_date: e.entry_date, memo: e.memo, source: e.source });
     const binds = s.entries.flatMap((e) => e.lines.map((l) => ({ id: crypto.randomUUID().replace(/-/g, '').toUpperCase(), eid: e.id, bid: s.business.id, aid: l.accountId, dr: l.dr, cr: l.cr, pid: l.propertyId, unitid: l.unitId, tid: l.tenantId, d: e.entry_date, memo: e.memo })));
     await c.executeMany(`INSERT INTO journal_entry_line (id, entry_id, business_id, account_id, debit_cents, credit_cents, property_id, unit_id, tenant_id, entry_date, memo)

@@ -1065,3 +1065,40 @@ CREATE TABLE lease_tenant (
   CONSTRAINT uq_lease_tenant UNIQUE (lease_id, tenant_id)
 );
 ALTER TABLE lease_tenant ADD CONSTRAINT fk_lease_tenant_lease FOREIGN KEY (lease_id) REFERENCES lease (id) ON DELETE CASCADE;
+
+-- Multi-unit leases and utility responsibility (also available on its own as add_lease_units_utilities.sql)
+CREATE TABLE lease_unit (
+  id RAW(16) DEFAULT SYS_GUID() NOT NULL,
+  lease_id RAW(16) NOT NULL,
+  unit_id RAW(16) NOT NULL,
+  rent_cents NUMBER(10),
+  created_at TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,
+  CONSTRAINT pk_lease_unit PRIMARY KEY (id),
+  CONSTRAINT uq_lease_unit UNIQUE (lease_id, unit_id)
+);
+ALTER TABLE lease_unit ADD CONSTRAINT fk_lease_unit_lease FOREIGN KEY (lease_id) REFERENCES lease (id) ON DELETE CASCADE;
+
+CREATE TABLE lease_utility (
+  id RAW(16) DEFAULT SYS_GUID() NOT NULL,
+  lease_id RAW(16) NOT NULL,
+  bill_type VARCHAR2(40 CHAR) NOT NULL,
+  payer VARCHAR2(10 CHAR) DEFAULT 'LANDLORD' NOT NULL,
+  tenant_pct NUMBER(5,2) DEFAULT 0 NOT NULL,
+  created_at TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,
+  CONSTRAINT pk_lease_utility PRIMARY KEY (id),
+  CONSTRAINT ck_lease_utility_payer CHECK (payer IN ('LANDLORD','TENANT','SPLIT')),
+  CONSTRAINT ck_lease_utility_pct CHECK (tenant_pct BETWEEN 0 AND 100),
+  CONSTRAINT uq_lease_utility UNIQUE (lease_id, bill_type)
+);
+ALTER TABLE lease_utility ADD CONSTRAINT fk_lease_utility_lease FOREIGN KEY (lease_id) REFERENCES lease (id) ON DELETE CASCADE;
+
+CREATE TABLE lease_utility_share (
+  id RAW(16) DEFAULT SYS_GUID() NOT NULL,
+  lease_utility_id RAW(16) NOT NULL,
+  tenant_id RAW(16) NOT NULL,
+  pct NUMBER(5,2) NOT NULL,
+  CONSTRAINT pk_lease_utility_share PRIMARY KEY (id),
+  CONSTRAINT ck_lease_utility_share CHECK (pct BETWEEN 0 AND 100),
+  CONSTRAINT uq_lease_utility_share UNIQUE (lease_utility_id, tenant_id)
+);
+ALTER TABLE lease_utility_share ADD CONSTRAINT fk_lease_utility_share FOREIGN KEY (lease_utility_id) REFERENCES lease_utility (id) ON DELETE CASCADE;

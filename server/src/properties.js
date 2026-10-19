@@ -46,8 +46,8 @@ units.get('/', wrap(async (req, res) => {
       u.bedrooms "bedrooms", u.bathrooms "bathrooms", u.market_rent_cents "rent", u.status "status"
     FROM unit u JOIN property p ON p.id=u.property_id WHERE u.business_id=HEXTORAW(:b)${w} ORDER BY p.name, u.unit_number`, binds);
   // Everyone on each unit's lease (primary first, then co-tenants, then occupants) and the household's unpaid rent.
-  const ts = await rows(`SELECT RAWTOHEX(l.unit_id) "unitId", RAWTOHEX(t.id) "id", t.first_name || ' ' || t.last_name "name", t.status "status", lt.role "role", t.email "email", t.phone "phone", t.photo_data "photo", TO_CHAR(t.move_in_date,'YYYY-MM-DD') "moveIn"
-    FROM lease_tenant lt JOIN lease l ON l.id=lt.lease_id JOIN tenant t ON t.id=lt.tenant_id WHERE l.business_id=HEXTORAW(:b) AND l.status IN ${CURRENT_LEASE}
+  const ts = await rows(`SELECT RAWTOHEX(lu.unit_id) "unitId", RAWTOHEX(t.id) "id", t.first_name || ' ' || t.last_name "name", t.status "status", lt.role "role", t.email "email", t.phone "phone", t.photo_data "photo", TO_CHAR(t.move_in_date,'YYYY-MM-DD') "moveIn"
+    FROM lease_tenant lt JOIN lease l ON l.id=lt.lease_id JOIN lease_unit lu ON lu.lease_id=l.id JOIN tenant t ON t.id=lt.tenant_id WHERE l.business_id=HEXTORAW(:b) AND l.status IN ${CURRENT_LEASE}
     ORDER BY CASE lt.role WHEN 'PRIMARY' THEN 0 WHEN 'CO_TENANT' THEN 1 ELSE 2 END, t.last_name, t.first_name`, { b });
   const hh = await householdBalances(req.query.property || null);
   res.json(r.map((x) => ({ ...x, status: x.status.toLowerCase(), pending: hh.byUnit[x.id] || 0,
@@ -55,7 +55,7 @@ units.get('/', wrap(async (req, res) => {
 }));
 async function validateUnit(d, id) {
   const e = {}; const b = await businessId(); const num = text(d.number);
-  const self = id ? (await rows(`SELECT RAWTOHEX(l.tenant_id) "tenantId", RAWTOHEX(u.property_id) "propertyId" FROM unit u LEFT JOIN lease l ON l.unit_id=u.id AND l.status IN ${CURRENT_LEASE} WHERE u.id=HEXTORAW(:i)`, { i: id }))[0] : null;
+  const self = id ? (await rows(`SELECT RAWTOHEX(l.tenant_id) "tenantId", RAWTOHEX(u.property_id) "propertyId" FROM unit u LEFT JOIN (lease_unit lu JOIN lease l ON l.id=lu.lease_id AND l.status IN ${CURRENT_LEASE}) ON lu.unit_id=u.id WHERE u.id=HEXTORAW(:i)`, { i: id }))[0] : null;
   if (id && !self) throw new HttpError(404, 'Unit not found.');
   const tenanted = !!self?.tenantId;
   if (!d.propertyId) e.propertyId = 'Choose a property.';

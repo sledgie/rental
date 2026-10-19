@@ -1,0 +1,198 @@
+/* Portfolio overview page, ported from the reference project. Tailwind runs here without its global reset (preflight),
+   limited to this folder, and every colour token lives on .rd so nothing leaks into the rest of the app. */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@source "./";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-ink: var(--brand-ink);
+  --color-lime: var(--lime);
+  --color-positive: var(--positive);
+  --color-positive-soft: var(--positive-soft);
+  --color-negative: var(--negative);
+  --color-negative-soft: var(--negative-soft);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Inter Tight", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  .rd {
+    --canvas: #0a0e0b;
+    --surface: #111612;
+    --surface-2: #151b16;
+    --surface-3: #1b221c;
+    --ink: #eef3ed;
+    --ink-2: #c9d3ca;
+    --muted: #93a096;
+    --line: #242d26;
+    --line-soft: #1c241e;
+    --brand: #5ecba2;
+    --brand-strong: #8ce2bf;
+    --brand-soft: #152a20;
+    --brand-ink: #8ce2bf;
+    --lime: #d3f57a;
+    --positive: #64d3a3;
+    --positive-soft: #14291f;
+    --negative: #f3907f;
+    --negative-soft: #2c1a17;
+    --amber: #eec77c;
+    --amber-soft: #2a2214;
+    --c1: #5ecba2;
+    --c2: #3f9c80;
+    --c3: #dfb269;
+    --c4: #8ca3d6;
+    --c5: #2c6b55;
+    --grid: #232c25;
+    --bar-prev: #28332b;
+    --tooltip: #e9f1ea;
+    --tooltip-ink: #0d1510;
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 16px 36px -28px rgba(0, 0, 0, 0.8);
+    --shadow-pop: 0 22px 50px -16px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.4);
+    --ring: rgba(94, 203, 162, 0.4);
+    --glow: rgba(63, 156, 128, 0.16);
+    --line-strong: #2e3a31;
+    --elevated: #1f2820;
+    --ink-faint: #6e7a71;
+    --draft: #93a096;
+    --chart-track: rgba(255, 255, 255, 0.09);
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    min-height: 100%;
+  }
+  :root[data-theme="light"] .rd {
+    color-scheme: light;
+    --canvas: #f3f5f0; --surface: #ffffff; --surface-2: #f8faf6; --surface-3: #eef2ec;
+    --ink: #111713; --ink-2: #38443c; --muted: #5d6a60; --line: #e2e7de; --line-soft: #edf1e9;
+    --brand: #12694f; --brand-strong: #0c5640; --brand-soft: #e4f1e9; --brand-ink: #0f5d46; --lime: #cdf06a;
+    --positive: #157a54; --positive-soft: #e4f4ec; --negative: #b3453b; --negative-soft: #fbeae6; --amber: #a9761a; --amber-soft: #fbf1dc;
+    --c1: #17795a; --c2: #69b699; --c3: #ddab52; --c4: #7e96c8; --c5: #c6e5d7; --grid: #e5eae1; --bar-prev: #d9e3db;
+    --tooltip: #111a15; --tooltip-ink: #f3f7f2;
+    --shadow-card: 0 1px 2px rgba(17, 23, 19, 0.04), 0 14px 34px -26px rgba(17, 23, 19, 0.4);
+    --shadow-pop: 0 18px 46px -14px rgba(17, 23, 19, 0.24), 0 2px 6px rgba(17, 23, 19, 0.06);
+    --ring: rgba(18, 105, 79, 0.35); --glow: rgba(105, 182, 153, 0.18);
+    --line-strong: #cfd6cb; --elevated: #ffffff; --ink-faint: #8a968c; --draft: #6c796f; --chart-track: #e7e7e5;
+  }
+  :root[data-theme="dark"] .rd { color-scheme: dark; }
+  /* the parts of Tailwind's reset this page relies on */
+  .rd *, .rd ::before, .rd ::after { box-sizing: border-box; margin: 0; padding: 0; border: 0 solid var(--line); }
+  .rd h1, .rd h2, .rd h3, .rd h4 { font-family: "Inter Tight", "Inter", ui-sans-serif, system-ui, sans-serif; letter-spacing: -0.022em; font-size: inherit; font-weight: inherit; }
+  .rd button, .rd input, .rd select { font: inherit; color: inherit; background: transparent; border-radius: 0; }
+  .rd button { cursor: pointer; }
+  .rd a { color: inherit; text-decoration: inherit; }
+  .rd svg, .rd img { display: block; }
+  .rd ol, .rd ul { list-style: none; }
+  .rd table { border-collapse: collapse; text-indent: 0; border-color: inherit; }
+  .rd :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .rd ::selection { background: var(--brand); color: #fff; }
+}
+
+@layer utilities {
+  .rd .card-shadow { box-shadow: var(--shadow-card); }
+  .rd .tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  .rd .page-glow {
+    background:
+      radial-gradient(760px 380px at 88% -12%, var(--glow), transparent 70%),
+      radial-gradient(620px 300px at 6% -18%, var(--glow), transparent 72%);
+  }
+  .rd .grid-lines { background-image: linear-gradient(to right, var(--line-soft) 1px, transparent 1px); background-size: 56px 100%; }
+  .rd .chart-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw-line 1.05s cubic-bezier(0.22, 0.61, 0.36, 1) forwards; }
+  .rd .chart-area { opacity: 0; animation: fade-in 0.9s ease-out 0.15s forwards; }
+  .rd .chart-dot { opacity: 0; animation: fade-in 0.4s ease-out 0.6s forwards; }
+  .rd .donut-seg { transition: stroke-dasharray 0.7s cubic-bezier(0.22, 0.61, 0.36, 1), stroke-width 0.2s ease, opacity 0.2s ease; }
+  .rd .bar-fill { transition: height 0.6s cubic-bezier(0.22, 0.61, 0.36, 1), background-color 0.2s ease, opacity 0.2s ease; }
+  .rd .pop-in { animation: pop-in 0.16s ease-out both; transform-origin: top; }
+  .rd .fade-rise { animation: fade-rise 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+  .rd .live-dot { animation: live-pulse 2.4s ease-in-out infinite; }
+  .rd .slide-in { animation: slide-in 0.24s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+  .rd .spin { animation: spin 0.8s linear infinite; }
+}
+
+@keyframes slide-in { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes draw-line { to { stroke-dashoffset: 0; } }
+@keyframes fade-in { to { opacity: 1; } }
+@keyframes pop-in { from { opacity: 0; transform: scale(0.97) translateY(-4px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes fade-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes live-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(100, 211, 163, 0.45); } 50% { box-shadow: 0 0 0 4px rgba(100, 211, 163, 0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@theme {
+  --color-mint-50: #effaf5; --color-mint-100: #d4f1e4; --color-mint-200: #a9e3cb; --color-mint-300: #8ce2bf; --color-mint-400: #5ecba2; --color-mint-500: #3fae88; --color-mint-600: #2c8f6f; --color-mint-700: #247358; --color-mint-800: #1f5c48; --color-mint-900: #1a4a3a; --color-mint-950: #0c2a21;
+  --color-sand-50: #fbf6ea; --color-sand-100: #f4e8c8; --color-sand-200: #eed9a2; --color-sand-300: #eec77c; --color-sand-400: #dfb269; --color-sand-500: #c79a4a; --color-sand-600: #a67e35; --color-sand-700: #85642a; --color-sand-800: #654c22; --color-sand-900: #4a371a; --color-sand-950: #2a2010;
+  --color-sage-50: #f1f5f2; --color-sage-100: #dde8e0; --color-sage-200: #bdd2c3; --color-sage-300: #9dbba6; --color-sage-400: #84a690; --color-sage-500: #6f927b; --color-sage-600: #587a63; --color-sage-700: #466250; --color-sage-800: #374d3f; --color-sage-900: #283830; --color-sage-950: #18221d;
+  --color-brick-50: #fbf3f2; --color-brick-100: #f5e0dd; --color-brick-200: #ebc2bc; --color-brick-300: #e0a198; --color-brick-400: #f3907f; --color-brick-500: #d4766a; --color-brick-600: #b85e53; --color-brick-700: #8f4a42; --color-brick-800: #64322d; --color-brick-900: #432320; --color-brick-950: #271412;
+  --color-gry-50: #fafafa; --color-gry-100: #f4f4f5; --color-gry-200: #e4e4e7; --color-gry-300: #d4d4d8; --color-gry-400: #a1a1aa; --color-gry-500: #71717a; --color-gry-600: #52525b; --color-gry-700: #3f3f46; --color-gry-800: #27272a; --color-gry-900: #18181b; --color-gry-950: #09090b;
+}
+
+/* Extra tokens used by the Properties page (src/properties), mapped onto the same .rd palette. */
+@source "../properties/";
+@theme inline {
+  --color-hairline: var(--line);
+  --color-hairline-2: var(--line-soft);
+  --color-hairline-strong: var(--line-strong);
+  --color-ink-3: var(--muted);
+}
+@keyframes riseIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* Invoices page (src/invoices): its token names, mapped onto the same .rd palette. */
+@source "../invoices/";
+@theme inline {
+  --color-line-strong: var(--line-strong);
+  --color-elevated: var(--elevated);
+  --color-ink-muted: var(--muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-accent: var(--brand);
+  --color-accent-hover: var(--brand-strong);
+  --color-accent-soft: var(--brand-soft);
+  --color-paid: var(--positive);
+  --color-unpaid: var(--amber);
+  --color-overdue: var(--negative);
+  --color-draft: var(--draft);
+}
+@keyframes slide-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@layer utilities {
+  .animate-pop-in { animation: pop-in 120ms ease-out; }
+  .animate-fade-in { animation: fade-in 150ms ease-out; }
+  .animate-slide-up { animation: slide-up 180ms ease-out; }
+  .scrollbar-thin::-webkit-scrollbar { width: 10px; height: 10px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: #2b3830; border-radius: 999px; border: 3px solid transparent; background-clip: content-box; }
+}
+
+/* Neutral scale tinted to the app surfaces (add/edit property form). Dark by default; inverted in the light theme. */
+@theme inline {
+  --color-moss-50: var(--moss-50); --color-moss-100: var(--moss-100); --color-moss-200: var(--moss-200); --color-moss-300: var(--moss-300); --color-moss-400: var(--moss-400);
+  --color-moss-500: var(--moss-500); --color-moss-600: var(--moss-600); --color-moss-700: var(--moss-700); --color-moss-800: var(--moss-800); --color-moss-900: var(--moss-900); --color-moss-950: var(--moss-950);
+}
+@layer base {
+  :root {
+    --moss-50: #f6f9f6; --moss-100: #eef3ed; --moss-200: #dfe6df; --moss-300: #c9d3ca; --moss-400: #93a096;
+    --moss-500: #6e7a71; --moss-600: #4a564d; --moss-700: #2e3a31; --moss-800: #242d26; --moss-900: #151b16; --moss-950: #0a0e0b;
+  }
+  :root[data-theme="light"] {
+    --moss-50: #111713; --moss-100: #1a221c; --moss-200: #2b362f; --moss-300: #44504a; --moss-400: #5a665d;
+    --moss-500: #6c796f; --moss-600: #b5bdb2; --moss-700: #cfd6cb; --moss-800: #e2e7de; --moss-900: #ffffff; --moss-950: #f3f5f0;
+  }
+}
+/* light theme: the 300/400 accent shades are used as text on dark surfaces, so deepen them for white ones */
+:root[data-theme="light"] {
+  --color-mint-300: #2c8f6f; --color-mint-400: #247358;
+  --color-brick-300: #b85e53; --color-brick-400: #a9544a;
+  --color-sage-300: #587a63; --color-sage-400: #466250;
+  --color-sand-300: #a67e35; --color-sand-400: #85642a;
+}

@@ -54,11 +54,13 @@ export async function arByTenant(property = null) { return balanceBy(await loadL
 // Returns { byTenant, byUnit } for people on a lease and { own } (the person's own receivable) for everyone else.
 export async function householdBalances(property = null) {
   const b = await businessId();
-  const [own, ms] = await Promise.all([arByTenant(property), rows(`SELECT RAWTOHEX(lt.lease_id) "leaseId", RAWTOHEX(l.unit_id) "unitId", RAWTOHEX(lt.tenant_id) "tenantId"
-    FROM lease_tenant lt JOIN lease l ON l.id=lt.lease_id WHERE l.business_id=HEXTORAW(:b) AND l.status IN ${CURRENT_LEASE}`, { b })]);
+  const [own, ms, us] = await Promise.all([arByTenant(property), rows(`SELECT RAWTOHEX(lt.lease_id) "leaseId", RAWTOHEX(lt.tenant_id) "tenantId"
+    FROM lease_tenant lt JOIN lease l ON l.id=lt.lease_id WHERE l.business_id=HEXTORAW(:b) AND l.status IN ${CURRENT_LEASE}`, { b }),
+    rows(`SELECT RAWTOHEX(lu.lease_id) "leaseId", RAWTOHEX(lu.unit_id) "unitId" FROM lease_unit lu JOIN lease l ON l.id=lu.lease_id WHERE l.business_id=HEXTORAW(:b) AND l.status IN ${CURRENT_LEASE}`, { b })]);
   const byLease = {};
   ms.forEach((m) => { byLease[m.leaseId] = (byLease[m.leaseId] || 0) + (own[m.tenantId] || 0); });
   const byTenant = {}; const byUnit = {};
-  ms.forEach((m) => { byTenant[m.tenantId] = byLease[m.leaseId]; byUnit[m.unitId] = byLease[m.leaseId]; });
+  ms.forEach((m) => { byTenant[m.tenantId] = byLease[m.leaseId]; });
+  us.forEach((u) => { byUnit[u.unitId] = byLease[u.leaseId]; }); // a multi-unit lease shows the household's balance on each of its units
   return { byTenant, byUnit, own };
 }

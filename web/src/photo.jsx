@@ -30,7 +30,7 @@ export function shrinkImage(file, { max = 1000, square = false } = {}) {
 export function Avatar({ photo, size = 36, name = '' }) {
   const box = { width: size, height: size, borderRadius: '50%', flex: 'none', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' };
   if (photo) return <img src={photo} alt={name} style={{ ...box, objectFit: 'cover' }} />;
-  return <span role="img" aria-label={name || 'No picture'} style={{ ...box, background: 'linear-gradient(135deg,#8FB4F5,#1D5BD8)', color: '#fff' }}><Icon name="user" size={Math.round(size * 0.58)} /></span>;
+  return <span role="img" aria-label={name || 'No picture'} style={{ ...box, background: 'linear-gradient(135deg,#5ecba2,#2c6b55)', color: '#fff' }}><Icon name="user" size={Math.round(size * 0.58)} /></span>;
 }
 
 export function PhotoField({ label = 'Picture', hint, value, name, onChange, error }) {
