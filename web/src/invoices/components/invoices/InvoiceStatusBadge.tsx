@@ -27,9 +27,9 @@ const tones: Record<InvoiceStatus, Tone> = {
   },
   partially_paid: {
     icon: CircleDollarSign,
-    chip: "border-[#8ca3d6]/25 bg-[#8ca3d6]/10 text-[#b4c5ea]",
-    dot: "bg-[#8ca3d6]",
-    row: "text-[#b4c5ea]",
+    chip: "border-info/25 bg-info/10 text-info-ink",
+    dot: "bg-info",
+    row: "text-info-ink",
   },
   unpaid: {
     icon: Clock,
@@ -39,9 +39,9 @@ const tones: Record<InvoiceStatus, Tone> = {
   },
   pending_approval: {
     icon: FileClock,
-    chip: "border-unpaid/25 bg-unpaid/10 text-[#fbbf24]",
-    dot: "bg-[#fbbf24]",
-    row: "text-[#fbbf24]",
+    chip: "border-unpaid/25 bg-unpaid/10 text-unpaid",
+    dot: "bg-unpaid",
+    row: "text-unpaid",
   },
   overdue: {
     icon: FileClock,

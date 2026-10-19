@@ -191,7 +191,7 @@ export function InvoiceTable({
                   )}
                 >
                   <td className="whitespace-nowrap px-4 py-3">
-                    <span className="font-medium text-ink group-hover:text-[#8ce2bf]">
+                    <span className="font-medium text-ink group-hover:text-brand-ink">
                       {invoice.id}
                     </span>
                     <span className="mt-0.5 block text-[11.5px] text-ink-faint">

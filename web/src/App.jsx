@@ -29,8 +29,8 @@ export default function App() {
   const [toast, setToast] = useState('');
   const [collapsed, setCollapsed] = useState(store.get('rms.navCollapsed', '0') === '1');
   const [drawer, setDrawer] = useState(false);
-  const [theme, setTheme] = useState(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark');
-  const pickTheme = useCallback((t) => { setTheme(t); document.documentElement.dataset.theme = t; store.set('rms.theme', t); }, []);
+  const [theme, setTheme] = useState(document.documentElement.dataset.theme === 'light' ? (document.documentElement.dataset.accent === 'blue' ? 'blue' : 'light') : 'dark');
+  const pickTheme = useCallback((t) => { setTheme(t); const root = document.documentElement; root.dataset.theme = t === 'dark' ? 'dark' : 'light'; if (t === 'blue') root.dataset.accent = 'blue'; else delete root.dataset.accent; store.set('rms.theme', t); }, []);
   const closeDrawer = useCallback(() => setDrawer(false), []);
   const [version, setVersion] = useState(0);
   useEffect(() => { const f = () => setLoc(readHash()); window.addEventListener('hashchange', f); return () => window.removeEventListener('hashchange', f); }, []);

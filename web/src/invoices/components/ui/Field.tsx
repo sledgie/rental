@@ -4,7 +4,7 @@ import { cn } from "@inv/utils/cn";
 
 const base =
   "h-9 w-full rounded-lg border border-line-strong bg-surface-2 text-sm text-ink placeholder:text-ink-faint " +
-  "transition-colors duration-150 hover:border-[#3a4a3e] focus:border-accent/70 focus:outline-none focus:ring-2 focus:ring-accent/25";
+  "transition-colors duration-150 hover:border-line-strong focus:border-accent/70 focus:outline-none focus:ring-2 focus:ring-accent/25";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   ({ className, ...props }, ref) => (

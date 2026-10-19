@@ -49,7 +49,7 @@ export default function TopBar({ notify, onMenu, menuOpen, theme, onTheme }) {
           {(close) => (
             <>
               <div className="tv-gh">Theme</div>
-              {[['dark', 'Dark theme'], ['light', 'Light theme']].map(([t, label]) => (
+              {[['dark', 'Dark theme'], ['light', 'Light theme'], ['blue', 'Light with blue']].map(([t, label]) => (
                 <button key={t} type="button" role="menuitemradio" aria-checked={theme === t} className="tv-mi" onClick={() => { onTheme(t); close(); }}>
                   <span style={{ flex: 1 }}>{label}</span>{theme === t && <Icon name="check" size={14} />}
                 </button>

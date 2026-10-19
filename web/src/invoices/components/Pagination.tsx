@@ -42,7 +42,7 @@ export function Pagination({
     cn(
       "h-8 min-w-8 rounded-md border px-2 text-[13px] font-medium transition-colors tabular-nums",
       active
-        ? "border-accent/50 bg-accent-soft text-[#8ce2bf]"
+        ? "border-accent/50 bg-accent-soft text-brand-ink"
         : "border-transparent text-ink-muted hover:bg-surface-2 hover:text-ink"
     );
 

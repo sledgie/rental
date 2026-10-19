@@ -214,7 +214,7 @@ export function InvoiceFiltersBar({
         </span>
 
         {activeCount > 0 ? (
-          <span className="rounded-full border border-accent/30 bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-[#b9bcfa]">
+          <span className="rounded-full border border-accent/30 bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-brand-ink">
             {activeCount} active {activeCount === 1 ? "filter" : "filters"}
           </span>
         ) : null}

@@ -27,9 +27,9 @@ const kindIcon: Record<ActivityKind, LucideIcon> = {
 };
 
 const kindColor: Record<ActivityKind, string> = {
-  created: "border-accent/40 bg-accent-soft text-[#b9bcfa]",
+  created: "border-accent/40 bg-accent-soft text-brand-ink",
   edited: "border-line-strong bg-surface-3 text-ink-muted",
-  approved: "border-accent/40 bg-accent-soft text-[#b9bcfa]",
+  approved: "border-accent/40 bg-accent-soft text-brand-ink",
   payment: "border-paid/30 bg-paid/10 text-paid",
   paid: "border-paid/30 bg-paid/10 text-paid",
   voided: "border-overdue/30 bg-overdue/10 text-overdue",

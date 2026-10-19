@@ -176,7 +176,7 @@ export function RecordPaymentModal({
         ) : (
           <p className="rounded-lg border border-line bg-surface-2/60 px-3 py-2 text-[12px] leading-relaxed text-ink-muted">
             Status updates automatically: partial payments set the invoice to
-            <span className="text-[#b4c5ea]"> Partially Paid</span>, full payments to
+            <span className="text-info-ink"> Partially Paid</span>, full payments to
             <span className="text-paid"> Paid</span>.
           </p>
         )}

@@ -446,10 +446,10 @@ export default function PropertiesView({
                               </div>
                             </td>
                             <td className="email-cell" title={`${p.address1}, ${p.city}, ${p.state} ${p.zip}`}>
-                              {p.address1}
+                              <a>{p.address1}</a>
                               <span className="tenant-number">{p.city}, {p.state} {p.zip}</span>
                             </td>
-                            <td className="phone-cell">{p.manager}</td>
+                            <td className="phone-cell"><a>{p.manager}</a></td>
                             <td className="units-cell">
                               <span className="unit-count">{p.units.length.toString().padStart(2, "0")}</span>
                               <span className="tenant-number">{propertyOccupied(p)} leased</span>

@@ -12,8 +12,8 @@ import {
 import { cn } from "@inv/utils/cn";
 
 const categoryStyles: Record<string, string> = {
-  Rent: "border-accent/25 bg-accent-soft text-[#b9bcfa]",
-  Utilities: "border-[#8ca3d6]/25 bg-[#8ca3d6]/10 text-[#b4c5ea]",
+  Rent: "border-accent/25 bg-accent-soft text-brand-ink",
+  Utilities: "border-info/25 bg-info/10 text-info-ink",
   Maintenance: "border-unpaid/25 bg-unpaid/10 text-unpaid",
   Parking: "border-line-strong bg-surface-3 text-ink-muted",
   Storage: "border-line-strong bg-surface-3 text-ink-muted",

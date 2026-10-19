@@ -71,6 +71,9 @@
     --ink-faint: #6e7a71;
     --draft: #93a096;
     --chart-track: rgba(255, 255, 255, 0.09);
+    --info: #8ca3d6;
+    --info-ink: #b4c5ea;
+    --on-brand: #07130d;
     font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     font-size: 16px;
     line-height: 1.5;
@@ -88,6 +91,19 @@
     --shadow-pop: 0 18px 46px -14px rgba(17, 23, 19, 0.24), 0 2px 6px rgba(17, 23, 19, 0.06);
     --ring: rgba(18, 105, 79, 0.35); --glow: rgba(105, 182, 153, 0.18);
     --line-strong: #cfd6cb; --elevated: #ffffff; --ink-faint: #8a968c; --draft: #6c796f; --chart-track: #e7e7e5;
+    --info: #3d5a99; --info-ink: #2c4373; --on-brand: #ffffff;
+  }
+  /* light theme with a blue accent */
+  :root[data-theme="light"][data-accent="blue"] .rd {
+    --canvas: #f3f6fc; --surface: #ffffff; --surface-2: #f6f9fd; --surface-3: #eaf0f9;
+    --ink: #0f1a2e; --ink-2: #34435c; --muted: #5a6a85; --line: #dfe6f1; --line-soft: #ebf0f8;
+    --brand: #1d5bd8; --brand-strong: #1748ae; --brand-soft: #e5eefe; --brand-ink: #1b3f9a; --lime: #cdf06a;
+    --c1: #1d5bd8; --c2: #6ea0ff; --c3: #f2a33a; --c4: #7e96c8; --c5: #cddcf8; --grid: #e3e9f3; --bar-prev: #d6e0f1;
+    --tooltip: #0f1a2e; --tooltip-ink: #f3f6fc;
+    --shadow-card: 0 1px 2px rgba(15, 26, 46, 0.04), 0 14px 34px -26px rgba(15, 26, 46, 0.4);
+    --shadow-pop: 0 18px 46px -14px rgba(15, 26, 46, 0.24), 0 2px 6px rgba(15, 26, 46, 0.06);
+    --ring: rgba(29, 91, 216, 0.35); --glow: rgba(29, 91, 216, 0.1);
+    --line-strong: #cbd5e5; --ink-faint: #8794ab; --draft: #66758f; --chart-track: #e1e8f4; --info: #3d5a99; --info-ink: #2c4373;
   }
   :root[data-theme="dark"] .rd { color-scheme: dark; }
   /* the parts of Tailwind's reset this page relies on */
@@ -163,6 +179,9 @@
   --color-unpaid: var(--amber);
   --color-overdue: var(--negative);
   --color-draft: var(--draft);
+  --color-info: var(--info);
+  --color-info-ink: var(--info-ink);
+  --color-on-brand: var(--on-brand);
 }
 @keyframes slide-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @layer utilities {
@@ -195,4 +214,12 @@
   --color-brick-300: #b85e53; --color-brick-400: #a9544a;
   --color-sage-300: #587a63; --color-sage-400: #466250;
   --color-sand-300: #a67e35; --color-sand-400: #85642a;
+}
+
+/* Light with blue: the "mint" accent scale becomes blue, neutrals pick up a cool tint. */
+:root[data-theme="light"][data-accent="blue"] {
+  --color-mint-50: #eff4ff; --color-mint-100: #dbe6fe; --color-mint-200: #bfd3fe; --color-mint-300: #3b6fe0; --color-mint-400: #2a5bd0;
+  --color-mint-500: #1d5bd8; --color-mint-600: #1748ae; --color-mint-700: #143d8c; --color-mint-800: #123270; --color-mint-900: #0f2754; --color-mint-950: #0a1a38;
+  --moss-50: #0f1a2e; --moss-100: #162238; --moss-200: #26334b; --moss-300: #3e4c66; --moss-400: #566580;
+  --moss-500: #66758f; --moss-600: #b3bfd2; --moss-700: #cbd5e5; --moss-800: #dfe6f1; --moss-900: #ffffff; --moss-950: #f3f6fc;
 }

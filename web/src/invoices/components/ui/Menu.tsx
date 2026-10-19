@@ -84,7 +84,7 @@ export function MenuItem({
         "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] transition-colors",
         "disabled:opacity-40 disabled:pointer-events-none",
         danger
-          ? "text-[#f3907f] hover:bg-overdue/12"
+          ? "text-overdue hover:bg-overdue/12"
           : "text-ink-muted hover:bg-surface-3 hover:text-ink"
       )}
     >

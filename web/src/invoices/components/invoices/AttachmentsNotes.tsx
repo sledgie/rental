@@ -107,7 +107,7 @@ export function AttachmentsNotes({
                   <div className="flex items-baseline gap-2">
                     <p className="text-[12.5px] font-medium text-ink">{note.author}</p>
                     {note.pinned ? (
-                      <span className="rounded border border-accent/30 bg-accent-soft px-1.5 py-0.5 text-[10px] font-medium text-[#b9bcfa]">
+                      <span className="rounded border border-accent/30 bg-accent-soft px-1.5 py-0.5 text-[10px] font-medium text-brand-ink">
                         Pinned
                       </span>
                     ) : null}

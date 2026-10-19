@@ -3,7 +3,11 @@ import { createRoot } from 'react-dom/client';
 import './styles.css';
 
 // apply the saved theme before the first paint (dark is the default)
-try { document.documentElement.dataset.theme = localStorage.getItem('rms.theme') === 'light' ? 'light' : 'dark'; } catch { document.documentElement.dataset.theme = 'dark'; }
+try {
+  const t = localStorage.getItem('rms.theme');
+  document.documentElement.dataset.theme = t === 'light' || t === 'blue' ? 'light' : 'dark';
+  if (t === 'blue') document.documentElement.dataset.accent = 'blue';
+} catch { document.documentElement.dataset.theme = 'dark'; }
 import App from './App.jsx';
 
 createRoot(document.getElementById('root')).render(<App />);
