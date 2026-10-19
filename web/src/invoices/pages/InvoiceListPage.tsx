@@ -10,12 +10,15 @@ import { InvoiceFormModal, type InvoiceFormValues } from "@inv/components/invoic
 import { RecordPaymentModal } from "@inv/components/invoices/RecordPaymentModal";
 import { InvoiceTable, type SortState } from "@inv/components/invoices/InvoiceTable";
 import { Pagination } from "@inv/components/Pagination";
-import { properties, tenants } from "@inv/data/mockInvoices";
+import { properties, statusRank, tenants } from "@inv/data/mockInvoices";
 import { formatCAD, monthRange, todayISO, weekRange } from "@inv/lib/format";
 import { useInvoices } from "@inv/store/InvoiceStore";
+import { InvoiceRegister } from "@inv/components/invoices/InvoiceRegister";
 import {
   defaultFilters,
   invoiceBalance,
+  statusLabels,
+  typeLabels,
   invoiceTotal,
   type Invoice,
   type InvoiceFilters,
@@ -161,7 +164,16 @@ export default function InvoiceListPage({ startCreate = false }: { startCreate?:
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
-  const pageRows = filtered.slice((safePage - 1) * pageSize, safePage * pageSize).map((r) => r.inv);
+  const sortValue = (inv: Invoice, total: number, balance: number): string | number =>
+    ({ id: inv.id, issueDate: inv.issueDate, dueDate: inv.dueDate, total, balance, status: statusRank[inv.status] })[sort.field];
+  const sorted = [...filtered].sort((a, b) => {
+    const av = sortValue(a.inv, a.total, a.balance);
+    const bv = sortValue(b.inv, b.total, b.balance);
+    let cmp = typeof av === "number" && typeof bv === "number" ? av - bv : String(av).localeCompare(String(bv));
+    if (cmp === 0) cmp = a.inv.id.localeCompare(b.inv.id);
+    return sort.direction === "asc" ? cmp : -cmp;
+  });
+  const pageRows = sorted.slice((safePage - 1) * pageSize, safePage * pageSize).map((r) => r.inv);
 
 
   /* ---------- modals ---------- */
@@ -240,12 +252,24 @@ export default function InvoiceListPage({ startCreate = false }: { startCreate?:
   };
 
   const exportCsv = () => {
+    const q = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+    const csv = [
+      ["Invoice", "Tenant", "Property", "Unit", "Type", "Issued", "Due", "Total", "Balance", "Status"],
+      ...sorted.map(({ inv, total, balance }) => [inv.id, inv.tenant.name, inv.propertyName, inv.unit, typeLabels[inv.type], inv.issueDate, inv.dueDate, total.toFixed(2), balance.toFixed(2), statusLabels[inv.status]]),
+    ].map((r) => r.map(q).join(",")).join("\r\n");
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    link.download = `invoices-${todayISO()}.csv`;
+    document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(link.href);
+    toast({ kind: "success", title: `Exported ${sorted.length} invoice${sorted.length === 1 ? "" : "s"} to CSV` });
+  };
+
+  const download = (invoice: Invoice) =>
     toast({
       kind: "info",
-      title: "Export unavailable in prototype",
-      body: `${filtered.length} matching invoices would be exported to CSV/PDF.`,
+      title: "PDF export unavailable in prototype",
+      body: `${invoice.id} would be generated as a CAD invoice PDF. Placeholder action only.`,
     });
-  };
 
   const emptyState = (
     <div className="rounded-xl border border-line bg-surface px-6 py-16 text-center">
@@ -272,91 +296,35 @@ export default function InvoiceListPage({ startCreate = false }: { startCreate?:
 
   return (
     <>
-      <PageHeader
-        title="Invoices"
-        subtitle="Manage and track tenant invoices across your properties."
-        actions={
-          <>
-            <Button variant="secondary" onClick={exportCsv}>
-              <Download className="size-4" />
-              Export
-            </Button>
-            <Button variant="primary" onClick={() => setCreateOpen(true)}>
-              <Plus className="size-4" />
-              Create Invoice
-            </Button>
-          </>
+      <InvoiceRegister
+        allInvoices={invoices}
+        pageRows={pageRows}
+        totalItems={filtered.length}
+        filters={filters}
+        onFilterChange={onFilterChange}
+        onClear={onClear}
+        activeCount={activeCount}
+        tenants={tenants}
+        sort={sort}
+        onSort={(field) =>
+          patchUrl(
+            { [SORT_KEY]: field, dir: sort.field === field ? (sort.direction === "asc" ? "desc" : "asc") : field === "status" || field === "id" ? "asc" : "desc" },
+            false
+          )
         }
+        onDirection={() => patchUrl({ dir: sort.direction === "asc" ? "desc" : "asc" }, false)}
+        page={safePage}
+        pageSize={pageSize}
+        onPage={(n) => patchUrl({ [PAGE_KEY]: String(Math.min(Math.max(1, n), totalPages)) }, false)}
+        onPageSize={(n) => patchUrl({ [SIZE_KEY]: String(n), [PAGE_KEY]: "1" }, false)}
+        onCreate={() => setCreateOpen(true)}
+        onExport={exportCsv}
+        onEdit={setEditTarget}
+        onRecordPayment={setPayTarget}
+        onVoid={setVoidTarget}
+        onDownload={download}
+        onResetDemo={resetDemoData}
       />
-
-      <div className="space-y-4">
-        <InvoiceFiltersBar
-          filters={filters}
-          onChange={onFilterChange}
-          onClear={onClear}
-          tenants={tenants}
-          resultCount={filtered.length}
-          activeCount={activeCount}
-        />
-
-        {pageRows.length > 0 ? (
-          <div className="space-y-3">
-            <InvoiceTable
-              invoices={pageRows}
-              sort={sort}
-              onSortChange={(field) =>
-                patchUrl(
-                  {
-                    [SORT_KEY]: field,
-                    dir:
-                      sort.field === field && sort.direction === "asc"
-                        ? "desc"
-                        : sort.field === field
-                          ? "asc"
-                          : field === "status"
-                            ? "asc"
-                            : "desc",
-                  },
-                  false
-                )
-              }
-              handlers={{
-                onEdit: setEditTarget,
-                onRecordPayment: setPayTarget,
-                onVoid: setVoidTarget,
-              }}
-            />
-            <div className="overflow-hidden rounded-xl border border-line bg-surface">
-              <Pagination
-                page={safePage}
-                pageSize={pageSize}
-                totalItems={filtered.length}
-                onPageChange={(p) =>
-                  patchUrl({ [PAGE_KEY]: String(Math.min(Math.max(1, p), totalPages)) }, false)
-                }
-                onPageSizeChange={(s) => patchUrl({ [SIZE_KEY]: String(s), [PAGE_KEY]: "1" }, false)}
-              />
-            </div>
-          </div>
-        ) : (
-          emptyState
-        )}
-
-        <p className="flex flex-wrap items-center gap-1.5 text-[11.5px] text-ink-faint">
-          <FilePlus2 className="size-3.5" />
-          <span>
-            Demonstration data — {invoices.length} invoices across {properties.length} properties.
-            Changes persist in this browser only.
-          </span>
-          <button
-            type="button"
-            onClick={resetDemoData}
-            className="underline decoration-dotted underline-offset-2 transition-colors hover:text-ink"
-          >
-            Reset demo data
-          </button>
-        </p>
-      </div>
 
       <InvoiceFormModal
         open={createOpen}

@@ -14,6 +14,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   CircleDollarSign,
+  Eye,
   Download,
   Home,
   MoreHorizontal,
@@ -35,6 +36,7 @@ import {
   type Property,
   type Unit,
 } from "./data/properties";
+import { PropertyProfile, type ProfileTab } from "./PropertyProfile";
 import { Button, DataField, EmptyState, IconButton, SectionTitle, TextLink } from "../tenants/components/ui";
 
 type Tab = "all" | "arrears" | "current" | "vacancy";
@@ -87,7 +89,7 @@ function unitLabel(u: Unit) {
   return { current: "Current", late: "Late", delinquent: "Delinquent", vacant: "Vacant", notice: "Notice" }[u.status];
 }
 
-function ExpandedProperty({ p, onEdit }: { p: Property; onEdit: () => void }) {
+function ExpandedProperty({ p, onView }: { p: Property; onView: () => void }) {
   const balance = propertyBalance(p);
   const occupied = propertyOccupied(p);
   const residents = p.units.flatMap((u) => u.tenants.map((t) => ({ ...t, unit: u.unit })));
@@ -97,8 +99,8 @@ function ExpandedProperty({ p, onEdit }: { p: Property; onEdit: () => void }) {
     <div className="expanded-detail">
       <div className="expanded-detail-top">
         <span>PROPERTY DETAILS</span>
-        <TextLink onClick={onEdit}>
-          Edit property
+        <TextLink onClick={onView}>
+          View full profile
           <ArrowUpRight size={12} />
         </TextLink>
       </div>
@@ -217,11 +219,16 @@ export default function PropertiesView({
   onAdd,
   onEdit,
   notify,
+  openCode,
+  onOpened,
 }: {
   properties: Property[];
   onAdd: () => void;
   onEdit: (p: Property) => void;
   notify?: (message: string) => void;
+  /** property code from a deep link (#/properties?property=PR-1042): open its profile, then call onOpened */
+  openCode?: string;
+  onOpened?: () => void;
 }) {
   const [tab, setTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
@@ -233,6 +240,14 @@ export default function PropertiesView({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
   const [menu, setMenu] = useState<string | null>(null);
+  const [profile, setProfile] = useState<{ code: string; tab: ProfileTab } | null>(null);
+  useEffect(() => {
+    if (!openCode) return;
+    if (properties.some((x) => x.code === openCode)) setProfile({ code: openCode, tab: "Overview" });
+    onOpened?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openCode]);
+  const profileProperty = profile ? properties.find((x) => x.code === profile.code) : undefined;
 
   useEffect(() => {
     if (!menu) return;
@@ -435,7 +450,7 @@ export default function PropertiesView({
                               <div className="tenant-identity">
                                 <Initials name={p.name} />
                                 <div>
-                                  <button className="tenant-name" onClick={() => setExpanded(open ? null : p.code)}>
+                                  <button className="tenant-name" onClick={() => setProfile({ code: p.code, tab: "Overview" })}>
                                     {p.name}
                                   </button>
                                   <span className="tenant-number">
@@ -463,6 +478,9 @@ export default function PropertiesView({
                             <td className="status-cell"><PropertyBadge p={p} /></td>
                             <td className="actions-cell">
                               <div className="row-actions">
+                                <IconButton label={`View ${p.name}`} onClick={() => setProfile({ code: p.code, tab: "Overview" })}>
+                                  <Eye size={15} />
+                                </IconButton>
                                 <IconButton label={`Edit ${p.name}`} onClick={() => onEdit(p)}>
                                   <Pencil size={14} />
                                 </IconButton>
@@ -476,6 +494,15 @@ export default function PropertiesView({
                                   </IconButton>
                                   {menu === p.code && (
                                     <div className="row-menu">
+                                      <button onClick={() => { setProfile({ code: p.code, tab: "Overview" }); setMenu(null); }}>
+                                        <Eye size={14} />
+                                        View profile
+                                      </button>
+                                      <button onClick={() => { setProfile({ code: p.code, tab: "Financials" }); setMenu(null); }}>
+                                        <CircleDollarSign size={14} />
+                                        Financials
+                                      </button>
+                                      <div className="menu-divider" />
                                       <button onClick={() => { onEdit(p); setMenu(null); }}>
                                         <Pencil size={14} />
                                         Edit property
@@ -493,7 +520,7 @@ export default function PropertiesView({
                           {open && (
                             <tr className="detail-row" id={`details-${p.code}`}>
                               <td colSpan={8}>
-                                <ExpandedProperty p={p} onEdit={() => onEdit(p)} />
+                                <ExpandedProperty p={p} onView={() => setProfile({ code: p.code, tab: "Overview" })} />
                               </td>
                             </tr>
                           )}
@@ -554,6 +581,19 @@ export default function PropertiesView({
           </main>
         </div>
       </div>
+      {profile && profileProperty && (
+        <PropertyProfile
+          key={profile.code}
+          property={profileProperty}
+          tab={profile.tab}
+          onTab={(tab) => setProfile({ ...profile, tab })}
+          onClose={() => setProfile(null)}
+          onEdit={() => {
+            setProfile(null);
+            onEdit(profileProperty);
+          }}
+        />
+      )}
     </div>
   );
 }

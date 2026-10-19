@@ -6,12 +6,19 @@ import { useSearchParams } from "@inv/router";
 
 export default function Invoices({ startCreate = false }: { startCreate?: boolean }) {
   const [params] = useSearchParams();
+  const detail = params.get("id");
   return (
-    <div className="rd min-h-screen bg-canvas text-ink">
+    <div className="rd contents">
       <ToastProvider>
-        <div className="px-4 py-5 sm:px-6 sm:py-6">
-          {params.get("id") ? <InvoiceDetailPage /> : <InvoiceListPage startCreate={startCreate} />}
-        </div>
+        {detail ? (
+          <div className="rd min-h-screen bg-canvas text-ink">
+            <div className="px-4 py-5 sm:px-6 sm:py-6">
+              <InvoiceDetailPage />
+            </div>
+          </div>
+        ) : (
+          <InvoiceListPage startCreate={startCreate} />
+        )}
       </ToastProvider>
     </div>
   );

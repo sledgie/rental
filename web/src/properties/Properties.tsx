@@ -54,6 +54,11 @@ export default function Properties({
             onAdd={() => setForm({ property: null })}
             onEdit={(p) => setForm({ property: p })}
             notify={notify}
+            openCode={params?.property}
+            onOpened={() => {
+              window.history.replaceState(null, "", "#/properties");
+              window.dispatchEvent(new HashChangeEvent("hashchange"));
+            }}
           />
         )}
       </ToastProvider>
