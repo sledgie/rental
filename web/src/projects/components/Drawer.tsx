@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { lockScroll } from "../../shell/scrollLock";
 
 /** Right-hand side drawer in the app's standard profile-drawer chrome (same as Properties / Tenants): header, profile heading, scrolling
  *  body. The body is module (Tailwind) content, so it sits inside a .u-root. */
@@ -23,11 +24,10 @@ export function Drawer({
     // Escape closes the drawer only when no dialog is open on top of it
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && !document.querySelector("[data-modal]") && onClose();
     window.addEventListener("keydown", onKey, true);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlockScroll = lockScroll();
     return () => {
       window.removeEventListener("keydown", onKey, true);
-      document.body.style.overflow = prev;
+      unlockScroll();
     };
   }, [open, onClose]);
   if (!open) return null;

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { Tenant } from "../types";
 import { fullName } from "../lib/domain";
+import { lockScroll } from "../../shell/scrollLock";
 
 export function Avatar({
   tenant,
@@ -177,7 +178,7 @@ export function Overlay({
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
     openOverlays += 1;
-    document.body.style.overflow = "hidden";
+    const unlockScroll = lockScroll();
     const container = ref.current;
     syncOverlayAccessibility();
     const first =
@@ -216,7 +217,7 @@ export function Overlay({
     document.addEventListener("keydown", handleKey);
     return () => {
       openOverlays -= 1;
-      if (!openOverlays) document.body.style.overflow = "";
+      unlockScroll();
       syncOverlayAccessibility(container?.parentElement);
       document.removeEventListener("keydown", handleKey);
       if (previouslyFocused?.isConnected) previouslyFocused.focus();

@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { cn } from "../../utils/cn";
 import { Button, IconButton } from "./Button";
 import { IconX, IconWarn } from "../icons";
+import { lockScroll } from "../../../shell/scrollLock";
 
 /* --------------------------------- Modal --------------------------------- */
 
@@ -101,11 +102,10 @@ export function Drawer({
     // Escape closes the drawer only when no dialog is open on top of it
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && !document.querySelector("[data-modal]") && onClose();
     window.addEventListener("keydown", onKey, true);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlockScroll = lockScroll();
     return () => {
       window.removeEventListener("keydown", onKey, true);
-      document.body.style.overflow = prev;
+      unlockScroll();
     };
   }, [open, onClose]);
 

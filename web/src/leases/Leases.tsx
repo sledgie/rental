@@ -9,6 +9,7 @@ import { isLeaseExpiringSoon } from "./summary";
 import LeaseDetails, { type DetailTab, type LeaseDetailActions } from "./components/LeaseDetails";
 import LeaseWizard, { type LeaseWizardPayload } from "./components/LeaseWizard";
 import StatusBadge from "./components/StatusBadge";
+import { lockScroll } from "../shell/scrollLock";
 import {
   AddPartyModal,
   AddUnitModal,
@@ -345,14 +346,14 @@ export default function Leases({ params }: { params?: Record<string, string> } =
     if (!drawerLeaseId) return;
     const root = document.getElementById("root");
     if (root) root.inert = true;
-    document.body.style.overflow = "hidden";
+    const unlockScroll = lockScroll();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !document.querySelector(".ls .modal-backdrop")) setDrawerLeaseId(null);
     };
     document.addEventListener("keydown", onKey, true);
     return () => {
       if (root) root.inert = false;
-      document.body.style.overflow = "";
+      unlockScroll();
       document.removeEventListener("keydown", onKey, true);
     };
   }, [drawerLeaseId]);

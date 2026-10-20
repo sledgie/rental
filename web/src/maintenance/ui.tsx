@@ -4,6 +4,7 @@ import { AlertTriangle, ChevronDown, X } from 'lucide-react';
 import { cn } from './utils/cn';
 import type { Priority, RequestStatus } from './types';
 import { initials } from './utils';
+import { lockScroll } from "../shell/scrollLock";
 
 // ── Buttons ──────────────────────────────────────────────────────────────────
 
@@ -88,11 +89,10 @@ export function Modal({
     if (!open) return;
     const handler = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', handler);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const unlockScroll = lockScroll();
     return () => {
       window.removeEventListener('keydown', handler);
-      document.body.style.overflow = prev;
+      unlockScroll();
     };
   }, [open, onClose]);
 

@@ -37,6 +37,7 @@ import { properties } from "@inv/data/mockInvoices";
 import { formatCAD, formatDate } from "@inv/lib/format";
 import { useInvoices } from "@inv/store/InvoiceStore";
 import { invoiceBalance, invoicePaid, invoiceTotal, statusLabels, typeLabels } from "@inv/types/invoice";
+import { lockScroll } from "../../../shell/scrollLock";
 
 type Tab = "overview" | "items" | "payments" | "notes" | "activity";
 const TABS: { key: Tab; label: string }[] = [
@@ -71,11 +72,10 @@ export function InvoiceDrawer({ id }: { id: string }) {
       if (e.key === "Escape" && document.querySelectorAll('[role="dialog"]').length <= 1) navigate("/invoices");
     };
     window.addEventListener("keydown", onKey, true);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlockScroll = lockScroll();
     return () => {
       window.removeEventListener("keydown", onKey, true);
-      document.body.style.overflow = prev;
+      unlockScroll();
     };
   }, [navigate]);
 

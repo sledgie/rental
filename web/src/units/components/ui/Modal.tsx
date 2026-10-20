@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { cn } from "../../utils/cn";
 import { Button, IconButton, Pill, type Tone } from "./primitives";
 import { Icon, type IconName } from "./Icon";
+import { lockScroll } from "../../../shell/scrollLock";
 
 function useDismiss(open: boolean, onClose: () => void) {
   useEffect(() => {
@@ -13,11 +14,10 @@ function useDismiss(open: boolean, onClose: () => void) {
         onClose();
       }
     };
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlockScroll = lockScroll();
     window.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = prev;
+      unlockScroll();
       window.removeEventListener("keydown", onKey);
     };
   }, [open, onClose]);

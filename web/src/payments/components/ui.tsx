@@ -9,6 +9,7 @@ import {
 import { cn } from "../utils/cn";
 import type { InvoiceStatus, PaymentMethod, PaymentStatus } from "../types";
 import { METHOD_LABELS } from "../utils/paymentUtils";
+import { lockScroll } from "../../shell/scrollLock";
 
 // ---------------------------------------------------------------------------
 // Icons (stroke-based, lucide-style)
@@ -366,11 +367,10 @@ export function Modal({
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlockScroll = lockScroll();
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      unlockScroll();
     };
   }, [onClose]);
 
@@ -424,11 +424,10 @@ export function Drawer({
       if (e.key === "Escape" && !document.querySelector("[data-modal]")) onClose();
     };
     window.addEventListener("keydown", onKey, true);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlockScroll = lockScroll();
     return () => {
       window.removeEventListener("keydown", onKey, true);
-      document.body.style.overflow = prev;
+      unlockScroll();
     };
   }, [onClose]);
 

@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "../utils/cn";
+import { lockScroll } from "../../shell/scrollLock";
 
 /* ------------------------------- Buttons ------------------------------- */
 
@@ -396,11 +397,10 @@ export function Modal({
       if (event.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKey);
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlockScroll = lockScroll();
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = previous;
+      unlockScroll();
     };
   }, [open, onClose]);
 
