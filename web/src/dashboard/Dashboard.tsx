@@ -39,6 +39,9 @@ import { useStore as useUnitsStore } from "../units/store/appStore";
 import { money0 as unitMoney } from "../units/lib/format";
 import { usePayments } from "../payments/store";
 import { useStore as useProjectsStore } from "../projects/lib/store";
+import { useStore as useMaintStore } from "../maintenance/store";
+import { OPEN_STATUSES as MAINT_OPEN } from "../maintenance/types";
+import { daysUntil as maintDays, fmtMoney as maintMoney, isOverdue as maintOverdue, warrantyState as maintWarranty } from "../maintenance/utils";
 import { money as projMoney, projectFinancials, TODAY as PROJECT_TODAY } from "../projects/lib/finance";
 import { useApp as useExpenses } from "../expenses/context/AppContext";
 import { dueStatus as billDueStatus, providerBalance as billBalance, recoveryOutstanding as billRecovery } from "../expenses/utils/bills";
@@ -93,6 +96,28 @@ export default function Dashboard({ notify }: { notify?: (message: string) => vo
     }
     return { active: active.length, pipeline: live.filter((p) => ["Draft", "Planned"].includes(p.status)).length, onHold: live.filter((p) => p.status === "On Hold").length, approved, incurred, outstanding, attention };
   }, [renovationProjects]);
+  const maint = useMaintStore();
+  const maintSummary = useMemo(() => {
+    const open = maint.requests.filter((r) => MAINT_OPEN.includes(r.status));
+    const inService = maint.assets.filter((a) => ["Active", "Under Inspection", "Under Repair"].includes(a.status));
+    const sched = maint.schedules.filter((sc) => sc.active);
+    return {
+      open: open.length,
+      urgent: open.filter((r) => r.priority === "Emergency" || r.priority === "High").length,
+      awaiting: maint.requests.filter((r) => r.status === "Awaiting Approval").length,
+      overdue: maint.requests.filter((r) => maintOverdue(r)).length,
+      woOpen: maint.workOrders.filter((w) => !["Completed", "Cancelled"].includes(w.status)).length,
+      woInProgress: maint.workOrders.filter((w) => w.status === "In Progress").length,
+      woUnassigned: maint.workOrders.filter((w) => w.status === "Awaiting Assignment" && !w.contractorId).length,
+      pmOverdue: sched.filter((sc) => (maintDays(sc.nextDue) ?? 0) < 0).length,
+      pmSoon: sched.filter((sc) => { const d = maintDays(sc.nextDue) ?? 99; return d >= 0 && d <= 14; }).length,
+      inService: inService.length,
+      underWarranty: inService.filter((a) => maintWarranty(a) === "active").length,
+      expiring: inService.filter((a) => maintWarranty(a) === "expiring").length,
+      attention: inService.filter((a) => a.condition === "Poor" || a.condition === "Failed" || a.status === "Under Repair").length,
+      spend: maint.assets.reduce((sum, a) => sum + maint.assetRepairSpend(a.id), 0),
+    };
+  }, [maint]);
   const pay = usePayments();
   const paySummary = useMemo(() => {
     const posted = pay.payments.filter((p) => p.status === "posted");
@@ -853,6 +878,114 @@ export default function Dashboard({ notify }: { notify?: (message: string) => vo
                 { label: "Approved capital", value: projMoney(projSummary.approved), unit: "CAD", hint: `${projMoney(projSummary.incurred)} incurred so far`, icon: "wallet" as const, href: "#/projects", tone: "text-ink" },
                 { label: "Outstanding payables", value: projMoney(projSummary.outstanding), unit: "CAD", hint: "Approved project invoices still unpaid", icon: "report" as const, href: "#/projects", tone: projSummary.outstanding > 0 ? "text-amber" : "text-ink" },
                 { label: "Needs attention", value: String(projSummary.attention), unit: "items", hint: "Deficiencies, late milestones, change orders, delays", icon: "clock" as const, href: "#/projects", tone: projSummary.attention > 0 ? "text-amber" : "text-ink" },
+              ].map((k) => (
+                <a key={k.label} href={k.href} className="group block">
+                  <Card className="fade-rise p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-[11.5px] font-medium text-muted">{k.label}</p>
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-muted transition-colors group-hover:bg-brand-soft group-hover:text-brand">
+                        <Icon name={k.icon} size={15} />
+                      </span>
+                    </div>
+                    <p className={cn("mt-2.5 font-display text-[27px] font-semibold leading-none tracking-[-0.035em] tnum", k.tone)}>
+                      {k.value}
+                      <span className="ml-1.5 text-[11px] font-medium tracking-normal text-muted">{k.unit}</span>
+                    </p>
+                    <p className="mt-3 border-t border-line-soft pt-2.5 text-[10.5px] text-muted">{k.hint}</p>
+                  </Card>
+                </a>
+              ))}
+            </div>
+
+            {/* maintenance requests group */}
+            <div className="mt-8 flex items-end justify-between gap-3">
+              <div>
+                <h2 className="font-display text-[15px] font-semibold text-ink">Maintenance requests</h2>
+                <p className="mt-0.5 text-[11px] text-muted">Repairs in the queue, what is urgent and what is overdue</p>
+              </div>
+              <a href="#/maintenance-requests" className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-brand transition hover:underline">
+                View requests
+                <Icon name="arrowRight" size={11} />
+              </a>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                { label: "Open requests", value: String(maintSummary.open), unit: "requests", hint: "Across all properties", icon: "wrench" as const, href: "#/maintenance-requests?status=open", tone: "text-ink" },
+                { label: "Emergency / high", value: String(maintSummary.urgent), unit: "requests", hint: "Open requests needing prompt attention", icon: "bell" as const, href: "#/maintenance-requests?status=urgent", tone: maintSummary.urgent > 0 ? "text-amber" : "text-ink" },
+                { label: "Awaiting approval", value: String(maintSummary.awaiting), unit: "requests", hint: "Estimates pending a decision", icon: "clock" as const, href: "#/maintenance-requests?status=awaiting", tone: "text-ink" },
+                { label: "Overdue", value: String(maintSummary.overdue), unit: "requests", hint: "Past their target date", icon: "calendar" as const, href: "#/maintenance-requests?status=overdue", tone: maintSummary.overdue > 0 ? "text-amber" : "text-ink" },
+              ].map((k) => (
+                <a key={k.label} href={k.href} className="group block">
+                  <Card className="fade-rise p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-[11.5px] font-medium text-muted">{k.label}</p>
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-muted transition-colors group-hover:bg-brand-soft group-hover:text-brand">
+                        <Icon name={k.icon} size={15} />
+                      </span>
+                    </div>
+                    <p className={cn("mt-2.5 font-display text-[27px] font-semibold leading-none tracking-[-0.035em] tnum", k.tone)}>
+                      {k.value}
+                      <span className="ml-1.5 text-[11px] font-medium tracking-normal text-muted">{k.unit}</span>
+                    </p>
+                    <p className="mt-3 border-t border-line-soft pt-2.5 text-[10.5px] text-muted">{k.hint}</p>
+                  </Card>
+                </a>
+              ))}
+            </div>
+
+            {/* work orders & inspections group */}
+            <div className="mt-8 flex items-end justify-between gap-3">
+              <div>
+                <h2 className="font-display text-[15px] font-semibold text-ink">Work orders & inspections</h2>
+                <p className="mt-0.5 text-[11px] text-muted">Contractor jobs in flight and recurring inspections coming due</p>
+              </div>
+              <a href="#/work-orders" className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-brand transition hover:underline">
+                View work orders
+                <Icon name="arrowRight" size={11} />
+              </a>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                { label: "Open work orders", value: String(maintSummary.woOpen), unit: "orders", hint: `${maintSummary.woInProgress} in progress`, icon: "wrench" as const, href: "#/work-orders", tone: "text-ink" },
+                { label: "Awaiting contractor", value: String(maintSummary.woUnassigned), unit: "orders", hint: "Not yet assigned to a contractor", icon: "users" as const, href: "#/work-orders", tone: maintSummary.woUnassigned > 0 ? "text-amber" : "text-ink" },
+                { label: "Inspections overdue", value: String(maintSummary.pmOverdue), unit: "tasks", hint: "Recurring inspections past due", icon: "calendar" as const, href: "#/inspections?status=overdue", tone: maintSummary.pmOverdue > 0 ? "text-amber" : "text-ink" },
+                { label: "Inspections due soon", value: String(maintSummary.pmSoon), unit: "tasks", hint: "Due within the next 14 days", icon: "clock" as const, href: "#/inspections?status=soon", tone: "text-ink" },
+              ].map((k) => (
+                <a key={k.label} href={k.href} className="group block">
+                  <Card className="fade-rise p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-[11.5px] font-medium text-muted">{k.label}</p>
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-muted transition-colors group-hover:bg-brand-soft group-hover:text-brand">
+                        <Icon name={k.icon} size={15} />
+                      </span>
+                    </div>
+                    <p className={cn("mt-2.5 font-display text-[27px] font-semibold leading-none tracking-[-0.035em] tnum", k.tone)}>
+                      {k.value}
+                      <span className="ml-1.5 text-[11px] font-medium tracking-normal text-muted">{k.unit}</span>
+                    </p>
+                    <p className="mt-3 border-t border-line-soft pt-2.5 text-[10.5px] text-muted">{k.hint}</p>
+                  </Card>
+                </a>
+              ))}
+            </div>
+
+            {/* assets & equipment group */}
+            <div className="mt-8 flex items-end justify-between gap-3">
+              <div>
+                <h2 className="font-display text-[15px] font-semibold text-ink">Assets & equipment</h2>
+                <p className="mt-0.5 text-[11px] text-muted">Appliances and systems, their warranties and repair spend</p>
+              </div>
+              <a href="#/assets" className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-brand transition hover:underline">
+                View assets
+                <Icon name="arrowRight" size={11} />
+              </a>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                { label: "Assets in service", value: String(maintSummary.inService), unit: "assets", hint: `${maintSummary.underWarranty} under warranty`, icon: "key" as const, href: "#/assets", tone: "text-ink" },
+                { label: "Warranty expiring", value: String(maintSummary.expiring), unit: "assets", hint: "Within 90 days, review before paying for repairs", icon: "clock" as const, href: "#/assets", tone: maintSummary.expiring > 0 ? "text-amber" : "text-ink" },
+                { label: "Needs attention", value: String(maintSummary.attention), unit: "assets", hint: "Poor condition or under repair", icon: "wrench" as const, href: "#/assets", tone: maintSummary.attention > 0 ? "text-amber" : "text-ink" },
+                { label: "Lifetime repair spend", value: maintMoney(maintSummary.spend), unit: "CAD", hint: "From linked invoices and expenses", icon: "wallet" as const, href: "#/assets", tone: "text-ink" },
               ].map((k) => (
                 <a key={k.label} href={k.href} className="group block">
                   <Card className="fade-rise p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand">

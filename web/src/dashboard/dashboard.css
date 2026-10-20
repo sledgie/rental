@@ -260,6 +260,7 @@
 @keyframes u-toast { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
 @keyframes u-ping-soft { 0% { transform: scale(1); opacity: 0.65; } 70%, 100% { transform: scale(2.4); opacity: 0; } }
 @keyframes u-shimmer { from { background-position: -420px 0; } to { background-position: 420px 0; } }
+@utility tabular { font-variant-numeric: tabular-nums; }
 @utility u-num { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 @utility u-panel { background-color: var(--card); border: 1px solid var(--line); border-radius: 12px; }
 @utility u-hairline { border-color: var(--line); }
@@ -327,6 +328,7 @@
 @source "../expenses/";
 
 @source "../projects/";
+@source "../maintenance/";
 @utility pj-panel { background-color: var(--card); border: 1px solid var(--line); box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 6%, transparent); }
 @utility pj-panel-flat { background-color: var(--surface-2); border: 1px solid var(--line); }
 @utility pj-blueprint {
