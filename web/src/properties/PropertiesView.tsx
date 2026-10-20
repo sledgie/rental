@@ -36,6 +36,7 @@ import {
   type Property,
   type Unit,
 } from "./data/properties";
+import { FilterCheckbox, FilterField, FilterPopover, SearchField, SortControl } from "../shell/directory";
 import { PropertyProfile, type ProfileTab } from "./PropertyProfile";
 import { Button, DataField, EmptyState, IconButton, SectionTitle, TextLink } from "../tenants/components/ui";
 
@@ -232,6 +233,10 @@ export default function PropertiesView({
 }) {
   const [tab, setTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [managerFilter, setManagerFilter] = useState("");
+  const [outstanding, setOutstanding] = useState(false);
+  const [hasVacancyOnly, setHasVacancyOnly] = useState(false);
   const [sort, setSort] = useState<SortKey>("default");
   const [desc, setDesc] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(() =>
@@ -270,6 +275,10 @@ export default function PropertiesView({
     const q = search.trim().toLowerCase();
     let out = properties.filter((p) => {
       if (!matches(p, tab)) return false;
+      if (typeFilter && p.type !== typeFilter) return false;
+      if (managerFilter && p.manager !== managerFilter) return false;
+      if (outstanding && propertyBalance(p) <= 0) return false;
+      if (hasVacancyOnly && !hasVacancy(p)) return false;
       if (!q) return true;
       const hay = [p.code, p.name, p.address1, p.city, p.state, p.zip, p.manager, ...p.units.flatMap((u) => [u.unit, ...u.tenants.map((t) => t.name)])]
         .join(" ")
@@ -286,12 +295,16 @@ export default function PropertiesView({
       if (desc) out.reverse();
     }
     return out;
-  }, [properties, tab, search, sort, desc]);
+  }, [properties, tab, search, typeFilter, managerFilter, outstanding, hasVacancyOnly, sort, desc]);
+  const activeFilters = Number(!!typeFilter) + Number(!!managerFilter) + Number(outstanding) + Number(hasVacancyOnly);
+  const resetFilters = () => { setTypeFilter(""); setManagerFilter(""); setOutstanding(false); setHasVacancyOnly(false); setPage(1); };
+  const types = [...new Set(properties.map((p) => p.type))].sort();
+  const managers = [...new Set(properties.map((p) => p.manager))].sort();
 
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const paginated = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
-  const reset = () => { setTab("all"); setSearch(""); setSort("default"); setPage(1); };
+  const reset = () => { setTab("all"); setSearch(""); setSort("default"); resetFilters(); };
   const sortBy = (k: SortKey) => {
     if (sort === k) setDesc(!desc);
     else { setSort(k); setDesc(k !== "name"); }
@@ -356,41 +369,33 @@ export default function PropertiesView({
                 </div>
               </div>
               <div className="directory-toolbar">
-                <div className="search-field">
-                  <Search size={17} />
-                  <input
-                    aria-label="Search properties"
-                    placeholder="Search property, address, unit or resident..."
-                    value={search}
-                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  />
-                  {search && (
-                    <IconButton label="Clear search" onClick={() => setSearch("")}>
-                      <X size={14} />
-                    </IconButton>
-                  )}
-                </div>
+                <SearchField label="Search properties" placeholder="Search property, address, unit or resident..." value={search} onChange={(v) => { setSearch(v); setPage(1); }} />
                 <div className="toolbar-actions">
-                  <label className="sort-control">
-                    <ArrowDownUp size={15} />
-                    <span className="sr-only">Sort properties</span>
-                    <select
-                      aria-label="Sort properties"
-                      value={sort}
-                      onChange={(e) => { const k = e.target.value as SortKey; setSort(k); setDesc(k === "balance" || k === "units"); setPage(1); }}
-                    >
-                      <option value="default">Sort by</option>
-                      <option value="name">Property name</option>
-                      <option value="balance">Balance</option>
-                      <option value="units">Number of units</option>
-                    </select>
-                    <ChevronDown size={13} />
-                  </label>
-                  {sort !== "default" && (
-                    <IconButton className="sort-direction" label={desc ? "Sort ascending" : "Sort descending"} onClick={() => setDesc(!desc)}>
-                      {desc ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
-                    </IconButton>
-                  )}
+                  <FilterPopover title="Filter properties" count={activeFilters} onReset={resetFilters}>
+                    <FilterCheckbox checked={outstanding} onChange={(v) => { setOutstanding(v); setPage(1); }} label="Outstanding balance" hint="Properties with an unpaid balance" />
+                    <FilterCheckbox checked={hasVacancyOnly} onChange={(v) => { setHasVacancyOnly(v); setPage(1); }} label="Has vacancy" hint="Vacant units or notices given" />
+                    <FilterField id="property-type-filter" label="Property type">
+                      <select id="property-type-filter" value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}>
+                        <option value="">All types</option>
+                        {types.map((t) => <option key={t}>{t}</option>)}
+                      </select>
+                    </FilterField>
+                    <FilterField id="property-manager-filter" label="Manager">
+                      <select id="property-manager-filter" value={managerFilter} onChange={(e) => { setManagerFilter(e.target.value); setPage(1); }}>
+                        <option value="">All managers</option>
+                        {managers.map((m) => <option key={m}>{m}</option>)}
+                      </select>
+                    </FilterField>
+                  </FilterPopover>
+                  <SortControl
+                    label="Sort properties"
+                    value={sort}
+                    defaultValue="default"
+                    descending={desc}
+                    options={[{ value: "name", label: "Property name" }, { value: "balance", label: "Balance" }, { value: "units", label: "Number of units" }]}
+                    onChange={(k) => { setSort(k as SortKey); setDesc(k === "balance" || k === "units"); setPage(1); }}
+                    onToggle={() => setDesc(!desc)}
+                  />
                 </div>
               </div>
 

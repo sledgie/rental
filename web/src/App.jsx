@@ -13,12 +13,24 @@ import Invoices, { NewInvoice } from './invoices/Invoices';
 import { InvoiceStoreProvider } from '@inv/store/InvoiceStore';
 import Tenants from './tenants/Tenants';
 import './tenants/tenants.css';
+import Leases from './leases/Leases';
+import Units from './units/Units';
+import Payments from './payments/Payments';
+import Expenses from './expenses/Expenses';
+import Projects from './projects/Projects';
+import { StoreProvider as ProjectsStoreProvider } from './projects/lib/store';
+import { AppProvider as ExpensesProvider } from './expenses/context/AppContext';
+import Applications from './applications/Applications';
+import { StoreProvider as ApplicationsStoreProvider } from './applications/state/store';
+import { PaymentsProvider } from './payments/store';
+import { StoreProvider as UnitsStoreProvider } from './units/store/appStore';
+import './leases/leases.css';
 import Accounts from './pages/Accounts.jsx';
 import CreditNotes from './pages/CreditNotes.jsx';
 import Vendors from './pages/Vendors.jsx';
 import BillSchedule from './pages/BillSchedule.jsx';
 
-const PAGES = { dashboard: Dashboard, tenants: Tenants, properties: Properties, invoices: Invoices, 'invoice-new': NewInvoice, accounts: Accounts, 'credit-notes': CreditNotes, vendors: Vendors, 'bill-schedule': BillSchedule };
+const PAGES = { dashboard: Dashboard, tenants: Tenants, leases: Leases, units: Units, payments: Payments, expenses: Expenses, projects: Projects, applications: Applications, properties: Properties, invoices: Invoices, 'invoice-new': NewInvoice, accounts: Accounts, 'credit-notes': CreditNotes, vendors: Vendors, 'bill-schedule': BillSchedule };
 const readHash = () => { const [h, q = ''] = window.location.hash.replace('#/', '').split('?'); return { route: PAGES[h] || NAV_IDS.includes(h) ? h : 'dashboard', params: Object.fromEntries(new URLSearchParams(q)) }; };
 const store = { get: (k, d) => { try { return localStorage.getItem(k) || d; } catch { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* ignore */ } } };
 
@@ -42,9 +54,14 @@ export default function App() {
   const valid = property === 'all' || (props || []).some((p) => p.id === property) || !props;
   const prop = property === 'all' || !valid ? null : property;
   const Page = PAGES[route];
-  const flush = route === 'tenants' || route === 'dashboard' || route === 'properties' || route === 'invoices' || route === 'invoice-new'; // the Tenants page lays itself out edge to edge and has its own filters
+  const flush = route === 'tenants' || route === 'leases' || route === 'units' || route === 'payments' || route === 'expenses' || route === 'projects' || route === 'applications' || route === 'dashboard' || route === 'properties' || route === 'invoices' || route === 'invoice-new'; // the Tenants page lays itself out edge to edge and has its own filters
   return (
     <InvoiceStoreProvider>
+    <UnitsStoreProvider>
+    <PaymentsProvider>
+    <ExpensesProvider>
+    <ProjectsStoreProvider>
+    <ApplicationsStoreProvider>
       <div className="tv-app">
         <Sidebar route={route} collapsed={collapsed} onToggle={() => { setCollapsed(!collapsed); store.set('rms.navCollapsed', collapsed ? '0' : '1'); }} mobileOpen={drawer} onClose={closeDrawer} />
         <div className="tv-col">
@@ -56,6 +73,11 @@ export default function App() {
         </div>
       </div>
       {toast && <div className="toast" role="status">{toast}</div>}
+    </ApplicationsStoreProvider>
+    </ProjectsStoreProvider>
+    </ExpensesProvider>
+    </PaymentsProvider>
+    </UnitsStoreProvider>
     </InvoiceStoreProvider>
   );
 }

@@ -41,7 +41,7 @@ export function Modal({
   return createPortal(
     <div className="rd contents">
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/65 p-4 backdrop-blur-[2px] sm:items-center sm:p-6 animate-fade-in"
+      className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/65 p-4 backdrop-blur-[2px] sm:items-center sm:p-6 animate-fade-in"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

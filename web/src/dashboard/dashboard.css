@@ -223,3 +223,152 @@
   --moss-50: #0f1a2e; --moss-100: #162238; --moss-200: #26334b; --moss-300: #3e4c66; --moss-400: #566580;
   --moss-500: #66758f; --moss-600: #b3bfd2; --moss-700: #cbd5e5; --moss-800: #dfe6f1; --moss-900: #ffffff; --moss-950: #f3f6fc;
 }
+
+/* Units module: Tailwind classes limited to ../units, its palette mapped onto the app theme (so it follows Dark / Light / Blue). */
+@source "../units/";
+@theme inline {
+  --color-u-bg: var(--bg);
+  --color-u-card: var(--card);
+  --color-u-s2: var(--surface-2);
+  --color-u-s3: var(--surface-3);
+  --color-u-line: var(--line);
+  --color-u-line2: var(--line2);
+  --color-u-ink: var(--ink);
+  --color-u-ink2: var(--ink-2);
+  --color-u-muted: var(--muted);
+  --color-u-accent: var(--accent);
+  --color-u-accent-strong: var(--accent-strong);
+  --color-u-onaccent: var(--accent-ink);
+  --color-u-accent-soft: var(--accent-soft);
+  --color-u-ok: var(--ok);
+  --color-u-ok-soft: var(--ok-soft);
+  --color-u-danger: var(--danger);
+  --color-u-danger-soft: var(--danger-soft);
+  --color-u-warn: var(--warn);
+  --color-u-warn-soft: var(--warn-soft);
+  --color-u-blue: var(--blue);
+  --color-u-blue-soft: var(--blue-soft);
+  --animate-u-fade-up: u-fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-u-expand: u-expand 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-u-drawer: u-drawer 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-u-toast: u-toast 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-u-ping-soft: u-ping-soft 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes u-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes u-expand { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes u-drawer { from { opacity: 0.4; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes u-toast { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes u-ping-soft { 0% { transform: scale(1); opacity: 0.65; } 70%, 100% { transform: scale(2.4); opacity: 0; } }
+@keyframes u-shimmer { from { background-position: -420px 0; } to { background-position: 420px 0; } }
+@utility u-num { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+@utility u-panel { background-color: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+@utility u-hairline { border-color: var(--line); }
+@utility u-skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 45%, var(--surface-2) 90%);
+  background-size: 420px 100%;
+  animation: u-shimmer 1.6s linear infinite;
+  border-radius: 6px;
+}
+@utility u-expandable {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  & > div { overflow: hidden; }
+  &[data-open="true"] { grid-template-rows: 1fr; }
+}
+
+/* Payments module: same approach as Units (u-* theme colours), plus a fixed paper palette for the receipt preview. */
+@source "../payments/";
+@theme {
+  --color-rc-ink-50: #f1f2ec; --color-rc-ink-100: #e4e6da; --color-rc-ink-200: #cfd3c2; --color-rc-ink-300: #adb3a0; --color-rc-ink-400: #878e7b;
+  --color-rc-ink-500: #666d5c; --color-rc-ink-600: #4d5345; --color-rc-ink-700: #3c4137; --color-rc-ink-800: #2b2f28; --color-rc-ink-900: #1e211c; --color-rc-ink-950: #141613;
+  --color-rc-pine-50: #f0f6f2; --color-rc-pine-100: #dcebdf; --color-rc-pine-200: #b9d7c3; --color-rc-pine-300: #8dbba0; --color-rc-pine-400: #5e9a7c;
+  --color-rc-pine-500: #3f7d60; --color-rc-pine-600: #2e634b; --color-rc-pine-700: #26503e; --color-rc-pine-800: #204033; --color-rc-pine-900: #1b352b;
+  --animate-p-rise: p-rise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-p-fade: p-fade 0.2s ease-out both;
+  --animate-p-toast-in: p-toast-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-p-row-flash: p-row-flash 2s ease-out 1;
+}
+@keyframes p-rise { from { opacity: 0; transform: translateY(10px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes p-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes p-toast-in { from { opacity: 0; transform: translateY(12px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes p-row-flash { 0% { background-color: color-mix(in srgb, var(--accent) 22%, transparent); } 100% { background-color: transparent; } }
+@keyframes p-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@utility p-skeleton {
+  background: linear-gradient(90deg, var(--surface-3) 25%, var(--surface-2) 50%, var(--surface-3) 75%);
+  background-size: 200% 100%;
+  animation: p-shimmer 1.4s linear infinite;
+  border-radius: 6px;
+}
+/* printing a receipt: only the receipt is visible (scoped so printing any other page is unaffected) */
+@media print {
+  body:has(#print-root) { background: #fff !important; }
+  body:has(#print-root) * { visibility: hidden; }
+  body:has(#print-root) #print-root, body:has(#print-root) #print-root * { visibility: visible; }
+  body:has(#print-root) #print-root { position: absolute; left: 0; top: 0; width: 100%; margin: 0; border: none !important; box-shadow: none !important; }
+  .no-print { display: none !important; }
+}
+
+/* Applications module: same approach as Units / Payments (u-* theme colours); violet has no theme token so it is a blend. */
+@source "../applications/";
+@theme inline {
+  --color-u-violet: color-mix(in oklab, var(--blue) 55%, var(--danger));
+  --animate-ap-in: ap-in 160ms ease-out both;
+  --animate-ap-slide-up: ap-slide-up 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes ap-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ap-slide-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@layer utilities {
+  .ap-ttip { position: relative; }
+  .ap-ttip > .ap-ttip-body { visibility: hidden; opacity: 0; transition: opacity 120ms ease; }
+  .ap-ttip:hover > .ap-ttip-body, .ap-ttip:focus-within > .ap-ttip-body { visibility: visible; opacity: 1; }
+}
+
+@source "../expenses/";
+
+@source "../projects/";
+@utility pj-panel { background-color: var(--card); border: 1px solid var(--line); box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 6%, transparent); }
+@utility pj-panel-flat { background-color: var(--surface-2); border: 1px solid var(--line); }
+@utility pj-blueprint {
+  background-image: linear-gradient(color-mix(in srgb, var(--accent) 7%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--accent) 7%, transparent) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+@utility pj-glass { background-color: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(18px) saturate(1.2); }
+@utility pj-no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; &::-webkit-scrollbar { display: none; } }
+@utility pj-gradient-text { background: linear-gradient(100deg, var(--ink) 10%, var(--accent) 80%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+@utility pj-hairline { border-color: var(--line); }
+@utility pj-dot-grid { background-image: radial-gradient(color-mix(in srgb, var(--ink) 10%, transparent) 1px, transparent 1px); background-size: 14px 14px; }
+@utility pj-shine { position: relative; overflow: hidden; }
+@utility pj-select-chevron {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237b8b9e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 9px center; background-size: 13px 13px;
+}
+
+/* Units module scope. Tailwind's preflight is not loaded in this app, so give the module a base reset (in @layer base so its
+   utilities still win), then revert every unlayered app rule (tenants.css, styles.css) inside it: unlayered CSS would otherwise
+   beat the module's Tailwind utilities on buttons, table cells and headings. */
+@layer base {
+  .u-root, .u-root *, .u-root *::before, .u-root *::after { box-sizing: border-box; border: 0 solid; }
+  .u-root { font-family: var(--font-sans); font-size: 14px; line-height: 1.5; color: var(--ink); }
+  .u-root button, .u-root input, .u-root select, .u-root textarea { font: inherit; color: inherit; letter-spacing: inherit; background: transparent; border-radius: 0; padding: 0; margin: 0; }
+  .u-root button { cursor: pointer; text-align: inherit; }
+  .u-root button:disabled { cursor: not-allowed; }
+  .u-root h1, .u-root h2, .u-root h3, .u-root h4, .u-root p, .u-root dl, .u-root dd, .u-root figure { margin: 0; font-size: inherit; font-weight: inherit; }
+  .u-root ul, .u-root ol { list-style: none; margin: 0; padding: 0; }
+  .u-root table { border-collapse: collapse; text-indent: 0; border-color: inherit; }
+  .u-root a { color: inherit; text-decoration: inherit; }
+  .u-root svg, .u-root img { display: block; vertical-align: middle; }
+  .u-root img { max-width: 100%; height: auto; }
+  .u-root input::placeholder, .u-root textarea::placeholder { color: color-mix(in srgb, currentColor 45%, transparent); }
+}
+.u-root.u-root.u-root * { all: revert-layer; }
+
+/* Invoice drawer: the invoice sections are Tailwind-styled but sit inside the Tenants-styled drawer (.tn); undo the few element rules
+   from tenants.css that would otherwise change their padding, headings and links. */
+.tn .inv-embed :is(table, th, td, h1, h2, h3, h4, a, dd) { all: revert-layer; }
+
+/* Units / Payments / Applications drawers use the standard profile-drawer chrome (.tn); these size and scroll the module content inside it. */
+.tn .overlay-panel.u-drawer-wide { width: min(1040px, 100%); }
+.tn .u-drawer-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 22px 22px; }
+.tn .u-drawer-foot { flex-shrink: 0; border-top: 1px solid var(--line); padding: 10px 22px; }
+.tn .overlay-panel.u-drawer-wide:focus, .tn .overlay-panel.u-drawer-wide:focus-visible { outline: none; }

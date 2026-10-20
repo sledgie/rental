@@ -192,3 +192,8 @@ main.tv-main-wrap.flush{padding:0;display:block}
 .tv-soon{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);border:1px solid var(--line);border-radius:999px;padding:4px 10px}
 
 }
+
+/* Filter popover fields (shared directory controls): inputs next to the Tenants select styling, following the app theme */
+.tn .popover-field input[type="date"], .tn .popover-field input[type="number"], .tn .popover-field input[type="text"] { width: 100%; height: 33px; padding: 0 8px; border: 1px solid var(--line2); border-radius: 5px; background: var(--surface-2); font-size: 10px; color: var(--ink); }
+.tn .popover-field + .popover-field { margin-top: 4px; border-top: 0; padding-top: 4px; }
+.tn .filter-popover { max-height: min(70vh, 560px); overflow-y: auto; }

@@ -1,6 +1,6 @@
-// Invoices: register (#/invoices) and detail (#/invoices?id=...). Ported from the reference project, on the app theme.
+// Invoices: the register (#/invoices) with the invoice record opening in a side drawer (#/invoices?id=...), like Properties, Leases and Units.
 import { ToastProvider } from "@inv/components/ui/Toast";
-import InvoiceDetailPage from "@inv/pages/InvoiceDetailPage";
+import { InvoiceDrawer } from "@inv/components/invoices/InvoiceDrawer";
 import InvoiceListPage from "@inv/pages/InvoiceListPage";
 import { useSearchParams } from "@inv/router";
 
@@ -10,15 +10,8 @@ export default function Invoices({ startCreate = false }: { startCreate?: boolea
   return (
     <div className="rd contents">
       <ToastProvider>
-        {detail ? (
-          <div className="rd min-h-screen bg-canvas text-ink">
-            <div className="px-4 py-5 sm:px-6 sm:py-6">
-              <InvoiceDetailPage />
-            </div>
-          </div>
-        ) : (
-          <InvoiceListPage startCreate={startCreate} />
-        )}
+        <InvoiceListPage startCreate={startCreate} />
+        {detail ? <InvoiceDrawer key={detail} id={detail} /> : null}
       </ToastProvider>
     </div>
   );

@@ -29,8 +29,6 @@ export const NAV = [
   { id: 'financials', label: 'Financials', items: [
     { id: 'invoices', label: 'Invoices', icon: 'receipt', desc: 'Issue and track invoices sent to tenants and other customers.' },
     { id: 'payments', label: 'Payments', icon: 'wallet', desc: 'Record and reconcile rent and other payments as they are received.' },
-    { id: 'bill-schedule', label: 'Recurring Billing', icon: 'calendar-clock', desc: 'Set up recurring charges and scheduled bills.' },
-    { id: 'credit-notes', label: 'Charges & Credits', icon: 'badge-dollar-sign', desc: 'Apply one-off charges and credit notes to tenant accounts.' },
     { id: 'deposits', label: 'Deposits', icon: 'shield-check', desc: 'Hold, apply and refund security deposits.' },
     { id: 'expenses', label: 'Expenses & Bills', icon: 'card', desc: 'Capture property expenses and the bills you owe to vendors.' },
     { id: 'accounts', label: 'Accounting', icon: 'calculator', desc: 'Billing, accounts and the general ledger for your rental business.' },

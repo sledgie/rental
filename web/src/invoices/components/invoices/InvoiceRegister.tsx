@@ -5,6 +5,8 @@ import {
   ArrowDownUp,
   ArrowUp,
   ArrowUpDown,
+  ArrowUpRight,
+  Building2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -13,6 +15,8 @@ import {
   CreditCard,
   Download,
   Eye,
+  FileText,
+  User,
   FilePlus2,
   MoreHorizontal,
   Pencil,
@@ -23,7 +27,7 @@ import {
   Ban,
   X,
 } from "lucide-react";
-import { Button, EmptyState, IconButton } from "../../../tenants/components/ui";
+import { Button, DataField, EmptyState, IconButton, SectionTitle, TextLink } from "../../../tenants/components/ui";
 import { useNavigate } from "@inv/router";
 import { dueLabel, formatCAD, formatDate } from "@inv/lib/format";
 import { DEMO_TODAY, properties } from "@inv/data/mockInvoices";
@@ -105,6 +109,8 @@ export function InvoiceRegister(p: InvoiceRegisterProps) {
   const navigate = useNavigate();
   const [filterOpen, setFilterOpen] = useState(false);
   const [menu, setMenu] = useState<string | null>(null);
+  // #/invoices?expand=INV-2026-009 opens that invoice's summary row
+  const [expanded, setExpanded] = useState<string | null>(() => new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("expand"));
   const filterRef = useRef<HTMLDivElement>(null);
   const { filters, sort } = p;
   const totalPages = Math.max(1, Math.ceil(p.totalItems / p.pageSize));
@@ -307,18 +313,20 @@ export function InvoiceRegister(p: InvoiceRegisterProps) {
                 <table className="tenant-table">
                   <caption className="sr-only">Invoice register. Open an invoice to see its line items, payments and activity.</caption>
                   <colgroup>
-                    <col style={{ width: "12%" }} />
-                    <col style={{ width: "20%" }} />
-                    <col style={{ width: "16%" }} />
-                    <col style={{ width: "9%" }} />
-                    <col style={{ width: "11%" }} />
-                    <col style={{ width: "9%" }} />
-                    <col style={{ width: "9%" }} />
-                    <col style={{ width: "9%" }} />
+                    <col className="col-expand" />
                     <col style={{ width: "10%" }} />
+                    <col style={{ width: "17%" }} />
+                    <col style={{ width: "14%" }} />
+                    <col style={{ width: "8%" }} />
+                    <col style={{ width: "9%" }} />
+                    <col style={{ width: "9%" }} />
+                    <col style={{ width: "9%" }} />
+                    <col style={{ width: "12%" }} />
+                    <col style={{ width: "9%" }} />
                   </colgroup>
                   <thead>
                     <tr>
+                      <th className="expand-cell"><span className="sr-only">Expand</span></th>
                       {sortableTh("id", "Invoice")}
                       <th>Tenant</th>
                       <th className="email-cell">Property / unit</th>
@@ -339,8 +347,21 @@ export function InvoiceRegister(p: InvoiceRegisterProps) {
                         inv.status === "overdue" ||
                         (balance > 0 && !["void", "draft", "pending_approval"].includes(inv.status) && new Date(`${inv.dueDate}T23:59:59`) < new Date(DEMO_TODAY));
                       const editable = inv.status === "draft" || inv.status === "pending_approval";
+                      const isOpen = expanded === inv.id;
                       return (
-                        <tr key={inv.id} className="tenant-row" style={voided ? { opacity: 0.6 } : undefined}>
+                        <Fragment key={inv.id}>
+                        <tr className={`tenant-row ${isOpen ? "tenant-row-expanded" : ""}`} style={voided ? { opacity: 0.6 } : undefined}>
+                          <td className="expand-cell">
+                            <IconButton
+                              label={`${isOpen ? "Collapse" : "Expand"} invoice ${inv.id}`}
+                              className="expand-button"
+                              onClick={() => setExpanded(isOpen ? null : inv.id)}
+                              aria-expanded={isOpen}
+                              aria-controls={`details-${inv.id}`}
+                            >
+                              <ChevronRight size={15} className={isOpen ? "chevron-expanded" : ""} />
+                            </IconButton>
+                          </td>
                           <td className="tenant-cell">
                             <button className="tenant-name" onClick={() => open(inv.id)} aria-label={`Open invoice ${inv.id} for ${inv.tenant.name}`}>
                               {inv.id}
@@ -422,6 +443,50 @@ export function InvoiceRegister(p: InvoiceRegisterProps) {
                             </div>
                           </td>
                         </tr>
+                        {isOpen && (
+                          <tr className="detail-row" id={`details-${inv.id}`}>
+                            <td colSpan={10}>
+                              <div className="expanded-detail">
+                                <div className="expanded-detail-top">
+                                  <span>INVOICE DETAILS</span>
+                                  <TextLink onClick={() => open(inv.id)}>
+                                    Open invoice record
+                                    <ArrowUpRight size={12} />
+                                  </TextLink>
+                                </div>
+                                <div className="expanded-grid">
+                                  <section className="detail-section is-compact">
+                                    <SectionTitle icon={<User size={15} />} title="Billed to" />
+                                    <dl className="lease-facts">
+                                      <DataField label="Tenant">{inv.tenant.name}</DataField>
+                                      <DataField label="Email"><a href={`mailto:${inv.tenant.email}`}>{inv.tenant.email}</a></DataField>
+                                      <DataField label="Phone"><a href={`tel:${inv.tenant.phone.replace(/[^+\d]/g, "")}`}>{inv.tenant.phone}</a></DataField>
+                                      <DataField label="Lease">{inv.leaseRef}</DataField>
+                                    </dl>
+                                  </section>
+                                  <section className="detail-section is-compact">
+                                    <SectionTitle icon={<FileText size={15} />} title="Billing details" />
+                                    <dl className="lease-facts">
+                                      <DataField label="Invoice type">{typeLabels[inv.type]}</DataField>
+                                      <DataField label="Invoice date">{formatDate(inv.issueDate)}</DataField>
+                                      <DataField label="Due date">{formatDate(inv.dueDate)}</DataField>
+                                      <DataField label="Billing period">{formatDate(inv.billingPeriodStart)} &ndash; {formatDate(inv.billingPeriodEnd)}</DataField>
+                                    </dl>
+                                  </section>
+                                  <section className="detail-section is-compact">
+                                    <SectionTitle icon={<Building2 size={15} />} title="Property & unit" />
+                                    <dl className="lease-facts">
+                                      <DataField label="Property">{inv.propertyName}</DataField>
+                                      <DataField label="Location">{properties.find((x) => x.id === inv.propertyId)?.city ?? "—"}</DataField>
+                                      <DataField label="Unit">{inv.unit}</DataField>
+                                    </dl>
+                                  </section>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        </Fragment>
                       );
                     })}
                   </tbody>

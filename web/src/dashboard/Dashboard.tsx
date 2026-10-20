@@ -34,6 +34,19 @@ import { useInvoiceKpis } from "@inv/kpis";
 import { formatCAD } from "@inv/lib/format";
 import { useTenantDb, useWarningDays } from "../tenants/store";
 import { dashboardSummary, leaseStatus, money as tenantMoney } from "../tenants/lib/domain";
+import { useLeaseData } from "../leases/store";
+import { useStore as useUnitsStore } from "../units/store/appStore";
+import { money0 as unitMoney } from "../units/lib/format";
+import { usePayments } from "../payments/store";
+import { useStore as useProjectsStore } from "../projects/lib/store";
+import { money as projMoney, projectFinancials, TODAY as PROJECT_TODAY } from "../projects/lib/finance";
+import { useApp as useExpenses } from "../expenses/context/AppContext";
+import { dueStatus as billDueStatus, providerBalance as billBalance, recoveryOutstanding as billRecovery } from "../expenses/utils/bills";
+import { currentMonthKey, formatCAD as expMoney, monthKey as expMonth } from "../expenses/utils/format";
+import { useStore as useApplicationsStore } from "../applications/state/store";
+import { SUMMARY_CARDS as APP_CARDS } from "../applications/parts/helpers";
+import { fmtCAD as payMoney, sumCents as paySum } from "../payments/utils/paymentUtils";
+import { leaseSummary } from "../leases/summary";
 
 export default function Dashboard({ notify }: { notify?: (message: string) => void }) {
   const { invoices } = useInvoices();
@@ -41,6 +54,75 @@ export default function Dashboard({ notify }: { notify?: (message: string) => vo
   const [tenantDb] = useTenantDb();
   const warningDays = useWarningDays();
   const tenantSummary = useMemo(() => dashboardSummary(tenantDb), [tenantDb]);
+  const { summary: unitSummary } = useUnitsStore();
+  const { state: appState } = useApplicationsStore();
+  const appCounts = useMemo(
+    () => APP_CARDS.map((c) => ({ ...c, count: appState.applications.filter((a) => c.statuses.includes(a.status)).length })),
+    [appState.applications],
+  );
+  const exp = useExpenses();
+  const expSummary = useMemo(() => {
+    let upcoming = 0, dueSoon = 0, overdue = 0, providerUnpaid = 0, tenantOut = 0, monthExpenses = 0;
+    const month = currentMonthKey();
+    for (const bill of exp.bills) {
+      const due = billDueStatus(bill, exp.payments, exp.reminderSettings.dueSoonDays);
+      if (due === "upcoming") upcoming += 1;
+      if (due === "due_soon") dueSoon += 1;
+      if (due === "overdue") overdue += 1;
+      providerUnpaid += Math.max(0, billBalance(bill, exp.payments));
+      tenantOut += Math.max(0, billRecovery(bill, exp.recoveries));
+      if (expMonth(bill.invoiceDate) === month) monthExpenses += bill.amount;
+    }
+    return { upcoming, dueSoon, overdue, providerUnpaid, tenantOut, monthExpenses, dueSoonDays: exp.reminderSettings.dueSoonDays };
+  }, [exp.bills, exp.payments, exp.recoveries, exp.reminderSettings.dueSoonDays]);
+  const { projects: renovationProjects } = useProjectsStore();
+  const projSummary = useMemo(() => {
+    const live = renovationProjects.filter((p) => !p.archived);
+    const active = live.filter((p) => ["Approved", "In Progress", "On Hold"].includes(p.status));
+    const inScope = renovationProjects.filter((p) => p.status !== "Cancelled");
+    let approved = 0, incurred = 0, outstanding = 0, attention = 0;
+    for (const p of inScope) {
+      const fin = projectFinancials(p);
+      approved += fin.currentBudget;
+      incurred += fin.incurred;
+      outstanding += fin.outstanding;
+      attention += p.deficiencies.filter((d) => d.status === "Open" || d.status === "In Progress").length
+        + p.milestones.filter((m) => m.status !== "Completed" && m.plannedDate < PROJECT_TODAY).length
+        + p.changeOrders.filter((c) => c.approval === "Pending Approval").length
+        + (p.estimatedCompletion < PROJECT_TODAY && !["Completed", "Cancelled"].includes(p.status) ? 1 : 0);
+    }
+    return { active: active.length, pipeline: live.filter((p) => ["Draft", "Planned"].includes(p.status)).length, onHold: live.filter((p) => p.status === "On Hold").length, approved, incurred, outstanding, attention };
+  }, [renovationProjects]);
+  const pay = usePayments();
+  const paySummary = useMemo(() => {
+    const posted = pay.payments.filter((p) => p.status === "posted");
+    const postedIds = new Set(posted.map((p) => p.id));
+    const unpaid = pay.INVOICES.filter((i) => i.status !== "cancelled" && (pay.balances.get(i.id)?.outstanding ?? 0) > 0);
+    const overdueByTenant = new Map<string, number>();
+    for (const i of pay.INVOICES) {
+      const b = pay.balances.get(i.id);
+      if (b?.overdue) overdueByTenant.set(i.tenantId, (overdueByTenant.get(i.tenantId) ?? 0) + b.outstanding);
+    }
+    const activeCredits = pay.credits.filter((c) => {
+      const b = pay.creditBalances.get(c.id);
+      return b && b.valid && !b.exhausted;
+    });
+    return {
+      received: paySum(posted.map((p) => p.amount)),
+      postedCount: posted.length,
+      reversed: pay.payments.filter((p) => p.status === "reversed").length,
+      refunded: pay.payments.filter((p) => p.refund).length,
+      allocated: paySum(pay.allocations.filter((a) => postedIds.has(a.paymentId)).map((a) => a.amount)),
+      credit: paySum(activeCredits.map((c) => pay.creditBalances.get(c.id)?.remaining ?? 0)),
+      creditCount: activeCredits.length,
+      outstanding: paySum(unpaid.map((i) => pay.balances.get(i.id)?.outstanding ?? 0)),
+      unpaidCount: unpaid.length,
+      overdueAccounts: overdueByTenant.size,
+      overdueCents: paySum([...overdueByTenant.values()]),
+    };
+  }, [pay.payments, pay.allocations, pay.balances, pay.credits, pay.creditBalances, pay.INVOICES]);
+  const [leaseData] = useLeaseData();
+  const leases = useMemo(() => leaseSummary(leaseData), [leaseData]);
   const expiringLeases = tenantDb.leases.filter((l) => leaseStatus(l, warningDays) === "Expiring").length;
   /* ---------------------------------------------------------------- filters */
   const [preset, setPreset] = useState<RangePreset>("30d");
@@ -439,6 +521,338 @@ export default function Dashboard({ notify }: { notify?: (message: string) => vo
                   href: "#/tenants?outstanding=1",
                   tone: tenantSummary.outstanding > 0 ? "text-amber" : "text-ink",
                 },
+              ].map((k) => (
+                <a key={k.label} href={k.href} className="group block">
+                  <Card className="fade-rise p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-[11.5px] font-medium text-muted">{k.label}</p>
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-muted transition-colors group-hover:bg-brand-soft group-hover:text-brand">
+                        <Icon name={k.icon} size={15} />
+                      </span>
+                    </div>
+                    <p className={cn("mt-2.5 font-display text-[27px] font-semibold leading-none tracking-[-0.035em] tnum", k.tone)}>
+                      {k.value}
+                      <span className="ml-1.5 text-[11px] font-medium tracking-normal text-muted">{k.unit}</span>
+                    </p>
+                    <p className="mt-3 border-t border-line-soft pt-2.5 text-[10.5px] text-muted">{k.hint}</p>
+                  </Card>
+                </a>
+              ))}
+            </div>
+
+            {/* leases group (lease register totals) */}
+            <div className="mt-8 flex items-end justify-between gap-3">
+              <div>
+                <h2 className="font-display text-[15px] font-semibold text-ink">Leases</h2>
+                <p className="mt-0.5 text-[11px] text-muted">Agreements in force, renewals due and signatures outstanding</p>
+              </div>
+              <a
+                href="#/leases"
+                className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-brand transition hover:underline"
+              >
+                View leases
+                <Icon name="arrowRight" size={11} />
+              </a>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                {
+                  label: "Active leases",
+                  value: String(leases.active),
+                  unit: "leases",
+                  hint: `${leases.total} agreements on the register`,
+                  icon: "report" as const,
+                  tone: "text-ink",
+                },
+                {
+                  label: "Expiring soon",
+                  value: String(leases.expiring),
+                  unit: "leases",
+                  hint: "Term or notice deadline within 60 days",
+                  icon: "clock" as const,
+                  tone: leases.expiring > 0 ? "text-amber" : "text-ink",
+                },
+                {
+                  label: "Pending signature",
+                  value: String(leases.pendingSignature),
+                  unit: "leases",
+                  hint: "Agreements awaiting tenant signatures",
+                  icon: "users" as const,
+                  tone: "text-ink",
+                },
+                {
+                  label: "Monthly contract rent",
+                  value: leases.format(leases.monthlyRent),
+                  unit: "per month",
+                  hint: "Active and expiring contracts, not payments received",
+                  icon: "wallet" as const,
+                  tone: "text-ink",
+                },
+              ].map((k) => (
+                <a key={k.label} href="#/leases" className="group block">
+                  <Card className="fade-rise p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-[11.5px] font-medium text-muted">{k.label}</p>
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-muted transition-colors group-hover:bg-brand-soft group-hover:text-brand">
+                        <Icon name={k.icon} size={15} />
+                      </span>
+                    </div>
+                    <p className={cn("mt-2.5 font-display text-[27px] font-semibold leading-none tracking-[-0.035em] tnum", k.tone)}>
+                      {k.value}
+                      <span className="ml-1.5 text-[11px] font-medium tracking-normal text-muted">{k.unit}</span>
+                    </p>
+                    <p className="mt-3 border-t border-line-soft pt-2.5 text-[10.5px] text-muted">{k.hint}</p>
+                  </Card>
+                </a>
+              ))}
+            </div>
+
+            {/* units group (unit register totals) */}
+            <div className="mt-8 flex items-end justify-between gap-3">
+              <div>
+                <h2 className="font-display text-[15px] font-semibold text-ink">Units</h2>
+                <p className="mt-0.5 text-[11px] text-muted">Occupancy, vacancies and what the unit register is earning</p>
+              </div>
+              <a
+                href="#/units"
+                className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-brand transition hover:underline"
+              >
+                View units
+                <Icon name="arrowRight" size={11} />
+              </a>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                {
+                  label: "Total units",
+                  value: String(unitSummary.countedUnits),
+                  unit: "units",
+                  hint: `${unitSummary.byProperty.filter((p) => p.units > 0).length} properties on the register`,
+                  icon: "building" as const,
+                  href: "#/units",
+                  tone: "text-ink",
+                },
+                {
+                  label: "Occupied",
+                  value: String(unitSummary.occupied),
+                  unit: `${Math.round(unitSummary.occupancyRate)}% occupancy`,
+                  hint: `${unitSummary.reserved} reserved, ${unitSummary.underMaintenance} under maintenance`,
+                  icon: "users" as const,
+                  href: "#/units?status=Occupied",
+                  tone: "text-ink",
+                },
+                {
+                  label: "Vacant",
+                  value: String(unitSummary.vacant),
+                  unit: "units",
+                  hint: `${unitSummary.expiringSoon} leases expiring soon`,
+                  icon: "key" as const,
+                  href: "#/units?status=Vacant",
+                  tone: unitSummary.vacant > 0 ? "text-amber" : "text-ink",
+                },
+                {
+                  label: "Outstanding rent",
+                  value: unitMoney(unitSummary.outstandingTotal),
+                  unit: "CAD",
+                  hint: `${unitMoney(unitSummary.overdueTotal)} overdue, ${unitMoney(unitSummary.monthlyRent)} monthly rent roll`,
+                  icon: "wallet" as const,
+                  href: "#/units?financial=outstanding",
+                  tone: unitSummary.outstandingTotal > 0 ? "text-amber" : "text-ink",
+                },
+              ].map((k) => (
+                <a key={k.label} href={k.href} className="group block">
+                  <Card className="fade-rise p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-[11.5px] font-medium text-muted">{k.label}</p>
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-muted transition-colors group-hover:bg-brand-soft group-hover:text-brand">
+                        <Icon name={k.icon} size={15} />
+                      </span>
+                    </div>
+                    <p className={cn("mt-2.5 font-display text-[27px] font-semibold leading-none tracking-[-0.035em] tnum", k.tone)}>
+                      {k.value}
+                      <span className="ml-1.5 text-[11px] font-medium tracking-normal text-muted">{k.unit}</span>
+                    </p>
+                    <p className="mt-3 border-t border-line-soft pt-2.5 text-[10.5px] text-muted">{k.hint}</p>
+                  </Card>
+                </a>
+              ))}
+            </div>
+
+            {/* payments group (payment ledger totals) */}
+            <div className="mt-8 flex items-end justify-between gap-3">
+              <div>
+                <h2 className="font-display text-[15px] font-semibold text-ink">Payments</h2>
+                <p className="mt-0.5 text-[11px] text-muted">Rent received, what has been applied and what is still owed</p>
+              </div>
+              <a
+                href="#/payments"
+                className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-brand transition hover:underline"
+              >
+                View payments
+                <Icon name="arrowRight" size={11} />
+              </a>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              {[
+                {
+                  label: "Payments received",
+                  value: payMoney(paySummary.received),
+                  unit: "CAD",
+                  hint: `${paySummary.postedCount} posted, ${paySummary.reversed} reversed, ${paySummary.refunded} refunded`,
+                  icon: "wallet" as const,
+                  href: "#/payments?status=posted",
+                  tone: "text-ink",
+                },
+                {
+                  label: "Applied to invoices",
+                  value: payMoney(paySummary.allocated),
+                  unit: "CAD",
+                  hint: "Posted payment funds allocated to rent",
+                  icon: "report" as const,
+                  href: "#/payments",
+                  tone: "text-ink",
+                },
+                {
+                  label: "Unapplied credits",
+                  value: payMoney(paySummary.credit),
+                  unit: "CAD",
+                  hint: `${paySummary.creditCount} active tenant credit${paySummary.creditCount === 1 ? "" : "s"} on account`,
+                  icon: "sparkles" as const,
+                  href: "#/payments",
+                  tone: "text-ink",
+                },
+                {
+                  label: "Outstanding rent",
+                  value: payMoney(paySummary.outstanding),
+                  unit: "CAD",
+                  hint: `Across ${paySummary.unpaidCount} unpaid invoices`,
+                  icon: "clock" as const,
+                  href: "#/payments",
+                  tone: paySummary.outstanding > 0 ? "text-amber" : "text-ink",
+                },
+                {
+                  label: "Overdue accounts",
+                  value: String(paySummary.overdueAccounts),
+                  unit: "tenants",
+                  hint: `${payMoney(paySummary.overdueCents)} past due`,
+                  icon: "users" as const,
+                  href: "#/payments",
+                  tone: paySummary.overdueAccounts > 0 ? "text-amber" : "text-ink",
+                },
+              ].map((k) => (
+                <a key={k.label} href={k.href} className="group block">
+                  <Card className="fade-rise p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-[11.5px] font-medium text-muted">{k.label}</p>
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-muted transition-colors group-hover:bg-brand-soft group-hover:text-brand">
+                        <Icon name={k.icon} size={15} />
+                      </span>
+                    </div>
+                    <p className={cn("mt-2.5 font-display text-[24px] font-semibold leading-none tracking-[-0.035em] tnum", k.tone)}>
+                      {k.value}
+                      <span className="ml-1.5 text-[11px] font-medium tracking-normal text-muted">{k.unit}</span>
+                    </p>
+                    <p className="mt-3 border-t border-line-soft pt-2.5 text-[10.5px] text-muted">{k.hint}</p>
+                  </Card>
+                </a>
+              ))}
+            </div>
+
+            {/* applications group (application pipeline) */}
+            <div className="mt-8 flex items-end justify-between gap-3">
+              <div>
+                <h2 className="font-display text-[15px] font-semibold text-ink">Applications</h2>
+                <p className="mt-0.5 text-[11px] text-muted">Rental applications moving from submission to a lease</p>
+              </div>
+              <a
+                href="#/applications"
+                className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-brand transition hover:underline"
+              >
+                View applications
+                <Icon name="arrowRight" size={11} />
+              </a>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              {appCounts.map((c) => (
+                <a key={c.key} href={`#/applications?status=${encodeURIComponent(c.statuses[0])}`} className="group block">
+                  <Card className="fade-rise p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-[11.5px] font-medium text-muted">{c.label}</p>
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-muted transition-colors group-hover:bg-brand-soft group-hover:text-brand">
+                        <Icon name="report" size={15} />
+                      </span>
+                    </div>
+                    <p className={cn("mt-2.5 font-display text-[27px] font-semibold leading-none tracking-[-0.035em] tnum", c.key === "awaiting" && c.count > 0 ? "text-amber" : "text-ink")}>
+                      {c.count}
+                      <span className="ml-1.5 text-[11px] font-medium tracking-normal text-muted">{c.count === 1 ? "application" : "applications"}</span>
+                    </p>
+                    <p className="mt-3 border-t border-line-soft pt-2.5 text-[10.5px] text-muted">{c.hint}</p>
+                  </Card>
+                </a>
+              ))}
+            </div>
+
+            {/* expenses group (provider bills and tenant recoveries) */}
+            <div className="mt-8 flex items-end justify-between gap-3">
+              <div>
+                <h2 className="font-display text-[15px] font-semibold text-ink">Expenses &amp; bills</h2>
+                <p className="mt-0.5 text-[11px] text-muted">Provider invoices, what is owed and what tenants still reimburse</p>
+              </div>
+              <a
+                href="#/expenses"
+                className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-brand transition hover:underline"
+              >
+                View expenses
+                <Icon name="arrowRight" size={11} />
+              </a>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
+              {[
+                { label: "Upcoming bills", value: String(expSummary.upcoming), unit: "bills", hint: `Due after the next ${expSummary.dueSoonDays} days`, icon: "clock" as const, href: "#/expenses?status=upcoming", tone: "text-ink" },
+                { label: "Due soon", value: String(expSummary.dueSoon), unit: "bills", hint: `Within ${expSummary.dueSoonDays} days, still open`, icon: "clock" as const, href: "#/expenses?status=due_soon", tone: expSummary.dueSoon > 0 ? "text-amber" : "text-ink" },
+                { label: "Overdue bills", value: String(expSummary.overdue), unit: "bills", hint: "Past due with a provider balance", icon: "report" as const, href: "#/expenses?status=overdue", tone: expSummary.overdue > 0 ? "text-amber" : "text-ink" },
+                { label: "Owed to providers", value: expMoney(expSummary.providerUnpaid), unit: "CAD", hint: "Unpaid provider balances", icon: "wallet" as const, href: "#/expenses", tone: expSummary.providerUnpaid > 0 ? "text-amber" : "text-ink" },
+                { label: "Tenant recoveries", value: expMoney(expSummary.tenantOut), unit: "CAD", hint: "Outstanding, independent of provider payments", icon: "users" as const, href: "#/expenses", tone: "text-ink" },
+                { label: "Expenses this month", value: expMoney(expSummary.monthExpenses), unit: "CAD", hint: "Actual invoices dated this month", icon: "trend" as const, href: "#/expenses", tone: "text-ink" },
+              ].map((k) => (
+                <a key={k.label} href={k.href} className="group block">
+                  <Card className="fade-rise p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-[11.5px] font-medium text-muted">{k.label}</p>
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-muted transition-colors group-hover:bg-brand-soft group-hover:text-brand">
+                        <Icon name={k.icon} size={15} />
+                      </span>
+                    </div>
+                    <p className={cn("mt-2.5 font-display text-[22px] font-semibold leading-none tracking-[-0.035em] tnum", k.tone)}>
+                      {k.value}
+                      <span className="ml-1.5 text-[11px] font-medium tracking-normal text-muted">{k.unit}</span>
+                    </p>
+                    <p className="mt-3 border-t border-line-soft pt-2.5 text-[10.5px] text-muted">{k.hint}</p>
+                  </Card>
+                </a>
+              ))}
+            </div>
+
+            {/* projects group (renovation pipeline) */}
+            <div className="mt-8 flex items-end justify-between gap-3">
+              <div>
+                <h2 className="font-display text-[15px] font-semibold text-ink">Projects</h2>
+                <p className="mt-0.5 text-[11px] text-muted">Renovation work in flight, approved capital and what needs attention</p>
+              </div>
+              <a
+                href="#/projects"
+                className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-brand transition hover:underline"
+              >
+                View projects
+                <Icon name="arrowRight" size={11} />
+              </a>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                { label: "Active projects", value: String(projSummary.active), unit: "projects", hint: `${projSummary.pipeline} in the pipeline, ${projSummary.onHold} on hold`, icon: "wrench" as const, href: "#/projects?status=In%20Progress", tone: "text-ink" },
+                { label: "Approved capital", value: projMoney(projSummary.approved), unit: "CAD", hint: `${projMoney(projSummary.incurred)} incurred so far`, icon: "wallet" as const, href: "#/projects", tone: "text-ink" },
+                { label: "Outstanding payables", value: projMoney(projSummary.outstanding), unit: "CAD", hint: "Approved project invoices still unpaid", icon: "report" as const, href: "#/projects", tone: projSummary.outstanding > 0 ? "text-amber" : "text-ink" },
+                { label: "Needs attention", value: String(projSummary.attention), unit: "items", hint: "Deficiencies, late milestones, change orders, delays", icon: "clock" as const, href: "#/projects", tone: projSummary.attention > 0 ? "text-amber" : "text-ink" },
               ].map((k) => (
                 <a key={k.label} href={k.href} className="group block">
                   <Card className="fade-rise p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand">
