@@ -1,0 +1,110 @@
+/* Financial Reports. Everything is scoped under .fr so it cannot leak into other pages.
+   The page shell (.tn …) comes from the tenants stylesheet; colours follow the app theme variables. */
+.fr .fr-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.fr .fr-kpi{display:flex;flex-direction:column;gap:6px;text-align:left;padding:15px 17px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);cursor:pointer;min-width:0;font:inherit}
+.fr .fr-kpi:hover{border-color:var(--line2);background:var(--surface-2)}
+.fr .fr-kpi:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fr .fr-kpi-top{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:11px;color:var(--muted)}
+.fr .fr-kpi-value{font-size:24px;font-weight:600;letter-spacing:-0.6px;font-variant-numeric:tabular-nums}
+.fr .fr-kpi-period{font-size:10.5px;color:var(--muted)}
+.fr .fr-delta{font-size:11px;font-weight:600;white-space:nowrap}
+.fr .fr-delta.up{color:var(--ok)}
+.fr .fr-delta.down{color:var(--danger)}
+.fr .fr-delta.flat{color:var(--muted);font-weight:400}
+
+.fr .fr-recent{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;padding:10px 16px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.fr .fr-recent button{border:0;background:transparent;color:var(--accent);cursor:pointer;font:inherit;padding:0}
+.fr .fr-recent button:hover{text-decoration:underline}
+
+.fr .fr-section{padding:18px 16px 4px;border-top:1px solid var(--line)}
+.fr .fr-section h2{margin:0;font-size:14px;font-weight:600;color:var(--ink)}
+.fr .fr-section p{margin:3px 0 12px;font-size:12px;color:var(--muted)}
+.fr .fr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px;margin-bottom:16px}
+.fr .fr-card{display:flex;flex-direction:column;gap:8px;text-align:left;min-height:150px;padding:15px 16px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);cursor:pointer;font:inherit}
+.fr .fr-card:hover{border-color:var(--accent);background:var(--surface-2)}
+.fr .fr-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fr .fr-card h3{margin:0;font-size:13.5px;font-weight:600}
+.fr .fr-card p{margin:0;flex:1;font-size:12px;line-height:1.5;color:var(--muted)}
+.fr .fr-card-open{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--accent)}
+.fr .fr-pill{width:fit-content;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;border:1px solid transparent}
+.fr .fr-pill.available{background:var(--ok-soft);color:var(--ok)}
+.fr .fr-pill.limited{background:var(--warn-soft);color:var(--warn)}
+.fr .fr-pill.planned{background:var(--surface-3);color:var(--muted)}
+
+.fr .fr-chips{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px;border-top:1px solid var(--line)}
+.fr .fr-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 6px 3px 10px;border-radius:999px;font-size:11.5px;background:var(--accent-soft);color:var(--accent)}
+.fr .fr-chip button{border:0;background:transparent;color:inherit;cursor:pointer;display:grid;place-items:center;padding:1px}
+.fr .fr-period{font-size:12px;color:var(--muted);white-space:nowrap}
+
+.fr .fr-note{margin:0;padding:11px 16px;border-top:1px solid var(--line);background:var(--warn-soft);color:var(--ink);font-size:12.5px}
+.fr .fr-note strong{color:var(--warn)}
+
+.fr .fr-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;padding:16px;border-top:1px solid var(--line)}
+.fr .fr-chart{padding:14px;border:1px solid var(--line);border-radius:8px;background:var(--card);min-width:0}
+.fr .fr-chart h4{margin:0 0 10px;font-size:12.5px;font-weight:600}
+.fr .fr-chart svg{display:block;width:100%;height:auto}
+.fr .fr-chart text{fill:var(--muted)}
+.fr .fr-legend{margin:0;padding:0;list-style:none;font-size:11.5px;color:var(--muted);display:grid;gap:4px}
+.fr .fr-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
+.fr .fr-pie{display:flex;gap:16px;align-items:center}
+.fr .fr-pie svg{width:120px;flex-shrink:0}
+.fr .fr-empty{padding:22px;text-align:center;color:var(--muted);font-size:12.5px}
+
+.fr .fr-tools{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;padding:14px 16px;border-top:1px solid var(--line)}
+.fr .fr-tools .fr-f{display:flex;flex-direction:column;gap:4px;min-width:150px}
+.fr .fr-tools label{font-size:11px;color:var(--muted);font-weight:600}
+.fr .fr-tools select,.fr .fr-tools input{height:34px;padding:0 10px;border:1px solid var(--line);border-radius:7px;background:var(--surface-2);color:var(--ink);font:inherit;font-size:12.5px}
+.fr .fr-tools-hint{font-size:11.5px;color:var(--muted)}
+.fr .fr-block{padding:14px 16px;border-top:1px solid var(--line)}
+.fr .fr-block strong{font-size:13px}
+.fr .fr-block p{margin:4px 0 10px;font-size:12px;color:var(--muted)}
+.fr .fr-links{display:flex;flex-wrap:wrap;gap:8px}
+
+.fr .fr-sheet{padding:22px 24px 26px;border-top:1px solid var(--line)}
+.fr .fr-head{text-align:center;margin-bottom:18px}
+.fr .fr-head h2{margin:0;font-size:18px;font-weight:600}
+.fr .fr-head p{margin:3px 0;color:var(--muted);font-size:12px}
+.fr .fr-scroll{overflow-x:auto}
+.fr table.fin{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.fr table.fin th{position:sticky;top:0;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--surface-2);color:var(--muted);font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;text-align:left;white-space:nowrap}
+.fr table.fin th.sortable{cursor:pointer}
+.fr table.fin td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.fr table.fin td.num,.fr table.fin th.num{text-align:right}
+.fr table.fin tr.section td{font-weight:700;background:var(--surface-2);letter-spacing:.02em}
+.fr table.fin tr.total td{font-weight:700;border-top:1px solid var(--ink-2)}
+.fr table.fin tr.grand td{font-weight:800;border-top:2px solid var(--ink-2);border-bottom:3px double var(--ink-2)}
+.fr table.fin tr.clickable{cursor:pointer}
+.fr table.fin tr.clickable:hover td{background:var(--accent-soft)}
+.fr table.fin .indent-1{padding-left:28px}
+.fr table.fin .indent-2{padding-left:46px}
+.fr table.fin .chev{display:inline-block;vertical-align:-3px;margin-right:2px;transition:transform .12s}
+.fr table.fin .chev.open{transform:rotate(90deg)}
+.fr .neg{color:var(--danger)}
+.fr .fav{color:var(--ok)}
+.fr .unfav{color:var(--danger)}
+.fr .fr-notes{margin:16px 0 0;padding:0;list-style:none;color:var(--muted);font-size:11.5px}
+.fr .fr-notes li{margin:0 0 5px;padding-left:12px;position:relative}
+.fr .fr-notes li:before{content:"•";position:absolute;left:0}
+
+.fr-drill p.fr-d{margin:0 0 8px;font-size:12.5px;color:var(--muted)}
+.fr-drill table.fin{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+.fr-drill table.fin th{padding:7px 8px;border-bottom:1px solid var(--line);color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;text-align:left}
+.fr-drill table.fin td{padding:7px 8px;border-bottom:1px solid var(--line)}
+.fr-drill table.fin .num{text-align:right}
+.fr-drill table.fin tr.total td{font-weight:700}
+.fr-drill h3{margin:16px 0 6px;font-size:13px}
+.fr-drill ul{margin:8px 0;padding-left:16px;font-size:12px;color:var(--muted)}
+.fr-drill .fr-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.fr-drill-body{padding:18px 22px}
+
+@media (max-width:1100px){.fr .fr-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.fr .fr-kpis{grid-template-columns:1fr}.fr .fr-sheet{padding:16px 12px}}
+
+@media print{
+  .ns,.tv-top,.no-print,.page-heading-actions,.directory-toolbar,.fr-chips{display:none !important}
+  .fr .directory-panel{border:0;box-shadow:none}
+  .fr .fr-sheet{padding:0;border:0}
+}
+
+.fr-link,.fr .fr-link{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border:1px solid var(--line);border-radius:7px;background:var(--surface-2);color:var(--ink);font:inherit;font-size:12.5px;cursor:pointer;margin-top:10px}
+.fr-link:hover,.fr .fr-link:hover{border-color:var(--accent);color:var(--accent)}

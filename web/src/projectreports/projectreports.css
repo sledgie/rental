@@ -1,0 +1,6 @@
+/* Project Reports: page shell comes from the tenants stylesheet; report bodies are Tailwind (u-* theme colours) inside .u-root. */
+.pr .pr-period{font-size:12px;color:var(--muted);white-space:nowrap}
+.pr .pr-body{padding:18px 16px 22px;border-top:1px solid var(--line)}
+.pr .pr-note{font-size:13px;color:var(--muted);padding:24px 0;text-align:center}
+.pr .directory-tab svg{margin-right:5px;vertical-align:-2px}
+@media print{.pr .no-print,.pr .directory-tabs,.pr .directory-toolbar{display:none !important}}

@@ -1,0 +1,8 @@
+/* Bank Reconciliation: page shell comes from the tenants stylesheet; bodies are Tailwind (u-* theme colours) inside .u-root. */
+.br .br-period{font-size:12px;color:var(--muted);white-space:nowrap}
+.br .br-body{padding:18px 16px 22px;border-top:1px solid var(--line)}
+.br .directory-tab svg{margin-right:5px;vertical-align:-2px}
+.br .br-role{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.br .br-role select{height:34px;border:1px solid var(--line2);border-radius:8px;background:var(--card);color:var(--ink);padding:0 8px;font:inherit;font-size:13px}
+.br .br-back{background:none;border:0;padding:0;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer}
+@media print{.br .no-print,.br .directory-tabs,.br .directory-toolbar{display:none !important}}

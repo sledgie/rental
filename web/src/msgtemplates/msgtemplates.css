@@ -1,0 +1,40 @@
+/* Message Templates: page shell comes from the tenants stylesheet; bodies are Tailwind (u-* theme colours) inside .u-root.
+   Children of .u-root have unlayered CSS reverted, so the module's helper classes live in a layer. */
+.mtp .mt-period{font-size:12px;color:var(--muted);white-space:nowrap}
+.mtp .mt-body{border-top:1px solid var(--line)}
+.mtp .directory-tab svg{margin-right:5px;vertical-align:-2px}
+@media print{.mtp .no-print{display:none !important}}
+
+@layer utilities {
+  .mt .card{background:var(--card);border:1px solid var(--line);border-radius:12px}
+  .mt .input{width:100%;min-height:40px;border:1px solid var(--line2);border-radius:8px;background:var(--card);padding:9px 11px;color:var(--ink);transition:border-color .15s,box-shadow .15s}
+  .mt .input:hover{border-color:var(--muted)}
+  .mt .input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+  .mt .input[aria-invalid="true"]{border-color:var(--danger);box-shadow:0 0 0 3px color-mix(in srgb,var(--danger) 12%,transparent)}
+  .mt textarea.input{resize:vertical;line-height:1.55}
+  .mt select.input{appearance:auto;padding-right:8px}
+  .mt .label{display:block;font-size:12px;line-height:1.25;font-weight:600;color:var(--ink-2);margin-bottom:6px}
+  .mt .scrollbar-thin{scrollbar-width:thin}
+  .mt .rich-editor{min-height:280px;padding:18px;line-height:1.65;color:var(--ink);outline:none;overflow-y:auto}
+  .mt .rich-editor:empty::before{content:attr(data-placeholder);color:var(--muted);pointer-events:none}
+  .mt .rich-editor p{margin:0 0 14px}
+  .mt .rich-editor ul,.mt .rich-editor ol{padding-left:24px;margin:0 0 14px;list-style:revert}
+  .mt .rich-editor a{color:var(--accent);text-decoration:underline}
+  .mt .rich-editor blockquote{border-left:3px solid var(--line2);padding-left:14px;color:var(--muted)}
+  /* The preview is an email, so it keeps a fixed light "paper" palette in every theme. */
+  .mt .email-preview{color:#20293a;font-family:Arial,Helvetica,sans-serif;line-height:1.6;font-size:14px;overflow-wrap:anywhere}
+  .mt .email-preview p{margin:0 0 15px}
+  .mt .email-preview ul,.mt .email-preview ol{padding-left:22px;margin:0 0 15px;list-style:revert}
+  .mt .email-preview a{color:#1d4ed8;text-decoration:underline}
+  .mt .email-preview .email-signature{border-top:1px solid #e8edf3;margin-top:26px;padding-top:16px;color:#526075}
+  .mt .modal-backdrop{animation:mt-fade .16s ease-out}
+  .mt .modal-panel{animation:mt-modal .2s cubic-bezier(.2,.8,.2,1)}
+  .mt .toast-enter{animation:mt-toast .22s cubic-bezier(.2,.8,.2,1)}
+  .mt .skeleton{background:linear-gradient(90deg,var(--surface-2) 25%,var(--surface-3) 50%,var(--surface-2) 75%);background-size:200% 100%;animation:mt-shimmer 1.4s infinite}
+  .mt .spin{animation:mt-spin .8s linear infinite}
+}
+@keyframes mt-fade{from{opacity:0}to{opacity:1}}
+@keyframes mt-modal{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes mt-toast{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes mt-shimmer{to{background-position:-200% 0}}
+@keyframes mt-spin{to{transform:rotate(360deg)}}

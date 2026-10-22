@@ -374,3 +374,35 @@
 .tn .u-drawer-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 22px 22px; }
 .tn .u-drawer-foot { flex-shrink: 0; border-top: 1px solid var(--line); padding: 10px 22px; }
 .tn .overlay-panel.u-drawer-wide:focus, .tn .overlay-panel.u-drawer-wide:focus-visible { outline: none; }
+
+/* Accounting / Chart of Accounts module (src/accounting): same approach as Units / Payments (u-* theme colours inside .u-root). */
+@source "../accounting/";
+@source "../occupancy/";
+@source "../performance/";
+@source "../projectreports/";
+@source "../bankrecon/";
+@source "../banks/";
+@source "../messaging/";
+@source "../msgtemplates/";
+@source "../automation/";
+@theme inline {
+  --animate-coa-fade-up: coa-fade-up 0.45s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+  --animate-coa-fade-in: coa-fade-in 0.25s ease both;
+  --animate-coa-sheet-in: coa-sheet-in 0.32s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+  --animate-coa-panel-in: coa-panel-in 0.3s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+  --animate-coa-pop-in: coa-pop-in 0.16s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+  --animate-coa-toast-in: coa-toast-in 0.3s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+}
+@keyframes coa-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes coa-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes coa-sheet-in { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes coa-panel-in { from { opacity: 0; transform: translateY(8px) scale(0.985); } to { opacity: 1; transform: none; } }
+@keyframes coa-pop-in { from { opacity: 0; transform: scale(0.97) translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes coa-toast-in { from { opacity: 0; transform: translateY(14px) scale(0.98); } to { opacity: 1; transform: none; } }
+@layer utilities {
+  .u-root .coa-scroll { scrollbar-width: thin; scrollbar-color: var(--line2) transparent; }
+  .u-root .coa-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+  .u-root .coa-scroll::-webkit-scrollbar-track { background: transparent; }
+  .u-root .coa-scroll::-webkit-scrollbar-thumb { background: var(--line2); border: 3px solid transparent; background-clip: content-box; border-radius: 99px; }
+  .u-root mark.hit { background: color-mix(in srgb, var(--warn) 28%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
+}

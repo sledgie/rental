@@ -13,6 +13,7 @@ export const NAV = [
   ] },
   { id: 'portfolio', label: 'Portfolio', items: [
     { id: 'properties', label: 'Properties', icon: 'building-2', desc: 'Manage the buildings and houses in your portfolio, their details and status.' },
+    { id: 'banks', label: 'Banks', icon: 'landmark', desc: 'Bank accounts used for payments, deposits and reconciliation.' },
     { id: 'units', label: 'Units', icon: 'door-open', desc: 'Track every rentable unit, its features, rent and availability.' },
     { id: 'tenants', label: 'Tenants', icon: 'users', desc: 'Keep tenant profiles, contact details and tenancy history in one place.' },
     { id: 'leases', label: 'Leases', icon: 'file-signature', desc: 'Create, renew and monitor lease agreements and their key dates.' },
@@ -40,7 +41,6 @@ export const NAV = [
     { id: 'documents', label: 'Document Center', icon: 'folder-open', desc: 'Store and share leases, notices, receipts and other documents.' },
   ] },
   { id: 'reports-group', label: 'Reports & Analytics', items: [
-    { id: 'reports', label: 'Reports', icon: 'chart-no-axes-combined', desc: 'Browse and run reports across the whole application.' },
     { id: 'financial-reports', label: 'Financial Reports', icon: 'trending-up', desc: 'Income statements, cash flow, aging and other financial reports.' },
     { id: 'occupancy-reports', label: 'Occupancy Reports', icon: 'chart-pie', desc: 'Vacancy, turnover and occupancy trends across properties and units.' },
     { id: 'property-performance', label: 'Property Performance', icon: 'chart', desc: 'Compare the income, costs and returns of each property.' },
@@ -49,7 +49,7 @@ export const NAV = [
   { id: 'automation', label: 'Automation', items: [
     { id: 'workflows', label: 'Workflow Automation', icon: 'workflow', desc: 'Automate repetitive steps such as reminders, approvals and follow-ups.' },
     { id: 'scheduled-tasks', label: 'Scheduled Tasks', icon: 'clock', desc: 'Manage jobs that run on a schedule, such as billing runs and reports.' },
-    { id: 'email-templates', label: 'Email Templates', icon: 'mail', desc: 'Create and edit reusable templates for emails sent from the system.' },
+    { id: 'message-templates', label: 'Message Templates', icon: 'mail', desc: 'Create and edit reusable email, SMS and in-app message templates used across the system.' },
     { id: 'activity-logs', label: 'Activity Logs', icon: 'activity', desc: 'An audit trail of who did what, and when.' },
   ] },
   { id: 'settings-group', label: 'Settings', items: [

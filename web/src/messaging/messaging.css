@@ -1,0 +1,20 @@
+/* Messages: an Outlook-style mail client (command bar, folder pane, message list, reading pane) in the app's panel chrome; panes are Tailwind (u-* theme colours) inside .u-root. */
+.ms .ms-client{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.ms .ms-topbar{display:flex;align-items:center;gap:14px;padding:8px 14px;background:var(--accent-strong);color:var(--accent-ink)}
+.ms .ms-brand{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:14px}
+.ms .ms-new{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border:0;border-radius:6px;background:var(--card);color:var(--accent-strong);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.ms .ms-new:hover{filter:brightness(.95)}
+.ms .ms-search{flex:1;max-width:460px;margin:0 auto;display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:6px;background:color-mix(in srgb,var(--accent-ink) 18%,transparent);color:var(--accent-ink)}
+.ms .ms-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:inherit;font:inherit;font-size:13px}
+.ms .ms-search input::placeholder{color:color-mix(in srgb,var(--accent-ink) 75%,transparent)}
+.ms .ms-unread{font-size:12px;opacity:.9;white-space:nowrap}
+.ms .ms-field{display:inline-flex;align-items:center;gap:8px;font-size:12px}
+.ms .ms-field select{height:30px;border:0;border-radius:6px;background:color-mix(in srgb,var(--accent-ink) 18%,transparent);color:var(--accent-ink);padding:0 8px;font:inherit;font-size:12px}
+.ms .ms-field select option{color:#000}
+/* Children of .u-root have unlayered CSS reverted, so the pane row has to live in a layer. */
+@layer utilities{
+.ms .ms-split{display:flex;flex-direction:row;align-items:stretch;height:calc(100vh - 200px);min-height:560px;overflow-x:auto;overflow-y:hidden}
+.ms .ms-split > *{min-height:0;flex-shrink:0}
+.ms .ms-split > :last-child{flex:1 1 0;min-width:420px}
+}
+@media print{.ms .no-print{display:none !important}}

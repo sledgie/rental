@@ -1,0 +1,23 @@
+/* Workflow Automation: page shell comes from the tenants stylesheet; bodies are Tailwind (u-* theme colours) inside .u-root.
+   The form helper classes (.input, .label, ...) are shared with Message Templates and live in a layer, scoped to .wf here. */
+.wfa .directory-tab svg{margin-right:5px;vertical-align:-2px}
+.wfa .wf-body{border-top:1px solid var(--line)}
+@media print{.wfa .no-print{display:none !important}}
+@layer utilities {
+  .wf .card{background:var(--card);border:1px solid var(--line);border-radius:12px}
+  .wf .input{width:100%;min-height:40px;border:1px solid var(--line2);border-radius:8px;background:var(--card);padding:9px 11px;color:var(--ink);transition:border-color .15s,box-shadow .15s}
+  .wf .input:hover{border-color:var(--muted)}
+  .wf .input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+  .wf .input[aria-invalid="true"]{border-color:var(--danger)}
+  .wf textarea.input{resize:vertical;line-height:1.55}
+  .wf select.input{appearance:auto;padding-right:8px}
+  .wf .label{display:block;font-size:12px;line-height:1.25;font-weight:600;color:var(--ink-2);margin-bottom:6px}
+  .wf .modal-backdrop{animation:wf-fade .16s ease-out}
+  .wf .modal-panel{animation:wf-modal .2s cubic-bezier(.2,.8,.2,1)}
+  .wf .toast-enter{animation:wf-modal .22s cubic-bezier(.2,.8,.2,1)}
+  .wf .spin{animation:wf-spin .8s linear infinite}
+  .wf .scrollbar-thin{scrollbar-width:thin}
+}
+@keyframes wf-fade{from{opacity:0}to{opacity:1}}
+@keyframes wf-modal{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes wf-spin{to{transform:rotate(360deg)}}

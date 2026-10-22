@@ -1,0 +1,6 @@
+/* Occupancy Reports: page shell comes from the tenants stylesheet; report bodies are Tailwind (u-* theme colours) inside .u-root. */
+.occ .directory-panel + .u-root{margin-top:0}
+.occ .directory-panel{margin-bottom:20px}
+@media print{
+  .occ .no-print{display:none !important}
+}
