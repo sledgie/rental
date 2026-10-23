@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../lib/supabase";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/utils/cn";
 import {
@@ -50,6 +51,9 @@ import { useStore as useApplicationsStore } from "../applications/state/store";
 import { SUMMARY_CARDS as APP_CARDS } from "../applications/parts/helpers";
 import { fmtCAD as payMoney, sumCents as paySum } from "../payments/utils/paymentUtils";
 import { leaseSummary } from "../leases/summary";
+
+// With Supabase the sample analytics (a short-term-rental data set) are hidden; the module groups below read the organization's data.
+const live = isSupabaseConfigured;
 
 export default function Dashboard({ notify }: { notify?: (message: string) => void }) {
   const { invoices } = useInvoices();
@@ -351,12 +355,22 @@ export default function Dashboard({ notify }: { notify?: (message: string) => vo
                   Portfolio overview
                 </h1>
                 <p className="mt-1 max-w-[540px] text-[12.5px] leading-relaxed text-muted">
-                  You&apos;re tracking{" "}
-                  <span className="font-medium text-ink-2">{derived.properties.length} properties</span> across{" "}
-                  <span className="font-medium text-ink-2">{derived.units} units</span> — here&apos;s how{" "}
-                  {fmtRange(range.start, range.end)} is performing.
+                  {live ? (
+                    <>
+                      You&apos;re tracking <span className="font-medium text-ink-2">{tenantDb.properties.length} properties</span> across{" "}
+                      <span className="font-medium text-ink-2">{unitSummary.countedUnits} units</span>.
+                    </>
+                  ) : (
+                    <>
+                      You&apos;re tracking{" "}
+                      <span className="font-medium text-ink-2">{derived.properties.length} properties</span> across{" "}
+                      <span className="font-medium text-ink-2">{derived.units} units</span> — here&apos;s how{" "}
+                      {fmtRange(range.start, range.end)} is performing.
+                    </>
+                  )}
                 </p>
               </div>
+{!live && (
               <div className="flex flex-wrap items-center gap-2">
                 <IconButton
                   icon="refresh"
@@ -381,9 +395,12 @@ export default function Dashboard({ notify }: { notify?: (message: string) => vo
                   Share report
                 </button>
               </div>
+              )}
+
             </div>
 
-            {/* filter bar */}
+            {!live && (<>
+{/* filter bar */}
             <div className="mt-5 flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-surface p-2 card-shadow sm:p-2.5">
               <DateRangeControl preset={preset} range={range} onChange={applyRange} />
               <SegmentControl segments={segments} onChange={setSegments} />
@@ -443,6 +460,7 @@ export default function Dashboard({ notify }: { notify?: (message: string) => vo
                 propertyCount={derived.properties.length}
               />
             </div>
+            </>)}
 
             {/* properties group (portfolio receivables, rent roll, occupancy, units) */}
             <div className="mt-8 flex items-end justify-between gap-3">
@@ -1005,7 +1023,8 @@ export default function Dashboard({ notify }: { notify?: (message: string) => vo
               ))}
             </div>
 
-            {/* trend + channel mix */}
+            {!live && (<>
+{/* trend + channel mix */}
             <div id="performance" className="mt-3 grid scroll-mt-24 grid-cols-1 gap-3 xl:grid-cols-3">
               <Card className="fade-rise p-4 sm:p-5 xl:col-span-2">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -1313,12 +1332,13 @@ export default function Dashboard({ notify }: { notify?: (message: string) => vo
                 onShowToast={showToast}
               />
             </div>
+            </>)}
 
             <footer className="mt-6 flex flex-col items-center justify-between gap-2 border-t border-line pt-4 text-[10.5px] text-muted sm:flex-row">
               <p>
-                © 2026 L.O.F.T. · Sample data generated for Jun 30, 2026 · Amounts in USD
+                {live ? "© 2026 L.O.F.T. · Figures from your organization's records" : "© 2026 L.O.F.T. · Sample data generated for Jun 30, 2026 · Amounts in USD"}
               </p>
-              <div className="flex items-center gap-3">
+              {!live && <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => showToast("Data dictionary: metrics are aggregated from 800 days of nightly stays")}
@@ -1339,7 +1359,7 @@ export default function Dashboard({ notify }: { notify?: (message: string) => vo
                 <button type="button" onClick={() => showToast("Privacy policy · demo environment")} className="transition hover:text-ink">
                   Privacy
                 </button>
-              </div>
+              </div>}
             </footer>
           </div>
         </div>
