@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../../lib/supabase";
 import { db } from "./memory";
 import {
   properties,
@@ -1545,6 +1546,7 @@ export function seedDatabase() {
 
 let seeded = false;
 export function ensureSeeded() {
+  if (isSupabaseConfigured) return; // the tables are filled from the organization (./liveLoad)
   if (!seeded) {
     seeded = true;
     seedDatabase();

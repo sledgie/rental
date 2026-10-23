@@ -1,4 +1,4 @@
-import { getDataset } from "../data";
+import { getDataset, SYS } from "../data";
 import type {
   ChartAccount,
   Dataset,
@@ -53,7 +53,7 @@ export function filterLines(
     if (filters.bankAccountId !== "all") {
       const ds = getDataset();
       const bank = ds.bankAccounts.find((b) => b.bankAccountId === filters.bankAccountId);
-      if (bank && line.accountId !== bank.accountId && !(line.accountId === "1020" || line.accountId === "1030")) {
+      if (bank && line.accountId !== bank.accountId && !(line.accountId === SYS.cash || line.accountId === SYS.trust)) {
         /* keep non-cash lines; bank filter applied by callers that need it */
       }
     }
@@ -255,25 +255,25 @@ export function cashBasisActivity(ds: Dataset, filters: ReportFilters): Map<stri
   cashEntries.forEach((je) => {
     if (je.sourceType === "mortgage_payment") {
       je.lines.forEach((line) => {
-        if (line.accountId !== "6000") return;
+        if (line.accountId !== SYS.interest) return;
         if (filters.propertyId !== "all" || filters.ownerId !== "all") {
           if (!propertyMatches(line.propertyId, filters)) return;
         }
-        add("6000", line.debitAmount);
+        add(SYS.interest, line.debitAmount);
       });
     }
     if (je.sourceType === "bank_charge") {
       je.lines.forEach((line) => {
-        if (line.accountId === "6200") add("6200", line.debitAmount - line.creditAmount);
+        if (line.accountId === SYS.bankCharges) add(SYS.bankCharges, line.debitAmount - line.creditAmount);
       });
     }
     if (je.sourceType === "manual" && je.referenceNumber.startsWith("LAUNDRY")) {
       je.lines.forEach((line) => {
-        if (line.accountId !== "4110") return;
+        if (line.accountId !== SYS.otherRental) return;
         if (filters.propertyId !== "all" || filters.ownerId !== "all") {
           if (!propertyMatches(line.propertyId, filters)) return;
         }
-        add("4110", line.creditAmount);
+        add(SYS.otherRental, line.creditAmount);
       });
     }
   });

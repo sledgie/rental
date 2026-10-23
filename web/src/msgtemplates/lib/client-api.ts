@@ -1,7 +1,7 @@
 // In-memory stand-in for the original /api routes and Postgres service. Same call shapes as the original client, so the
 // components are unchanged; everything lives for the browser session (module scope, so it survives page navigation).
 import { getProvider } from "./providers";
-import { isSupabaseConfigured } from "../../lib/supabase";
+import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 import { getActiveOrgId, subscribeActiveOrg } from "../../lib/activeOrg";
 import * as db from "./db";
 import { DEFAULT_SENDER, PROPERTIES } from "./catalog";
@@ -216,7 +216,12 @@ export const communicationApi = {
       channel: template.channel, recipient, subject: preview.renderedSubject,
       body: template.channel === "email" ? preview.renderedBody : preview.plainTextBody,
       sender: template.channel === "email" ? { name: template.senderConfiguration.fromName, email: template.senderConfiguration.fromEmail, replyTo: template.senderConfiguration.replyTo } : undefined,
+      meta: {
+        templateId: payload.templateId ?? ("id" in template ? template.id : null), templateVersion: payload.templateVersion ?? ("version" in template ? template.version : null),
+        triggerSource: payload.mode === "manual" ? "manual" : "test", category: template.category,
+      },
     });
+    const realDelivery = result.provider === "Twilio"; // the Edge Function already wrote the delivery record
     const stamp = now();
     const status = result.ok ? "sent" : "failed";
     const log: CommunicationLog = {
@@ -233,13 +238,35 @@ export const communicationApi = {
       timestamps: { createdAt: stamp, ...(result.ok ? { queuedAt: stamp, sentAt: stamp } : { failedAt: stamp }) },
       attempts: [{ at: stamp, status, detail: result.ok ? "Accepted by provider; delivery to recipient is not yet confirmed." : result.message ?? "Dispatch stopped before provider handoff." }],
       errorDetails: result.ok ? null : { code: result.code, message: result.message, resolution: `Configure a ${template.channel === "in_app" ? "realtime notification" : template.channel.toUpperCase()} provider and retry from a connected worker.` },
-      isMock: true, initiatedBy: ACTOR, createdAt: stamp, updatedAt: stamp,
+      isMock: !realDelivery, initiatedBy: ACTOR, createdAt: stamp, updatedAt: stamp,
     };
     store.logs.unshift(log);
+    if (isSupabaseConfigured && !realDelivery) {
+      // the delivery history is kept in the database (the sample property/tenant ids of the scenario are not real records, so they are not stored)
+      const org = getActiveOrgId();
+      const isUuid = (v: unknown) => typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+      if (org) {
+        void (async () => {
+          const { data: auth } = await supabase.auth.getUser();
+          const saved = await supabase.from("communication_logs").insert({
+            organization_id: org, template_id: isUuid(log.templateId) ? log.templateId : null, template_version: log.templateVersion, recipient_name: recipient.name, recipient_email: recipient.email,
+            recipient_phone: recipient.phone, related_entity_type: log.relatedEntityType, related_entity_id: log.relatedEntityId, rendered_subject: log.renderedSubject, rendered_body: log.renderedBody,
+            channel: log.channel, category: log.category, status, trigger_source: log.triggerSource, attempt_count: log.attemptCount, provider_message_id: log.providerMessageId,
+            provider_response: log.providerResponse, queued_at: log.timestamps.queuedAt ?? null, sent_at: log.timestamps.sentAt ?? null, failed_at: log.timestamps.failedAt ?? null,
+            error_details: log.errorDetails, is_mock: true, initiated_by: auth.user?.id ?? null,
+          }).select("id").single();
+          if (!saved.error && saved.data) {
+            await supabase.from("communication_log_attempts").insert(log.attempts.map((a) => ({ organization_id: org, log_id: saved.data.id, attempted_at: a.at, status: a.status, detail: a.detail })));
+          }
+        })().catch(() => undefined); // a logging failure never blocks the screen
+      }
+    }
     return {
       ok: result.ok,
       disposition: (result.ok ? "accepted_by_provider" : "not_sent") as "accepted_by_provider" | "not_sent",
-      message: result.ok ? "Accepted by the provider. Delivery has not been confirmed." : "Validation completed and the request was recorded as failed. No message was sent.",
+      message: result.ok
+        ? realDelivery ? "Sent through Twilio. Delivery is confirmed when the carrier reports back." : "Accepted by the provider. Delivery has not been confirmed."
+        : realDelivery ? `Not sent: ${result.message ?? "Twilio refused the message."}` : "Validation completed and the request was recorded as failed. No message was sent.",
       log,
       preview,
     };

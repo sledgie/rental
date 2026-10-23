@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../lib/supabase";
 import { useState } from 'react';
 import { Award, BarChart2, ClipboardCheck, Download, Layers, LayoutDashboard, ListTodo, Printer, RefreshCw, Settings2, Users, Wrench, Zap } from 'lucide-react';
 import { Button as TnButton, IconButton } from '../tenants/components/ui';
@@ -193,7 +194,7 @@ function PropertyPerformanceView({ initialTab }: { initialTab?: string }) {
             </section>
 
             <div className="directory-footnote no-print">
-              <span>Mock operations data held in memory for this session; scores are recalculated in the browser, and management actions are not saved.</span>
+              <span>{isSupabaseConfigured ? "Scored from your maintenance requests, inspections, assets, projects and leases. Turnover logs and tenant complaints are not recorded yet; management actions added here last for this session." : "Mock operations data held in memory for this session; scores are recalculated in the browser, and management actions are not saved."}</span>
             </div>
           </main>
         </div>

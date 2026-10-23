@@ -1,7 +1,8 @@
+import { isSupabaseConfigured } from "../lib/supabase";
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Download, Printer } from "lucide-react";
 import { Button as TnButton } from "../tenants/components/ui";
-import { getDataset, getReportDefinition } from "./lib/data";
+import { getDataset, getReportDefinition, SYS } from "./lib/data";
 import { getFinancialReport } from "./lib/services";
 import type { ReportRow } from "./lib/types";
 import { formatMoney } from "./lib/utils/currency";
@@ -194,7 +195,7 @@ export function ReportView({ reportId }: { reportId: string }) {
             </section>
 
             <div className="directory-footnote no-print">
-              <span>Mock ledger data generated in the browser. Budget edits and bank matches are kept for this session only.</span>
+              <span>{isSupabaseConfigured ? "Figures come from your books. Budget edits and bank matches made here are kept for this session only." : "Mock ledger data generated in the browser. Budget edits and bank matches are kept for this session only."}</span>
             </div>
           </main>
         </div>
@@ -223,7 +224,7 @@ function YearEndLinks({ onOpen }: { onOpen: (id: string) => void }) {
 function BudgetEditor() {
   const { filters, budgetOverrides, setBudgetAmount } = useReportContext();
   const ds = getDataset();
-  const [accountId, setAccountId] = useState("4000");
+  const [accountId, setAccountId] = useState(SYS.rent);
   const [propertyId, setPropertyId] = useState(ds.properties[0].propertyId);
   const [amount, setAmount] = useState("0");
   return (
@@ -268,11 +269,12 @@ function BudgetEditor() {
 
 function BankMatchPanel({ matchOverrides, toggleMatch }: { matchOverrides: Record<string, boolean>; toggleMatch: (id: string, matched: boolean) => void }) {
   const ds = getDataset();
-  const txns = ds.bankTxns.filter((t) => t.statementId === "STMT-OP-2026-02").slice(0, 12);
+  const statement = isSupabaseConfigured ? ds.bankStatements[ds.bankStatements.length - 1] : undefined;
+  const txns = ds.bankTxns.filter((t) => t.statementId === (isSupabaseConfigured ? statement?.statementId : "STMT-OP-2026-02")).slice(0, 12);
   return (
     <div className="fr-block no-print">
       <strong>Reconciliation workspace</strong>
-      <p>Sample statement for RBC Operating — February 2026. Toggle match status; unmatched items remain reconciling items.</p>
+      <p>{isSupabaseConfigured ? (statement ? `Latest statement period ${statement.periodStart} to ${statement.periodEnd}. Toggle match status here to preview; reconcile in Bank Reconciliation.` : "No bank statements imported yet. Import them in Bank Reconciliation.") : "Sample statement for RBC Operating — February 2026. Toggle match status; unmatched items remain reconciling items."}</p>
       <div className="fr-scroll">
         <table className="fin">
           <thead><tr><th>Date</th><th>Description</th><th className="num">Amount</th><th>Matched</th></tr></thead>

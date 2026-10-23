@@ -195,7 +195,7 @@ export function InvoiceRegister(p: InvoiceRegisterProps) {
                 ))}
                 <div className="directory-tabs-end">
                   <span className="live-dot" />
-                  Demo data
+                  {isSupabaseConfigured ? "Live" : "Demo data"}
                 </div>
               </div>
 

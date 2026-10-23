@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from '../../lib/supabase';
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import {
@@ -103,6 +104,10 @@ export const ComposeModal: React.FC = () => {
   };
 
   const handleAddMockFile = () => {
+    if (isSupabaseConfigured) {
+      void pickFiles('').then((files) => setAttachments((prev) => [...prev, ...files.map((file) => ({ id: crypto.randomUUID(), filename: file.name, mimeType: file.type, sizeBytes: file.size, uploadedBy: currentUser.id, uploadedAt: new Date().toISOString(), file }))]));
+      return;
+    }
     const newAtt: Attachment = {
       id: `att_${Date.now()}`,
       filename: `document_${Math.floor(Math.random() * 900 + 100)}.pdf`,
@@ -515,7 +520,7 @@ export const ComposeModal: React.FC = () => {
                 className="flex items-center gap-1 text-u-muted hover:text-u-ink px-2 py-1 rounded bg-u-s3 hover:bg-u-line font-medium text-xs transition-colors"
               >
                 <Paperclip className="w-3.5 h-3.5" />
-                <span>Attach Mock PDF</span>
+                <span>{isSupabaseConfigured ? 'Attach files' : 'Attach Mock PDF'}</span>
               </button>
 
               {attachments.length > 0 && (
@@ -568,3 +573,15 @@ export const ComposeModal: React.FC = () => {
     </div>
   );
 };
+
+/** Lets the user choose real files (Supabase mode) instead of adding sample attachments. */
+function pickFiles(accept: string, multiple = true): Promise<File[]> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.multiple = multiple;
+    input.onchange = () => resolve(Array.from(input.files ?? []));
+    input.click();
+  });
+}

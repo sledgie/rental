@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from '../../lib/supabase';
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { Conversation, ChannelType, Attachment } from '../types';
@@ -84,7 +85,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
     // Show simulated confirmation toast
     const mode = isInternalNote
       ? 'Internal Staff Note logged'
-      : `Message simulated sent via ${selectedChannel.toUpperCase()}`;
+      : isSupabaseConfigured ? (selectedChannel === 'sms' ? 'Message saved. It is texted to the participants who have a mobile number.' : `Message recorded (${selectedChannel.toUpperCase()} delivery is not connected yet)`) : `Message simulated sent via ${selectedChannel.toUpperCase()}`;
     setSendSuccessToast(mode);
     setTimeout(() => setSendSuccessToast(null), 3000);
   };
@@ -100,6 +101,11 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
 
   // Add mock file attachment
   const handleAddMockAttachment = (type: 'photo' | 'pdf' | 'doc') => {
+    if (isSupabaseConfigured) {
+      const accept = type === 'photo' ? 'image/*' : type === 'pdf' ? 'application/pdf' : '.doc,.docx,.xls,.xlsx,.csv,.txt';
+      void pickFiles(accept).then((files) => setAttachments((prev) => [...prev, ...files.map((file) => ({ id: crypto.randomUUID(), filename: file.name, mimeType: file.type, sizeBytes: file.size, uploadedBy: currentUser.id, uploadedAt: new Date().toISOString(), file }))]));
+      return;
+    }
     const mockFiles: Record<string, { filename: string; mime: string; size: number }> = {
       photo: { filename: 'inspection_site_photo.jpg', mime: 'image/jpeg', size: 1840000 },
       pdf: { filename: 'lease_addendum_doc.pdf', mime: 'application/pdf', size: 450000 },
@@ -486,3 +492,15 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
     </div>
   );
 };
+
+/** Lets the user choose real files (Supabase mode) instead of adding sample attachments. */
+function pickFiles(accept: string, multiple = true): Promise<File[]> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.multiple = multiple;
+    input.onchange = () => resolve(Array.from(input.files ?? []));
+    input.click();
+  });
+}

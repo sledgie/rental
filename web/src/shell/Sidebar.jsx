@@ -1,7 +1,7 @@
-// Dark navy sidebar driven by navConfig.js: quick action, collapsible groups, icon-rail collapse and a mobile drawer.
+// Dark navy sidebar driven by navConfig.js: collapsible groups, icon-rail collapse and a mobile drawer.
 import { useEffect, useState } from 'react';
 import { Icon } from '../icons.jsx';
-import { BRAND, NAV, QUICK_ACTION, groupOf } from './navConfig.js';
+import { BRAND, NAV, groupOf } from './navConfig.js';
 
 function useMedia(query) {
   const [on, setOn] = useState(() => window.matchMedia(query).matches);
@@ -14,7 +14,6 @@ export default function Sidebar({ route, collapsed, onToggle, mobileOpen, onClos
   const tablet = useMedia('(max-width: 1024px)'); // tablets always get the icon rail
   const rail = !mobile && (collapsed || tablet);
   const [open, setOpen] = useState(() => new Set([groupOf(route), 'dashboard-group']));
-  const [quickOpen, setQuickOpen] = useState(true);
   useEffect(() => { const g = groupOf(route); if (g) setOpen((s) => (s.has(g) ? s : new Set(s).add(g))); }, [route]);
   useEffect(() => {
     if (!mobileOpen) return undefined;
@@ -48,21 +47,6 @@ export default function Sidebar({ route, collapsed, onToggle, mobileOpen, onClos
         </div>
 
         <div className="ns-scroll">
-          <div className="ns-quick">
-            {!rail && (
-              <button type="button" className="ns-gh" aria-expanded={quickOpen} aria-controls="ns-quick-body" onClick={() => setQuickOpen(!quickOpen)}>
-                <span>Quick Actions</span><Icon name={quickOpen ? 'down' : 'right'} size={14} />
-              </button>
-            )}
-            {(rail || quickOpen) && (
-              <div id="ns-quick-body">
-                <a href={`#/${QUICK_ACTION.id}`} className={`ns-cta${route === QUICK_ACTION.id ? ' on' : ''}`} aria-label={QUICK_ACTION.label} onClick={onClose} {...tip(QUICK_ACTION.label)}>
-                  <Icon name="plus" size={18} /><span className="ns-lbl">{QUICK_ACTION.label}</span>
-                </a>
-              </div>
-            )}
-          </div>
-
           {NAV.map((g) => {
             const isOpen = open.has(g.id);
             const hasActive = active === g.id;

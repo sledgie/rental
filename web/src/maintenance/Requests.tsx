@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../lib/supabase";
 // Maintenance requests in the same format as the Properties, Leases, Units, Payments, Applications, Expenses and Projects pages: tabs, search,
 // the shared Tenants-style filters, sortable master rows, an inline summary (chevron) and a side drawer with the full request record (View).
 // The store, tabbed request record (visits, work log, estimates, costs, documents, activity) and every dialog come from the maintenance module.
@@ -174,7 +175,7 @@ export default function MaintenanceRequests({ params }: { params?: Record<string
                     {t.label}<span>{tabCount(t.key)}</span>
                   </button>
                 ))}
-                <div className="directory-tabs-end"><span className="live-dot" />Demo data</div>
+                <div className="directory-tabs-end"><span className="live-dot" />{isSupabaseConfigured ? "Live" : "Demo data"}</div>
               </div>
               <div className="directory-toolbar">
                 <SearchField label="Search requests" placeholder="Search ID, title, tenant, property, unit, contractor or appliance..." value={search} onChange={(v) => { setSearch(v); setPage(1); }} />
@@ -370,7 +371,7 @@ export default function MaintenanceRequests({ params }: { params?: Record<string
             </section>
             <div className="directory-footnote">
               <span><ShieldCheck size={13} />Costs combine approved estimates with linked invoices. Completed requests are reopened, never overwritten, so history stays intact.</span>
-              <span><CalendarClock size={13} />All amounts in CAD<span className="footnote-separator">&middot;</span>Demo data</span>
+              <span><CalendarClock size={13} />All amounts in CAD{!isSupabaseConfigured && <><span className="footnote-separator">&middot;</span>Demo data</>}</span>
             </div>
           </main>
         </div>

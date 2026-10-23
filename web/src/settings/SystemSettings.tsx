@@ -3,7 +3,9 @@ import { CheckCircle2, ChevronRight, CircleAlert, Info, Lock, RotateCcw, Save, S
 import { Button as TnButton } from "../tenants/components/ui";
 import { useAuth } from "../auth/contexts/AuthContext";
 import { useOrganization } from "../auth/contexts/OrganizationContext";
-import { listOrganizationMembers } from "../auth/services/mockMembershipService";
+import { membershipService } from "../auth/services";
+import { isSupabaseConfigured } from "../lib/supabase";
+const listOrganizationMembers = (orgId: string) => membershipService.listOrganizationMembers(orgId);
 import { initials } from "../auth/lib/format";
 import { cn } from "../auth/utils/cn";
 import { CATEGORY_MAP, DEFAULT_CATEGORY, GROUP_LABELS, GROUP_ORDER, SEARCH_INDEX, SETTINGS_CATEGORIES } from "./catalog";
@@ -225,7 +227,7 @@ function SettingsBody({ category }: { category: CategoryId }) {
                 <div className="border-t border-u-line p-2.5">
                   <div className="flex items-start gap-2 rounded-lg bg-u-s2 px-2.5 py-2">
                     <Info size={14} className="mt-0.5 shrink-0 text-u-muted" />
-                    <div><p className="text-[11px] font-medium text-u-ink2">Prototype settings</p><p className="mt-0.5 text-[10.5px] leading-relaxed text-u-muted">Stored in your browser per organization. No production policies are enforced.</p></div>
+                    <div><p className="text-[11px] font-medium text-u-ink2">{isSupabaseConfigured ? "Organization settings" : "Prototype settings"}</p><p className="mt-0.5 text-[10.5px] leading-relaxed text-u-muted">{isSupabaseConfigured ? "Saved for everyone in this organization; your personal preferences are saved to your account." : "Stored in your browser per organization. No production policies are enforced."}</p></div>
                   </div>
                 </div>
               </div>
@@ -288,7 +290,7 @@ function SettingsBody({ category }: { category: CategoryId }) {
               <Button type="button" variant="danger" icon={RotateCcw} onClick={confirmReset}>Reset to defaults</Button>
             </>}>
             <div className="space-y-3">
-              <p className="text-[12.5px] leading-relaxed text-u-ink2">This restores the prototype default values for <span className="font-medium">{meta.label}</span> for {activeOrg.name}. This action does not delete records or reset the full application.</p>
+              <p className="text-[12.5px] leading-relaxed text-u-ink2">This restores the default values for <span className="font-medium">{meta.label}</span> for {activeOrg.name}. This action does not delete records or reset the full application.</p>
               {dirty ? <Callout tone="warning" icon={CircleAlert}>Your current unsaved edits in this category will be lost.</Callout> : null}
             </div>
           </Modal>

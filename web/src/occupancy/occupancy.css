@@ -4,3 +4,7 @@
 @media print{
   .occ .no-print{display:none !important}
 }
+
+/* long report names: let the tab row wrap inside the panel instead of running past its right edge */
+.occ .directory-tabs{flex-wrap:wrap;align-items:stretch;column-gap:24px;row-gap:0;min-height:0;padding-top:2px;padding-bottom:2px}
+.occ .directory-tab{min-height:44px}

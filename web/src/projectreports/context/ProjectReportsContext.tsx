@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import {
   Project,
   Property,
@@ -18,6 +18,9 @@ import {
   ManagementException,
 } from "../lib/types";
 import { fetchFullProjectReportsData } from "../lib/data-service";
+import { isSupabaseConfigured } from "../../lib/supabase";
+import { getActiveOrgId } from "../../lib/activeOrg";
+import { loadReportData } from "../db/supabaseLoad";
 import { DEFAULT_THRESHOLDS } from "../lib/calculations";
 
 export const DEFAULT_FILTERS: FilterState = {
@@ -115,10 +118,18 @@ export function ProjectReportsProvider({ children }: { children: React.ReactNode
   const [managementExceptions, setManagementExceptions] = useState<ManagementException[]>([]);
   const [kpis, setKpis] = useState<any>(null);
 
+  const loadedOnce = useRef(false);
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+      if (isSupabaseConfigured) {
+        const org = getActiveOrgId();
+        if (!org) throw new Error("Select an organization first.");
+        // read fresh project data the first time the reports open; filter changes reuse it
+        await loadReportData(org, !loadedOnce.current);
+        loadedOnce.current = true;
+      }
       const data: any = fetchFullProjectReportsData(filters, thresholds);
 
       setProperties(data.properties || []);

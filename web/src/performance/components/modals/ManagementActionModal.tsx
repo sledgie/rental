@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../../../lib/supabase";
 import React, { useState, useEffect } from "react";
 import { useReportContext } from "../../context/ReportContext";
 import { X, CheckCircle2, AlertCircle } from "lucide-react";
@@ -27,7 +28,7 @@ export function ManagementActionModal() {
       setPropertyId(actionModalPrefill.propertyId || (rawData?.properties[0]?.id ?? "prop-1"));
       setIssueDescription(actionModalPrefill.issue || actionModalPrefill.issueDescription || "");
       setPriority(actionModalPrefill.severity || actionModalPrefill.priority || "High");
-      setAssignedTo(actionModalPrefill.responsiblePerson || actionModalPrefill.assignedTo || "Marcus Vance");
+      setAssignedTo(actionModalPrefill.responsiblePerson || actionModalPrefill.assignedTo || (isSupabaseConfigured ? "" : "Marcus Vance"));
       setDueDate(actionModalPrefill.dueDate || new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
       setRelatedType(actionModalPrefill.relatedRecordType || actionModalPrefill.relatedType || "Operational");
       setRelatedRecordRef(actionModalPrefill.relatedRecordId || actionModalPrefill.relatedRecordRef || "N/A");
@@ -35,7 +36,7 @@ export function ManagementActionModal() {
       setPropertyId(rawData?.properties[0]?.id ?? "prop-1");
       setIssueDescription("");
       setPriority("High");
-      setAssignedTo("Marcus Vance");
+      setAssignedTo(isSupabaseConfigured ? "" : "Marcus Vance");
       setDueDate(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
       setRelatedType("Operational");
       setRelatedRecordRef("N/A");

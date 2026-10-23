@@ -50,8 +50,8 @@ const extensionOf = (name: string) => (name.includes(".") ? name.split(".").pop(
 // ------------------------------------------------------------------ the records documents can be linked to
 async function loadRegistry(orgId: string): Promise<{ registry: MockBusinessRecord[]; byRow: Map<string, RecordReference>; entities: EntityReference[] }> {
   const [properties, units, tenants, leases, leaseUnits, parties, applications, invoices, payments, requests, workOrders, assets, projects, bills, vendors] = await Promise.all([
-    fetchAll("properties", "id, code, name, address_line1", orgId, "name"),
-    fetchAll("units", "id, property_id, unit_code, unit_number", orgId, "unit_number"),
+    fetchAll("properties", "*", orgId, "name"),
+    fetchAll("units", "*", orgId, "unit_number"),
     fetchAll("tenants", "id, tenant_number, first_name, last_name", orgId, "last_name"),
     fetchAll("leases", "id, lease_number, status", orgId, "lease_number"),
     fetchAll("lease_units", "lease_id, unit_id", orgId, "lease_id"),

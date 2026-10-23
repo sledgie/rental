@@ -7,7 +7,8 @@ import { useOrganization } from "../auth/contexts/OrganizationContext";
 import { ACTIONS, ACTOR_TYPES, CATEGORIES, DEFAULT_FILTERS, ENTITY_TYPES, OUTCOMES, SEVERITIES, actionLabel, formatActorType, type ActivityFilters } from "./lib/types";
 import { filtersToSearchParams, parseActivityFilters } from "./lib/filters";
 import { formatDateTime, formatRelativeTime } from "./lib/format";
-import { activityVersion, exportActivityLogs, getActivityById, getActivityLogs, getRecordTimeline, getRelatedActivities, subscribeActivity, type AccessContext } from "./lib/store";
+import { activityVersion, exportActivityLogs, getActivityById, getActivityLogs, getRecordTimeline, getRelatedActivities, loadActivityFromDatabase, recordedActions, subscribeActivity, type AccessContext } from "./lib/store";
+import { isSupabaseConfigured } from "../lib/supabase";
 import { ActivityDetail } from "./components/ActivityDetail";
 import { RecordTimeline } from "./components/RecordTimeline";
 import { ActorAvatar, CategoryBadge, RecordLink, ResultBadge, SeverityIndicator } from "./components/ui";
@@ -32,7 +33,14 @@ function SortButton({ label, column, filters, onSort }: { label: string; column:
 
 export default function ActivityLogs({ params, notify }: { params?: Record<string, string>; notify?: (message: string) => void }) {
   const { user } = useAuth();
-  const { activeRole } = useOrganization();
+  const { activeRole, activeOrganization } = useOrganization();
+  const [loadError, setLoadError] = useState<string | null>(null);
+  // Supabase mode: read the organization's audit trail each time the page opens
+  useEffect(() => {
+    if (!isSupabaseConfigured || !activeOrganization) return;
+    setLoadError(null);
+    loadActivityFromDatabase(activeOrganization.id, true).catch((error) => setLoadError(error instanceof Error ? error.message : "Unable to load the activity log."));
+  }, [activeOrganization]);
   const manager = activeRole === "Owner" || activeRole === "Administrator";
   const ctx = useMemo<AccessContext>(() => ({
     userId: user?.id ?? "anonymous", userName: user?.fullName ?? "Unknown user",
@@ -105,7 +113,7 @@ export default function ActivityLogs({ params, notify }: { params?: Record<strin
             {TABS.map(([value, label, key]) => (
               <button key={value} type="button" className={`directory-tab ${filters.group === value ? "selected" : ""}`} aria-pressed={filters.group === value} onClick={() => update("group", value)}>{label}<span>{data.summary[key as keyof typeof data.summary]}</span></button>
             ))}
-            <div className="directory-tabs-end"><span className="live-dot" />Sample data · held in memory for this session</div>
+            <div className="directory-tabs-end"><span className="live-dot" />{isSupabaseConfigured ? (loadError ?? "Live · your organization's audit trail") : "Sample data · held in memory for this session"}</div>
           </div>
           <div className="directory-toolbar no-print">
             <SearchField label="Search activity" placeholder="Search description, actor, property, unit, record or event ID..." value={searchDraft} onChange={setSearchDraft} />
@@ -114,7 +122,7 @@ export default function ActivityLogs({ params, notify }: { params?: Record<strin
                 <FilterField id="al-actor" label="Actor"><select id="al-actor" value={filters.actorId} onChange={(e) => update("actorId", e.target.value)}><option value="">All users & actors</option>{data.options.actors.map((actor) => <option key={actor.id} value={actor.id}>{actor.name} · {formatActorType(actor.type)}</option>)}</select></FilterField>
                 <FilterField id="al-atype" label="Actor type"><select id="al-atype" value={filters.actorType} onChange={(e) => update("actorType", e.target.value)}><option value="">All actor types</option>{ACTOR_TYPES.map((type) => <option key={type} value={type}>{formatActorType(type)}</option>)}</select></FilterField>
                 <FilterField id="al-category" label="Category"><select id="al-category" value={filters.category} onChange={(e) => update("category", e.target.value)}><option value="">All categories</option>{CATEGORIES.map((category) => <option key={category}>{category}</option>)}</select></FilterField>
-                <FilterField id="al-action" label="Action type"><select id="al-action" value={filters.action} onChange={(e) => update("action", e.target.value)}><option value="">All action types</option>{ACTIONS.map((action) => <option key={action} value={action}>{actionLabel(action)}</option>)}</select></FilterField>
+                <FilterField id="al-action" label="Action type"><select id="al-action" value={filters.action} onChange={(e) => update("action", e.target.value)}><option value="">All action types</option>{(isSupabaseConfigured ? recordedActions() : ACTIONS).map((action) => <option key={action} value={action}>{actionLabel(action)}</option>)}</select></FilterField>
                 <FilterField id="al-property" label="Property"><select id="al-property" value={filters.propertyId} onChange={(e) => setFilters((previous) => ({ ...previous, propertyId: e.target.value, unitId: "", page: 1 }))}><option value="">All properties</option>{data.options.properties.map((property) => <option key={property.id} value={property.id}>{property.name}</option>)}</select></FilterField>
                 <FilterField id="al-unit" label="Unit"><select id="al-unit" value={filters.unitId} onChange={(e) => update("unitId", e.target.value)}><option value="">All units</option>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.propertyName} · {unit.number}</option>)}</select></FilterField>
                 <FilterField id="al-entity" label="Related entity type"><select id="al-entity" value={filters.entityType} onChange={(e) => update("entityType", e.target.value)}><option value="">All entity types</option>{ENTITY_TYPES.map((type) => <option key={type} value={type}>{type.replaceAll("_", " ")}</option>)}</select></FilterField>
@@ -199,7 +207,7 @@ export default function ActivityLogs({ params, notify }: { params?: Record<strin
     {exportOpen && (
       <Overlay title="Export filtered activity?" subtitle="The CSV follows the active search, tab and filters." onClose={() => setExportOpen(false)} className="alg-modal">
         <div className="u-root alg"><div className="space-y-4 px-5 py-5">
-          <p className="text-sm text-u-ink2">Your CSV will include <strong className="text-u-ink">{data.total.toLocaleString()} matching events</strong> from the sample workspace.</p>
+          <p className="text-sm text-u-ink2">Your CSV will include <strong className="text-u-ink">{data.total.toLocaleString()} matching events</strong>{isSupabaseConfigured ? "" : " from the sample workspace"}.</p>
           <div className="rounded-xl bg-u-s2 p-3.5 text-xs leading-5 text-u-ink2">
             {["Before/after values are excluded", "Untrusted cells are formula-escaped", "This sensitive export will be audit logged"].map((line) => <p key={line} className="flex items-center gap-2 py-0.5"><Check size={14} className="text-u-ok" />{line}</p>)}
           </div>

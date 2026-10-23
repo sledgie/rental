@@ -298,7 +298,7 @@ export default function MessageTemplates({ params }: { params?: Record<string, s
             </section>
 
             <div className="directory-footnote no-print">
-              <span>{isSupabaseConfigured ? 'Templates are saved to your organization. Test sends are validated and recorded; no email, SMS or in-app message is delivered from here.' : 'Demonstration data held in memory for this session. Test sends are validated and recorded; no email, SMS or in-app message is actually delivered.'}</span>
+              <span>{isSupabaseConfigured ? 'Templates are saved to your organization. SMS test sends are delivered through Twilio; email and in-app sends are validated and recorded only.' : 'Demonstration data held in memory for this session. Test sends are validated and recorded; no email, SMS or in-app message is actually delivered.'}</span>
             </div>
           </main>
         </div>

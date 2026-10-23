@@ -71,6 +71,8 @@ export interface Attachment {
   mockUrl?: string;
   uploadedBy: string;
   uploadedAt: string;
+  /** a newly chosen file, uploaded when the message is saved */
+  file?: File;
 }
 
 export interface Message {

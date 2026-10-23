@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../../lib/supabase";
 import {
   AlertTriangle,
   Archive,
@@ -159,14 +160,14 @@ export default function DataPage({ value, update, readOnly, errors, org, activit
       setBusy(null);
       setConfirmImport(false);
       setPreview(null);
-      notify("Mock settings imported", "success", `${preview.categories.length} categories updated. Unrelated settings were preserved.`);
+      notify(isSupabaseConfigured ? "Settings imported" : "Mock settings imported", "success", `${preview.categories.length} categories updated. Unrelated settings were preserved.`);
     }, 850);
   };
 
   return (
     <div className="space-y-5">
-      <Callout tone="info" icon={Database} title="Browser-scoped prototype data">
-        Organization settings and activity history are stored in localStorage for this demo. There is no database, backup service or production data processing. Exports are generated entirely in your browser.
+      <Callout tone="info" icon={Database} title={isSupabaseConfigured ? "Organization data" : "Browser-scoped prototype data"}>
+        {isSupabaseConfigured ? "Organization settings and their history are saved to your organization. Exports are generated in your browser from what is saved." : "Organization settings and activity history are stored in localStorage for this demo. There is no database, backup service or production data processing. Exports are generated entirely in your browser."}
       </Callout>
 
       <Card id="data-exports">
@@ -382,7 +383,7 @@ export default function DataPage({ value, update, readOnly, errors, org, activit
             {preview?.categories.length ?? 0} categories from <span className="font-medium">{preview?.filename}</span> will replace their current saved values. Other categories remain untouched.
           </p>
           <Callout tone="warning" icon={AlertTriangle}>
-            This is a mock import. No real rental records will be created, updated or deleted.
+            {isSupabaseConfigured ? "Only the selected settings categories are replaced. No rental records are created, updated or deleted." : "This is a mock import. No real rental records will be created, updated or deleted."}
           </Callout>
         </div>
       </Modal>

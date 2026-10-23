@@ -4,3 +4,7 @@
 .pr .pr-note{font-size:13px;color:var(--muted);padding:24px 0;text-align:center}
 .pr .directory-tab svg{margin-right:5px;vertical-align:-2px}
 @media print{.pr .no-print,.pr .directory-tabs,.pr .directory-toolbar{display:none !important}}
+
+/* long report names: let the tab row wrap inside the panel instead of running past its right edge */
+.pr .directory-tabs{flex-wrap:wrap;align-items:stretch;column-gap:24px;row-gap:0;min-height:0;padding-top:2px;padding-bottom:2px}
+.pr .directory-tab{min-height:44px}

@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from '../../lib/supabase';
 import {
   Property,
   Unit,
@@ -24,7 +25,24 @@ import { MOCK_OCCUPANCY_EXCEPTIONS } from '../mock/exceptions';
 import { calculateDaysDifference } from '../utils/formatters';
 
 // In-memory exception state to allow user review / simulate status changes
-let dynamicExceptions: OccupancyException[] = [...MOCK_OCCUPANCY_EXCEPTIONS];
+let dynamicExceptions: OccupancyException[] = isSupabaseConfigured ? [] : [...MOCK_OCCUPANCY_EXCEPTIONS];
+// With Supabase the sample lists start empty: they are filled only from the organization's records (./liveData), so a failed load shows
+// zeros and an error instead of sample figures.
+if (isSupabaseConfigured) {
+  for (const list of [MOCK_PROPERTIES, MOCK_UNITS, MOCK_LEASES, MOCK_TENANTS, MOCK_HISTORICAL_RECORDS, MOCK_TURNOVER_RECORDS, MOCK_PIPELINE_DATA, MOCK_MOVE_RECORDS] as unknown[][]) {
+    list.splice(0, list.length);
+  }
+}
+/** Replaces the data-quality findings (Supabase mode: computed from the organization's records). */
+export function setExceptions(list: OccupancyException[]) {
+  dynamicExceptions = list;
+}
+/** The month before the as-of date, as YYYY-MM and as a label. */
+function previousMonth(asOfDate: string) {
+  const d = new Date(`${(asOfDate || new Date().toISOString().slice(0, 10)).slice(0, 7)}-01T12:00:00`);
+  d.setMonth(d.getMonth() - 1);
+  return { period: d.toISOString().slice(0, 7), label: d.toLocaleString('en-US', { month: 'short', year: 'numeric' }) };
+}
 
 export class OccupancyService {
   /**
@@ -108,8 +126,9 @@ export class OccupancyService {
         return sum + dailyRent * days;
       }, 0);
 
-    // Prior Month comparison from historical data (Sep 2026)
-    const prevMonthHist = MOCK_HISTORICAL_RECORDS.filter((h) => h.period === '2026-09' && (propertyId === 'all' ? true : h.propertyId === propertyId));
+    // Prior month comparison from historical data
+    const prev = previousMonth(asOfDate);
+    const prevMonthHist = MOCK_HISTORICAL_RECORDS.filter((h) => h.period === prev.period && (propertyId === 'all' ? true : h.propertyId === propertyId));
     const prevTotalRentable = prevMonthHist.reduce((acc, h) => acc + h.totalRentableUnits, 0);
     const prevOccupied = prevMonthHist.reduce((acc, h) => acc + h.occupiedUnits, 0);
     const prevOccRate = prevTotalRentable > 0 ? (prevOccupied / prevTotalRentable) * 100 : 0;
@@ -127,7 +146,7 @@ export class OccupancyService {
       upcomingExpirations: expiringIn60Days,
       potentialVacancyLoss: Math.round(totalVacancyLoss),
       historicalComparison: {
-        prevMonthPeriod: 'Sep 2026',
+        prevMonthPeriod: prev.label,
         occupancyRateChange: occChange,
       },
     };
@@ -217,7 +236,7 @@ export class OccupancyService {
    * REPORT 2: VACANCY & AVAILABLE UNITS REPORT
    */
   static getVacancyReport(filters: Partial<ReportFilterState>) {
-    const asOfDate = filters.asOfDate || '2026-10-24';
+    const asOfDate = filters.asOfDate || new Date().toISOString().slice(0, 10);
     const allUnits = this.filterUnits(filters);
 
     // Filter to vacant, reserved, and awaiting move-in units

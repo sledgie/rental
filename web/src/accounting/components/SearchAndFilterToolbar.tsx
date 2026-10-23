@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../../lib/supabase";
 // Tabs + search + "Filters" popover in the shared directory format used by Properties, Payments and Tenants (shell/directory.tsx).
 import { ChevronsDownUp, ChevronsUpDown } from "lucide-react";
 import { useChart } from "../store/chart-store";
@@ -38,7 +39,7 @@ export function SearchAndFilterToolbar() {
         ))}
         <div className="directory-tabs-end">
           <span className="live-dot" />
-          Demo data
+          {isSupabaseConfigured ? "Live" : "Demo data"}
         </div>
       </div>
       <div className="directory-toolbar">

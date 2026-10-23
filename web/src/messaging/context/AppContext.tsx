@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useMemo, useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import { isSupabaseConfigured } from '../../lib/supabase';
+import { getActiveOrgId, subscribeActiveOrg } from '../../lib/activeOrg';
+import * as repo from '../repo';
 import {
   User,
   Conversation,
@@ -212,9 +215,14 @@ const MODULE_ROUTES: Partial<Record<AppModule, string>> = {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+// with Supabase every new record needs a real UUID, because the id becomes its database primary key
+const newId = (prefix: string) => (isSupabaseConfigured ? crypto.randomUUID() : `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`);
+const live = isSupabaseConfigured;
+const NO_USER: User = { id: '', name: '', email: '', phone: '', role: 'property_manager', title: '', isStaff: true };
+
 export const AppProvider: React.FC<{ children: React.ReactNode; initialFolder?: MessageFolder }> = ({ children, initialFolder }) => {
-  const [users] = useState<User[]>(MOCK_USERS);
-  const [currentUser, setCurrentUser] = useState<User>(MOCK_USERS[0]); // Alex Rivera (Property Manager)
+  const [users, setUsers] = useState<User[]>(live ? [] : MOCK_USERS);
+  const [currentUser, setCurrentUser] = useState<User>(live ? NO_USER : MOCK_USERS[0]); // demo: Alex Rivera (Property Manager)
 
   const [activeModule, setActiveModuleState] = useState<AppModule>('messages');
   // Records live on other pages of the host app, so those modules navigate by hash instead of swapping an in-page view.
@@ -225,7 +233,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode; initialFolder?: 
   }, []);
   const [activeFolder, setActiveFolder] = useState<MessageFolder>(initialFolder ?? 'inbox');
 
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>('conv_001');
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(live ? null : 'conv_001');
   const [activeChannelFilter, setActiveChannelFilter] = useState<ChannelType | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -237,26 +245,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode; initialFolder?: 
   const [selectedConversationIds, setSelectedConversationIds] = useState<string[]>([]);
 
   // Core Data
-  const [conversations, setConversations] = useState<Conversation[]>(INITIAL_CONVERSATIONS);
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
-  const [announcements, setAnnouncements] = useState<Announcement[]>(INITIAL_ANNOUNCEMENTS);
-  const [templates, setTemplates] = useState<MessageTemplate[]>(MOCK_TEMPLATES);
-  const [auditLogs, setAuditLogs] = useState<ConversationAuditLog[]>(INITIAL_AUDIT_LOGS);
-  const [notifications, setNotifications] = useState<InAppNotification[]>(INITIAL_NOTIFICATIONS);
+  const [conversations, setConversations] = useState<Conversation[]>(live ? [] : INITIAL_CONVERSATIONS);
+  const [messages, setMessages] = useState<Message[]>(live ? [] : INITIAL_MESSAGES);
+  const [announcements, setAnnouncements] = useState<Announcement[]>(live ? [] : INITIAL_ANNOUNCEMENTS);
+  const [templates, setTemplates] = useState<MessageTemplate[]>(live ? [] : MOCK_TEMPLATES);
+  const [auditLogs, setAuditLogs] = useState<ConversationAuditLog[]>(live ? [] : INITIAL_AUDIT_LOGS);
+  const [notifications, setNotifications] = useState<InAppNotification[]>(live ? [] : INITIAL_NOTIFICATIONS);
 
   // Entities
-  const [properties] = useState<Property[]>(MOCK_PROPERTIES);
-  const [units] = useState<Unit[]>(MOCK_UNITS);
-  const [tenants] = useState<Tenant[]>(MOCK_TENANTS);
-  const [leases] = useState<Lease[]>(MOCK_LEASES);
-  const [maintenanceRequests] = useState<MaintenanceRequest[]>(MOCK_MAINTENANCE);
-  const [invoices] = useState<Invoice[]>(MOCK_INVOICES);
-  const [vendors] = useState<Vendor[]>(MOCK_VENDORS);
-  const [inspections] = useState<Inspection[]>(MOCK_INSPECTIONS);
+  const [properties, setProperties] = useState<Property[]>(live ? [] : MOCK_PROPERTIES);
+  const [units, setUnits] = useState<Unit[]>(live ? [] : MOCK_UNITS);
+  const [tenants, setTenants] = useState<Tenant[]>(live ? [] : MOCK_TENANTS);
+  const [leases, setLeases] = useState<Lease[]>(live ? [] : MOCK_LEASES);
+  const [maintenanceRequests, setMaintenanceRequests] = useState<MaintenanceRequest[]>(live ? [] : MOCK_MAINTENANCE);
+  const [invoices, setInvoices] = useState<Invoice[]>(live ? [] : MOCK_INVOICES);
+  const [vendors, setVendors] = useState<Vendor[]>(live ? [] : MOCK_VENDORS);
+  const [inspections, setInspections] = useState<Inspection[]>(live ? [] : MOCK_INSPECTIONS);
 
   // Tracking read state per conversation for current user in mock
   // By default, conv_001 is unread for demonstration until clicked
-  const [readTracker, setReadTracker] = useState<Record<string, boolean>>({
+  const [readTracker, setReadTracker] = useState<Record<string, boolean>>(live ? {} : {
     conv_001: false,
     conv_002: true,
     conv_003: true,
@@ -267,6 +275,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode; initialFolder?: 
     conv_008: true,
     conv_009: true,
   });
+
+  // ── Supabase: load the organization's people, records and conversations; write every change as a difference from what is saved ──
+  const orgId = useSyncExternalStore(subscribeActiveOrg, getActiveOrgId);
+  const [ready, setReady] = useState(!live);
+  const saved = useRef<repo.Slices>(repo.emptySlices());
+  const chain = useRef<Promise<void>>(Promise.resolve());
+  const meRef = useRef(currentUser);
+  meRef.current = currentUser;
+
+  const reload = useCallback(async () => {
+    if (!live) return;
+    const org = getActiveOrgId();
+    if (!org) return;
+    try {
+      await chain.current; // let pending writes finish so they are not overwritten by an older read
+      const l = await repo.loadAll(org);
+      if (getActiveOrgId() !== org) return;
+      saved.current = { conversations: l.conversations, messages: l.messages, auditLogs: l.auditLogs, announcements: l.announcements, templates: l.templates, readTracker: l.readTracker };
+      setUsers(l.users);
+      if (l.me) setCurrentUser(l.me);
+      setProperties(l.properties); setUnits(l.units); setTenants(l.tenants); setLeases(l.leases); setMaintenanceRequests(l.maintenanceRequests); setInvoices(l.invoices); setVendors(l.vendors); setInspections(l.inspections);
+      setConversations(l.conversations); setMessages(l.messages); setAuditLogs(l.auditLogs); setAnnouncements(l.announcements); setTemplates(l.templates); setReadTracker(l.readTracker);
+      setReady(true);
+    } catch (error) {
+      setNotifications((prev) => [{ id: newId('notif'), title: 'Messages could not be loaded', description: error instanceof Error ? error.message : 'Try again in a moment.', timestamp: new Date().toISOString(), isRead: false, type: 'urgent' }, ...prev]);
+      setReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!live) return;
+    setReady(false);
+    if (orgId) void reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId]);
+
+  useEffect(() => {
+    if (!live || !ready) return;
+    const next: repo.Slices = { conversations, messages, auditLogs, announcements, templates, readTracker };
+    const prev = saved.current;
+    const key = (x: repo.Slices) => JSON.stringify({ ...x, conversations: x.conversations.map((c) => ({ ...c, draftBody: undefined })) });
+    if (key(prev) === key(next)) return;
+    saved.current = next;
+    chain.current = chain.current
+      .then(() => repo.persist(prev, next, meRef.current.id))
+      .catch((error) => {
+        setNotifications((p) => [{ id: newId('notif'), title: 'A change could not be saved', description: error instanceof Error ? error.message : 'Try again in a moment.', timestamp: new Date().toISOString(), isRead: false, type: 'urgent' }, ...p]);
+        return reload();
+      });
+  }, [ready, conversations, messages, auditLogs, announcements, templates, readTracker, reload]);
+
 
   // Compose Modal State
   const [isComposeOpen, setIsComposeOpen] = useState(false);
@@ -361,7 +420,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode; initialFolder?: 
 
       // Audit log entry
       const newAudit: ConversationAuditLog = {
-        id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        id: newId('log'),
         conversationId: convId,
         eventType: 'status_changed',
         actorId: currentUser.id,
@@ -390,7 +449,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode; initialFolder?: 
       );
 
       const newAudit: ConversationAuditLog = {
-        id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        id: newId('log'),
         conversationId: convId,
         eventType: 'priority_changed',
         actorId: currentUser.id,
@@ -419,7 +478,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode; initialFolder?: 
       );
 
       const newAudit: ConversationAuditLog = {
-        id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        id: newId('log'),
         conversationId: convId,
         eventType: 'category_changed',
         actorId: currentUser.id,
@@ -458,7 +517,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode; initialFolder?: 
       );
 
       const newAudit: ConversationAuditLog = {
-        id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        id: newId('log'),
         conversationId: convId,
         eventType: 'assigned',
         actorId: currentUser.id,
@@ -472,7 +531,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode; initialFolder?: 
       // Add in-app notification for the assignee
       if (staffId !== currentUser.id) {
         const notif: InAppNotification = {
-          id: `notif_${Date.now()}`,
+          id: newId('notif'),
           title: 'Conversation Assigned to You',
           description: `${currentUser.name} assigned a conversation to you: "${notes || 'No notes provided'}"`,
           timestamp,
@@ -494,7 +553,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode; initialFolder?: 
         prev.map((c) => (c.id === convId ? { ...c, archivedAt: timestamp, updatedAt: timestamp } : c))
       );
       const newAudit: ConversationAuditLog = {
-        id: `log_${Date.now()}`,
+        id: newId('log'),
         conversationId: convId,
         eventType: 'archived',
         actorId: currentUser.id,
@@ -513,7 +572,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode; initialFolder?: 
         prev.map((c) => (c.id === convId ? { ...c, archivedAt: undefined, updatedAt: timestamp } : c))
       );
       const newAudit: ConversationAuditLog = {
-        id: `log_${Date.now()}`,
+        id: newId('log'),
         conversationId: convId,
         eventType: 'reopened',
         actorId: currentUser.id,
@@ -535,7 +594,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode; initialFolder?: 
       attachments: Attachment[] = []
     ) => {
       const timestamp = new Date().toISOString();
-      const messageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const messageId = newId('msg');
 
       const newMsg: Message = {
         id: messageId,
@@ -570,7 +629,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode; initialFolder?: 
 
       // Audit Log
       const newAudit: ConversationAuditLog = {
-        id: `log_${Date.now()}`,
+        id: newId('log'),
         conversationId,
         eventType: isInternalNote ? 'internal_note_added' : 'message_sent',
         actorId: currentUser.id,
@@ -601,8 +660,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode; initialFolder?: 
       relatedEntityRef?: string;
     }): Conversation => {
       const timestamp = new Date().toISOString();
-      const convId = `conv_${Date.now()}`;
-      const msgId = `msg_${Date.now()}_1`;
+      const convId = newId('conv');
+      const msgId = newId('msg');
 
       const allParticipants = Array.from(new Set([currentUser.id, ...data.participantIds]));
 
@@ -645,7 +704,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode; initialFolder?: 
       markConversationRead(convId);
 
       const audit: ConversationAuditLog = {
-        id: `log_${Date.now()}`,
+        id: newId('log'),
         conversationId: convId,
         eventType: 'conversation_created',
         actorId: currentUser.id,
@@ -677,7 +736,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode; initialFolder?: 
     (tpl: Omit<MessageTemplate, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>) => {
       const newTpl: MessageTemplate = {
         ...tpl,
-        id: `tpl_${Date.now()}`,
+        id: newId('tpl'),
         createdBy: currentUser.id,
         updatedAt: new Date().toISOString(),
       };
@@ -701,7 +760,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode; initialFolder?: 
     (ann: Omit<Announcement, 'id' | 'createdAt' | 'createdBy' | 'acknowledgedUserIds'>) => {
       const newAnn: Announcement = {
         ...ann,
-        id: `ann_${Date.now()}`,
+        id: newId('ann'),
         createdAt: new Date().toISOString(),
         createdBy: currentUser.id,
         acknowledgedUserIds: [],

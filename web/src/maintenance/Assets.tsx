@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../lib/supabase";
 // Assets & equipment in the shared directory format: tabs, search, Tenants-style filters, master rows with an inline summary and a side drawer (View).
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
@@ -151,7 +152,7 @@ export default function Assets({ params }: { params?: Record<string, string> } =
                     {t.label}<span>{tabCount(t.key)}</span>
                   </button>
                 ))}
-                <div className="directory-tabs-end"><span className="live-dot" />Demo data</div>
+                <div className="directory-tabs-end"><span className="live-dot" />{isSupabaseConfigured ? "Live" : "Demo data"}</div>
               </div>
               <div className="directory-toolbar">
                 <SearchField label="Search assets" placeholder="Search asset ID, name, brand, model, serial or location..." value={search} onChange={(v) => { setSearch(v); setPage(1); }} />
@@ -332,7 +333,7 @@ export default function Assets({ params }: { params?: Record<string, string> } =
             </section>
             <div className="directory-footnote">
               <span><ShieldCheck size={13} />Replaced and retired assets stay visible so their history is never lost.</span>
-              <span><CalendarClock size={13} />All amounts in CAD<span className="footnote-separator">&middot;</span>Demo data</span>
+              <span><CalendarClock size={13} />All amounts in CAD{!isSupabaseConfigured && <><span className="footnote-separator">&middot;</span>Demo data</>}</span>
             </div>
           </main>
         </div>

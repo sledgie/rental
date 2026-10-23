@@ -156,7 +156,7 @@ export default function Contractors({ params }: { params?: Record<string, string
                     {t.label}<span>{tabCount(t.key)}</span>
                   </button>
                 ))}
-                <div className="directory-tabs-end"><span className="live-dot" />Demo data</div>
+                <div className="directory-tabs-end"><span className="live-dot" />{isSupabaseConfigured ? "Live" : "Demo data"}</div>
               </div>
               <div className="directory-toolbar">
                 <SearchField label="Search contractors" placeholder="Search company, contact, email, phone or service category..." value={search} onChange={(v) => { setSearch(v); setPage(1); }} />
@@ -296,7 +296,7 @@ export default function Contractors({ params }: { params?: Record<string, string
             </section>
             <div className="directory-footnote">
               <span><ShieldCheck size={13} />Inactive contractors stay on past requests but are no longer offered for new assignments.</span>
-              <span><CalendarClock size={13} />All amounts in CAD<span className="footnote-separator">&middot;</span>Demo data</span>
+              <span><CalendarClock size={13} />All amounts in CAD{!isSupabaseConfigured && <><span className="footnote-separator">&middot;</span>Demo data</>}</span>
             </div>
           </main>
         </div>

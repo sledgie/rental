@@ -1,3 +1,7 @@
+import { isSupabaseConfigured } from "../lib/supabase";
+import { useOrganization } from "../auth/contexts/OrganizationContext";
+import { loadFinancialDataset } from "./lib/data/live";
+import { setLiveDataset } from "./lib/data";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, FileBarChart } from "lucide-react";
 import { Button as TnButton, EmptyState } from "../tenants/components/ui";
@@ -132,7 +136,7 @@ function Catalog() {
             </section>
 
             <div className="directory-footnote">
-              <span>Mock ledger data generated in the browser; figures are illustrative and not connected to a live accounting backend.</span>
+              <span>{isSupabaseConfigured ? "Figures come from your general ledger, invoices, payments, bills and deposits. Budgets, mortgages and tax codes are not recorded yet." : "Mock ledger data generated in the browser; figures are illustrative and not connected to a live accounting backend."}</span>
             </div>
           </main>
         </div>
@@ -144,8 +148,22 @@ function Catalog() {
 export default function FinancialReports({ params }: { params?: Record<string, string> }) {
   const reportId = params?.report;
   useEffect(() => { window.scrollTo?.(0, 0); }, [reportId]);
+  // Supabase mode: read the organization's books each time the page opens; the reports render again once they arrive
+  const { activeOrganization } = useOrganization();
+  const [loaded, setLoaded] = useState<{ org: string | null; error: string | null }>({ org: null, error: null });
+  useEffect(() => {
+    if (!isSupabaseConfigured || !activeOrganization) return;
+    let live = true;
+    loadFinancialDataset(activeOrganization.id)
+      .then((ds) => { if (live) { setLiveDataset(ds); setLoaded({ org: activeOrganization.id, error: null }); } })
+      .catch((error) => { if (live) setLoaded({ org: null, error: error instanceof Error ? error.message : "Unable to load the financial data." }); });
+    return () => { live = false; };
+  }, [activeOrganization]);
+  if (isSupabaseConfigured && !loaded.org) {
+    return <div className="tn fr"><div className="app-shell"><div className="main-shell"><main className="main-content"><div className="page-heading"><div><div className="page-title-line"><h1>Financial Reports</h1></div><p>{loaded.error ?? "Loading your books…"}</p></div></div></main></div></div></div>;
+  }
   return (
-    <ReportProvider>
+    <ReportProvider key={loaded.org ?? "sample"}>
       {reportId ? <ReportView reportId={reportId} /> : <Catalog />}
     </ReportProvider>
   );
