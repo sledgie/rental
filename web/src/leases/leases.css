@@ -35,7 +35,7 @@
 .ls .document-count { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px; color: var(--ink-2); background: transparent; border: 1px solid transparent; border-radius: 4px; cursor: pointer; font-size: 9px; }
 .ls .document-count:hover { color: var(--accent); background: var(--surface-3); border-color: var(--line); }
 .ls .document-count svg { color: var(--muted); }
-.ls .pending-document-mark { display: inline-grid; place-items: center; width: 13px; height: 13px; border-radius: 50%; color: var(--accent-ink); background: var(--warn); font-size: 8px; font-weight: 800; }
+.ls .pending-document-mark { display: inline-flex; align-items: center; justify-content: center; flex: none; box-sizing: border-box; width: 13px; height: 13px; padding: 0; border-radius: 50%; color: var(--accent-ink); background: var(--warn); font-size: 8px; font-weight: 800; line-height: 1; text-align: center; }
 .ls .more-action-button { width: 27px; height: 27px; }
 .ls .lease-menu-wrap, .ls .document-menu-wrap { position: relative; }
 .ls .action-menu { position: absolute; z-index: 30; right: 0; top: calc(100% + 4px); min-width: 182px; padding: 5px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface-2); box-shadow: 0 12px 32px #0007; animation: ls-menu-in .15s ease-out; }
