@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../lib/supabase";
 // Properties directory in the same format as the Tenants page: tabs, search, sortable master rows and an expandable detail panel.
 // Uses the Tenants module's (.tn) styles and small UI parts.
 import { Fragment, useEffect, useMemo, useState } from "react";
@@ -365,7 +366,7 @@ export default function PropertiesView({
                 ))}
                 <div className="directory-tabs-end">
                   <span className="live-dot" />
-                  Demo data
+                  {isSupabaseConfigured ? "Live" : "Demo data"}
                 </div>
               </div>
               <div className="directory-toolbar">
@@ -580,7 +581,7 @@ export default function PropertiesView({
                 Your records stay connected. Your history stays intact.
               </span>
               <span>
-                All amounts in USD<span className="footnote-separator">&middot;</span>Demo data
+                All amounts in USD{!isSupabaseConfigured && <><span className="footnote-separator">&middot;</span>Demo data</>}
               </span>
             </div>
           </main>

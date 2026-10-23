@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../lib/supabase";
 // Inspections & preventive schedules in the shared directory format. Each schedule is a recurring inspection or service task (alarm checks,
 // furnace servicing, filter changes...) that can be completed, or turned into a maintenance request / work order when it falls due.
 import { Fragment, useEffect, useMemo, useState } from "react";
@@ -168,7 +169,7 @@ export default function Inspections({ params }: { params?: Record<string, string
                     {t.label}<span>{tabCount(t.key)}</span>
                   </button>
                 ))}
-                <div className="directory-tabs-end"><span className="live-dot" />Demo data</div>
+                <div className="directory-tabs-end"><span className="live-dot" />{isSupabaseConfigured ? "Live" : "Demo data"}</div>
               </div>
               <div className="directory-toolbar">
                 <SearchField label="Search schedules" placeholder="Search task, property, unit, asset or contractor..." value={search} onChange={(v) => { setSearch(v); setPage(1); }} />
@@ -322,8 +323,8 @@ export default function Inspections({ params }: { params?: Record<string, string
               <Pager total={filtered.length} page={page} pageSize={pageSize} noun="schedules" setPage={setPage} setPageSize={setPageSize} />
             </section>
             <div className="directory-footnote">
-              <span><ShieldCheck size={13} />Prototype: due indicators only. No background jobs or external reminders are running.</span>
-              <span><CalendarClock size={13} />All amounts in CAD<span className="footnote-separator">&middot;</span>Demo data</span>
+              <span><ShieldCheck size={13} />{isSupabaseConfigured ? "Due dates are shown here; no automatic reminders are sent yet." : "Prototype: due indicators only. No background jobs or external reminders are running."}</span>
+              <span><CalendarClock size={13} />All amounts in CAD{!isSupabaseConfigured && <><span className="footnote-separator">&middot;</span>Demo data</>}</span>
             </div>
           </main>
         </div>

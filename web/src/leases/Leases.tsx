@@ -903,7 +903,7 @@ export default function Leases({ params }: { params?: Record<string, string> } =
                   {TAB_LABEL[tab]}<span>{data.leases.filter((lease) => tabMatches(tab, lease)).length}</span>
                 </button>
               ))}
-              <div className="directory-tabs-end"><span className="live-dot" />Demo data</div>
+              <div className="directory-tabs-end"><span className="live-dot" />{isSupabaseConfigured ? "Live" : "Demo data"}</div>
             </div>
             <div className="directory-toolbar">
               <SearchField label="Search leases" placeholder="Search lease ID, name, tenant, property, or unit..." value={search} onChange={(v) => { setSearch(v); setCurrentPage(1); }} />
@@ -1025,7 +1025,7 @@ export default function Leases({ params }: { params?: Record<string, string> } =
           </section>
           <div className="directory-footnote">
             <span><ShieldCheck size={13} />Contracted rent shown; actual payments stay in Financials.</span>
-            <span>Prototype data<span className="footnote-separator">&middot;</span>Changes stay in this browser session</span>
+            <span>{isSupabaseConfigured ? "Saved to your organization" : <>Prototype data<span className="footnote-separator">&middot;</span>Changes stay in this browser session</>}</span>
           </div>
         </main>
       </div>

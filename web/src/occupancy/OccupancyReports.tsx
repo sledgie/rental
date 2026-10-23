@@ -292,7 +292,7 @@ export default function OccupancyReports({ params }: { params?: Record<string, s
                 </section>
 
                 <div className="directory-footnote">
-                  <span>Mock portfolio data for {PORTFOLIO}; figures are illustrative and not connected to a live leasing backend.</span>
+                  <span>{isSupabaseConfigured ? "Built from your units, leases, tenants and applications. Unit turnover steps are not recorded yet." : `Mock portfolio data for ${PORTFOLIO}; figures are illustrative and not connected to a live leasing backend.`}</span>
                 </div>
               </>
             )}

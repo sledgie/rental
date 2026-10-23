@@ -195,7 +195,7 @@ export function ReportView({ reportId }: { reportId: string }) {
             </section>
 
             <div className="directory-footnote no-print">
-              <span>Mock ledger data generated in the browser. Budget edits and bank matches are kept for this session only.</span>
+              <span>{isSupabaseConfigured ? "Figures come from your books. Budget edits and bank matches made here are kept for this session only." : "Mock ledger data generated in the browser. Budget edits and bank matches are kept for this session only."}</span>
             </div>
           </main>
         </div>

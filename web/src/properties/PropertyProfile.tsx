@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../lib/supabase";
 // Full property profile (a drawer with tabs), the property counterpart of the tenant profile. Uses the Tenants module's styles.
 import { ArrowUpRight, Building2, Home, Mail, MapPin, Pencil, Phone, Users, Wallet } from "lucide-react";
 import {
@@ -303,7 +304,7 @@ export function PropertyProfile({
             </dl>
           </>
         )}
-        <div className="profile-footer-note">Property records are private to your workspace. All amounts in USD. Demo data.</div>
+        <div className="profile-footer-note">Property records are private to your workspace. All amounts in USD.{isSupabaseConfigured ? "" : " Demo data."}</div>
       </div>
     </Overlay>
   );

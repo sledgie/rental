@@ -328,7 +328,7 @@ export function ChartOfAccountsPage() {
   const requestReset = () =>
     setConfirmReq({
       title: "Restore the sample chart?",
-      eyebrow: "Demo data",
+      eyebrow: isSupabaseConfigured ? "Live" : "Demo data",
       tone: "warning",
       body: (
         <p>
@@ -395,7 +395,7 @@ export function ChartOfAccountsPage() {
                 <IntegrityStrip />
                 <span className="inline-flex items-center gap-1.5 rounded-[6px] border border-dashed border-u-line bg-u-s2 px-2 py-1 text-[11px] text-u-muted">
                   <CloudOff className="h-3.5 w-3.5" />
-                  Demo data · session only · nothing persisted
+                  {isSupabaseConfigured ? "Saved to your organization" : "Demo data · session only · nothing persisted"}
                 </span>
               </div>
             </div>

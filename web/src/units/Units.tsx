@@ -295,7 +295,7 @@ export default function Units({ params }: { params?: Record<string, string> } = 
                     {t.label}<span>{rows.filter((r) => inTab(r, t.key)).length}</span>
                   </button>
                 ))}
-                <div className="directory-tabs-end"><span className="live-dot" />Demo data</div>
+                <div className="directory-tabs-end"><span className="live-dot" />{isSupabaseConfigured ? "Live" : "Demo data"}</div>
               </div>
               <div className="directory-toolbar">
                 <SearchField label="Search units" placeholder="Search unit, property, tenant, lease or phone..." value={filters.query} onChange={(v) => patch({ query: v })} />
@@ -490,7 +490,7 @@ export default function Units({ params }: { params?: Record<string, string> } = 
             </section>
             <div className="directory-footnote">
               <span><ShieldCheck size={13} />Contract rent comes from leases; advertised rent is shown only for units with no current lease.</span>
-              <span>All amounts in CAD<span className="footnote-separator">&middot;</span>Demo data</span>
+              <span>All amounts in CAD{!isSupabaseConfigured && <><span className="footnote-separator">&middot;</span>Demo data</>}</span>
             </div>
           </main>
         </div>
