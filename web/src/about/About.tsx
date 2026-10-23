@@ -8,7 +8,7 @@ import pkg from "../../package.json";
 import "./about.css";
 
 const NOT_CONNECTED = [
-  "Email, SMS and WhatsApp delivery: messages, announcements and automation rules are recorded but not sent yet.",
+  "Email and WhatsApp delivery: those messages and announcements are recorded but not sent yet. Text messages (SMS) are sent through Twilio.",
   "Electronic signatures: signatures are recorded on leases and applications, not collected online.",
   "Background automation: active workflow rules and inspection reminders do not run on their own yet.",
   "Tenant screening services: screening results are entered by your team, not fetched from a provider.",

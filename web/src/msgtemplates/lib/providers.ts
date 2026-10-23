@@ -1,3 +1,5 @@
+import { isSupabaseConfigured } from "../../lib/supabase";
+import { sendSms } from "../../lib/sms";
 import type { Channel, CommunicationLog } from "./types";
 
 export type DispatchRequest = {
@@ -6,6 +8,8 @@ export type DispatchRequest = {
   subject: string;
   body: string;
   sender?: { name: string; email: string; replyTo?: string };
+  /** what the delivery record should point at */
+  meta?: { templateId?: string | null; templateVersion?: number | null; triggerSource?: "manual" | "test"; category?: string | null };
 };
 export type DispatchResult = { ok: boolean; provider: string; providerMessageId?: string; code?: string; message?: string };
 export interface CommunicationProvider {
@@ -29,9 +33,23 @@ class UnconfiguredProvider implements CommunicationProvider {
   }
 }
 
+/** Text messages through Twilio, via the send-sms Edge Function (which also writes the delivery record). */
+class TwilioSmsProvider implements CommunicationProvider {
+  name = "Twilio";
+  channel: Channel = "sms";
+  configured = true;
+  async dispatch(request: DispatchRequest): Promise<DispatchResult> {
+    const result = await sendSms({
+      to: request.recipient.phone, body: request.body, recipientName: request.recipient.name, templateId: request.meta?.templateId ?? null,
+      templateVersion: request.meta?.templateVersion ?? null, triggerSource: request.meta?.triggerSource ?? "test", category: request.meta?.category ?? null,
+    });
+    return { ok: result.ok, provider: this.name, providerMessageId: result.providerMessageId, code: result.ok ? undefined : "TWILIO_ERROR", message: result.error };
+  }
+}
+
 const providers: Record<Channel, CommunicationProvider> = {
   email: new UnconfiguredProvider("email"),
-  sms: new UnconfiguredProvider("sms"),
+  sms: isSupabaseConfigured ? new TwilioSmsProvider() : new UnconfiguredProvider("sms"),
   in_app: new UnconfiguredProvider("in_app"),
 };
 

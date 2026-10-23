@@ -60,7 +60,7 @@ function Page({ tab }: { tab?: string }) {
               </div>
             </section>
             <div className="directory-footnote no-print">
-              <span>{isSupabaseConfigured ? 'Conversations are saved to your organization. Email, SMS and WhatsApp delivery is not connected yet, so messages are recorded only.' : 'Demonstration data held in memory for this visit. Nothing is delivered to real recipients.'}</span>
+              <span>{isSupabaseConfigured ? 'Conversations are saved to your organization. SMS messages are sent through Twilio; email and WhatsApp delivery is not connected yet.' : 'Demonstration data held in memory for this visit. Nothing is delivered to real recipients.'}</span>
             </div>
           </main>
         </div>

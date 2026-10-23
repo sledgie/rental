@@ -85,7 +85,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
     // Show simulated confirmation toast
     const mode = isInternalNote
       ? 'Internal Staff Note logged'
-      : isSupabaseConfigured ? `Message recorded (${selectedChannel.toUpperCase()} delivery is not connected yet)` : `Message simulated sent via ${selectedChannel.toUpperCase()}`;
+      : isSupabaseConfigured ? (selectedChannel === 'sms' ? 'Message saved. It is texted to the participants who have a mobile number.' : `Message recorded (${selectedChannel.toUpperCase()} delivery is not connected yet)`) : `Message simulated sent via ${selectedChannel.toUpperCase()}`;
     setSendSuccessToast(mode);
     setTimeout(() => setSendSuccessToast(null), 3000);
   };

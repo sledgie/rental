@@ -7,6 +7,7 @@ import { getActiveOrgId } from "../lib/activeOrg";
 import { fetchAll, loadFinance } from "../lib/financeData";
 import { loadStaff } from "../properties/add/store/refRepo";
 import { documentUrls, uploadDocument } from "../lib/documents";
+import { sendSms } from "../lib/sms";
 import type {
   Announcement, Attachment, Conversation, ConversationAuditLog, Inspection, Invoice, Lease, MaintenanceRequest, Message, MessageCategory, MessageTemplate, Property, Tenant, Unit, User, UserRole, Vendor,
 } from "./types";
@@ -45,6 +46,8 @@ type Kind = "staff" | "tenant" | "vendor" | "owner";
 /** who an id belongs to (staff are profiles; tenants, vendors and owners are their own records) */
 const kindOf = new Map<string, Kind>();
 const unitProperty = new Map<string, string>();
+/** mobile numbers of the people you can message (tenants, vendors, owners) */
+const phoneOf = new Map<string, { phone: string; name: string }>();
 const BUCKET = "lease-documents";
 const READ_KEY = "loft.messages.read";
 
@@ -110,6 +113,7 @@ export async function loadAll(orgId: string): Promise<Loaded> {
 
   kindOf.clear();
   unitProperty.clear();
+  phoneOf.clear();
   const unitInfo = new Map<string, any>(units.map((u: any) => [u.id, u]));
   for (const u of units) unitProperty.set(u.id, u.property_id);
   const propertyName = new Map<string, string>(properties.map((p: any) => [p.id, p.name]));
@@ -185,6 +189,7 @@ export async function loadAll(orgId: string): Promise<Loaded> {
   for (const inv of finance?.invoices ?? []) balanceOf.set(inv.tenantId, (balanceOf.get(inv.tenantId) ?? 0) + inv.outstanding);
   const today = new Date().toISOString().slice(0, 10);
 
+  for (const u of users) if (!u.isStaff && u.phone) phoneOf.set(u.id, { phone: u.phone, name: u.name });
   return {
     me: users.find((u) => u.id === meId) ?? null,
     users,
@@ -336,6 +341,24 @@ export async function persist(prev: Slices, next: Slices, meId: string): Promise
     }
   }
 
+  // text messages: an SMS message (not an internal note) goes to every participant outside your team who has a mobile number
+  const smsProblems: string[] = [];
+  for (const m of diff(prev.messages, next.messages).added.filter((x) => x.channel === "sms" && !x.isInternalNote)) {
+    const conversation = next.conversations.find((c) => c.id === m.conversationId);
+    const recipients = (conversation?.participantIds ?? []).filter((id) => kindOf.get(id) !== "staff" && phoneOf.get(id)?.phone);
+    if (!recipients.length) { smsProblems.push("no participant has a mobile number"); continue; }
+    let sent = 0;
+    for (const id of recipients) {
+      const who = phoneOf.get(id)!;
+      const result = await sendSms({
+        to: who.phone, body: m.body, recipientName: who.name, tenantId: kindOf.get(id) === "tenant" ? id : null, relatedEntityType: "conversation", relatedEntityId: m.conversationId,
+        triggerSource: "manual", category: conversation?.category ?? null,
+      });
+      if (result.ok) sent += 1; else smsProblems.push(`${who.name}: ${result.error ?? "not sent"}`);
+    }
+    await supabase.from("messages").update({ delivery_status: sent ? "sent" : "failed" }).eq("id", m.id);
+  }
+
   // history events (append-only)
   const events = diff(prev.auditLogs, next.auditLogs).added.reverse();
   if (events.length) {
@@ -388,4 +411,5 @@ export async function persist(prev: Slices, next: Slices, meId: string): Promise
     }
     saveLocalRead(local);
   }
+  if (smsProblems.length) throw new Error(`The message was saved, but the text message was not sent to everyone: ${smsProblems.join("; ")}.`);
 }

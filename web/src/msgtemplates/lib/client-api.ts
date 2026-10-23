@@ -216,7 +216,12 @@ export const communicationApi = {
       channel: template.channel, recipient, subject: preview.renderedSubject,
       body: template.channel === "email" ? preview.renderedBody : preview.plainTextBody,
       sender: template.channel === "email" ? { name: template.senderConfiguration.fromName, email: template.senderConfiguration.fromEmail, replyTo: template.senderConfiguration.replyTo } : undefined,
+      meta: {
+        templateId: payload.templateId ?? ("id" in template ? template.id : null), templateVersion: payload.templateVersion ?? ("version" in template ? template.version : null),
+        triggerSource: payload.mode === "manual" ? "manual" : "test", category: template.category,
+      },
     });
+    const realDelivery = result.provider === "Twilio"; // the Edge Function already wrote the delivery record
     const stamp = now();
     const status = result.ok ? "sent" : "failed";
     const log: CommunicationLog = {
@@ -233,10 +238,10 @@ export const communicationApi = {
       timestamps: { createdAt: stamp, ...(result.ok ? { queuedAt: stamp, sentAt: stamp } : { failedAt: stamp }) },
       attempts: [{ at: stamp, status, detail: result.ok ? "Accepted by provider; delivery to recipient is not yet confirmed." : result.message ?? "Dispatch stopped before provider handoff." }],
       errorDetails: result.ok ? null : { code: result.code, message: result.message, resolution: `Configure a ${template.channel === "in_app" ? "realtime notification" : template.channel.toUpperCase()} provider and retry from a connected worker.` },
-      isMock: true, initiatedBy: ACTOR, createdAt: stamp, updatedAt: stamp,
+      isMock: !realDelivery, initiatedBy: ACTOR, createdAt: stamp, updatedAt: stamp,
     };
     store.logs.unshift(log);
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && !realDelivery) {
       // the delivery history is kept in the database (the sample property/tenant ids of the scenario are not real records, so they are not stored)
       const org = getActiveOrgId();
       const isUuid = (v: unknown) => typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
@@ -259,7 +264,9 @@ export const communicationApi = {
     return {
       ok: result.ok,
       disposition: (result.ok ? "accepted_by_provider" : "not_sent") as "accepted_by_provider" | "not_sent",
-      message: result.ok ? "Accepted by the provider. Delivery has not been confirmed." : "Validation completed and the request was recorded as failed. No message was sent.",
+      message: result.ok
+        ? realDelivery ? "Sent through Twilio. Delivery is confirmed when the carrier reports back." : "Accepted by the provider. Delivery has not been confirmed."
+        : realDelivery ? `Not sent: ${result.message ?? "Twilio refused the message."}` : "Validation completed and the request was recorded as failed. No message was sent.",
       log,
       preview,
     };
