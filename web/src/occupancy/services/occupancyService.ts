@@ -26,6 +26,13 @@ import { calculateDaysDifference } from '../utils/formatters';
 
 // In-memory exception state to allow user review / simulate status changes
 let dynamicExceptions: OccupancyException[] = isSupabaseConfigured ? [] : [...MOCK_OCCUPANCY_EXCEPTIONS];
+// With Supabase the sample lists start empty: they are filled only from the organization's records (./liveData), so a failed load shows
+// zeros and an error instead of sample figures.
+if (isSupabaseConfigured) {
+  for (const list of [MOCK_PROPERTIES, MOCK_UNITS, MOCK_LEASES, MOCK_TENANTS, MOCK_HISTORICAL_RECORDS, MOCK_TURNOVER_RECORDS, MOCK_PIPELINE_DATA, MOCK_MOVE_RECORDS] as unknown[][]) {
+    list.splice(0, list.length);
+  }
+}
 /** Replaces the data-quality findings (Supabase mode: computed from the organization's records). */
 export function setExceptions(list: OccupancyException[]) {
   dynamicExceptions = list;

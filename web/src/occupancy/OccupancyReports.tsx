@@ -96,7 +96,7 @@ export default function OccupancyReports({ params }: { params?: Record<string, s
     setLoadState({ loading: true, error: null });
     loadOccupancyData(activeOrganization.id)
       .then(() => { if (live) { setLoadState({ loading: false, error: null }); setFilters((f) => ({ ...f })); } })
-      .catch((error) => { if (live) setLoadState({ loading: false, error: error instanceof Error ? error.message : 'Unable to load occupancy data.' }); });
+      .catch((error) => { console.error('Occupancy Reports load failed:', error); if (live) setLoadState({ loading: false, error: `Could not load your occupancy data: ${error instanceof Error ? error.message : 'unknown error'}` }); });
     return () => { live = false; };
   }, [activeOrganization]);
   const [recent, setRecent] = useState<string[]>(['report-occupancy-summary', 'report-vacancy-available', 'report-lease-expiration']);
@@ -246,7 +246,7 @@ export default function OccupancyReports({ params }: { params?: Record<string, s
                       <span className="muted">{REPORTS_CATALOG.length} reports</span>
                     </div>
                     <p>Monitor portfolio occupancy, available units, lease expirations, turnover and rental performance.</p>
-                    {loadState.loading ? <p className="text-u-muted">Loading your units and leases…</p> : loadState.error ? <p className="text-u-danger">{loadState.error}</p> : null}
+                    {loadState.loading ? <p className="text-u-muted">Loading your units and leases…</p> : loadState.error ? <p className="text-u-danger font-semibold">{loadState.error}</p> : null}
                   </div>
                   <div className="page-heading-actions">
                     <TnButton onClick={() => open('report-occupancy-summary')}><BarChart3 size={15} />Quick summary</TnButton>
