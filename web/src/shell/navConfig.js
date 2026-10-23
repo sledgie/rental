@@ -55,6 +55,7 @@ export const NAV = [
   { id: 'settings-group', label: 'Settings', items: [
     { id: 'organization', label: 'Organization', icon: 'building', desc: 'Your organization profile, branding and business details.' },
     { id: 'system-settings', label: 'System Settings', icon: 'gear', desc: 'Defaults and preferences that apply across the application.' },
+    { id: 'about', label: 'About', icon: 'help', desc: 'What L.O.F.T. is, your workspace, and the modules it offers.' },
   ] },
 ];
 
