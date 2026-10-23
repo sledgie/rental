@@ -32,7 +32,7 @@ export async function loadPerformanceData(orgId: string, force = false): Promise
     fetchAll("units", "id, property_id, unit_number, floor, bedrooms, bathrooms, square_feet, unit_status, archived_at", orgId, "unit_number"),
     fetchAll("maintenance_requests", "id, request_number, property_id, unit_id, asset_id, category, priority, status, title, description, reported_at, completed_at, assigned_staff_id, assigned_vendor_id, resolution_notes, created_at", orgId, "reported_at"),
     fetchAll("maintenance_visits", "request_id, visit_date, status", orgId, "visit_date"),
-    fetchAll("maintenance_schedules", "id, schedule_number, task, category, property_id, unit_id, frequency, last_completed, next_due, is_active", orgId, "next_due"),
+    fetchAll("maintenance_schedules", "*", orgId, "next_due") // "*": schedule_number only exists after migration 019,
     fetchAll("project_inspections", "id, project_id, inspection_type, inspection_date, inspector, result", orgId, "inspection_date"),
     fetchAll("project_deficiencies", "id, project_id, inspection_id, description, severity, assigned_to, due_date, status, resolution_notes, reinspection_date", orgId, "due_date"),
     fetchAll("assets", "id, asset_number, name, asset_type, property_id, install_date, purchase_date, purchase_price, condition, status, last_inspection, next_service", orgId, "name"),
