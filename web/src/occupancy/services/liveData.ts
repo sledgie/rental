@@ -29,8 +29,8 @@ const replace = <T,>(target: T[], items: T[]) => { target.splice(0, target.lengt
 export async function loadOccupancyData(orgId: string): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
   const [props, units, leases, leaseUnits, parties, tenants, owners, links, renewals, applications, staff] = await Promise.all([
-    fetchAll("properties", "id, code, name, address_line1, city, state_province, postal_code, property_type, year_built, property_manager_id, archived_at", orgId, "name"),
-    fetchAll("units", "id, property_id, unit_number, unit_code, unit_type, unit_status, floor, bedrooms, square_feet, market_rent, advertised_rent, available_on, notes, archived_at, allow_multiple_active_leases", orgId, "unit_number"),
+    fetchAll("properties", "*", orgId, "name"),
+    fetchAll("units", "*", orgId, "unit_number"),
     fetchAll("leases", "id, lease_number, status, tenancy_status, start_date, end_date, agreed_monthly_rent, deposit_amount", orgId, "start_date"),
     fetchAll("lease_units", "lease_id, unit_id, allocated_monthly_rent, start_date, end_date", orgId, "lease_id"),
     fetchAll("lease_parties", "lease_id, tenant_id, role, relationship_start_date, relationship_end_date", orgId, "lease_id"),

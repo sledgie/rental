@@ -50,7 +50,7 @@ export async function loadReportData(orgId: string, force = false): Promise<void
   if (!force && loadedFor === orgId) return;
   const today = new Date().toISOString().slice(0, 10);
   const [props, units, prjs, team, tasks, invoices, lines, expenses, cos, mls, defs, inspections, vendors, staff, events] = await Promise.all([
-    fetchAll("properties", "id, code, name, address_line1, city, state_province, property_type", orgId, "name"),
+    fetchAll("properties", "*", orgId, "name"),
     fetchAll("units", "id, property_id", orgId, "property_id"),
     fetchAll("projects", "*", orgId, "created_at"),
     fetchAll("project_team_members", "project_id, vendor_id, contract_amount, status", orgId, "project_id"),

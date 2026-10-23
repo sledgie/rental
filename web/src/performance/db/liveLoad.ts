@@ -28,7 +28,7 @@ export async function loadPerformanceData(orgId: string, force = false): Promise
   const today = new Date().toISOString().slice(0, 10);
   const now = new Date().toISOString();
   const [props, unitRows, requests, visits, schedules, projectInspections, deficiencies, assetRows, projects, leaseRows, leaseUnits, parties, tenants, renewals, vendors, staff] = await Promise.all([
-    fetchAll("properties", "id, code, name, property_type, address_line1, city, state_province, postal_code, year_built, property_manager_id, archived_at", orgId, "name"),
+    fetchAll("properties", "*", orgId, "name"),
     fetchAll("units", "id, property_id, unit_number, floor, bedrooms, bathrooms, square_feet, unit_status, archived_at", orgId, "unit_number"),
     fetchAll("maintenance_requests", "id, request_number, property_id, unit_id, asset_id, category, priority, status, title, description, reported_at, completed_at, assigned_staff_id, assigned_vendor_id, resolution_notes, created_at", orgId, "reported_at"),
     fetchAll("maintenance_visits", "request_id, visit_date, status", orgId, "visit_date"),

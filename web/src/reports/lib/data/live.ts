@@ -77,7 +77,7 @@ export async function loadFinancialDataset(orgId: string): Promise<Dataset> {
       supabase.from("organizations").select("name, legal_name, address_line1, city").eq("id", orgId).maybeSingle(),
       fetchAll("owners", "id, name, owner_type", orgId, "name"),
       fetchAll("property_owners", "property_id, owner_id, ownership_percentage", orgId, "property_id"),
-      fetchAll("properties", "id, code, name, property_type, address_line1, city, state_province, postal_code, date_acquired, created_at, archived_at", orgId, "name"),
+      fetchAll("properties", "*", orgId, "name"),
       fetchAll("units", "id, property_id, unit_number, bedrooms, bathrooms, square_feet, market_rent, unit_status, archived_at", orgId, "unit_number"),
       fetchAll("tenants", "id, tenant_number, first_name, last_name, email, phone, status", orgId, "last_name"),
       fetchAll("leases", "id, status, start_date, end_date, agreed_monthly_rent, deposit_amount", orgId, "start_date"),
