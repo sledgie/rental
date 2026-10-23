@@ -3,8 +3,8 @@ import Link from "../shim/link";
 import { useStore } from "../lib/store";
 import { computeRecon, withinPeriod } from "../lib/calc";
 import { suggestForBankTx, suggestForBookTxManyToOne, Suggestion } from "../lib/matching";
-import { Alert, Badge, Button, Card, DataTableWrap, EmptyState, Select, StatCard, Th, Td, confidenceBadge, matchBadge } from "../components/ui";
-import { money, moneySigned, fmtDate } from "../lib/format";
+import { Alert, Badge, Button, Card, DataTableWrap, EmptyState, Select, StatCard, Th, Td, confidenceBadge } from "../components/ui";
+import { moneySigned, fmtDate } from "../lib/format";
 
 export default function MatchingPage() {
   const { state, createMatch, can } = useStore();

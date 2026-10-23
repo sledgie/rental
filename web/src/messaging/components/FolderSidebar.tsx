@@ -1,20 +1,6 @@
 import React from 'react';
 import { useApp, MessageFolder } from '../context/AppContext';
-import {
-  Inbox,
-  Mail,
-  Send,
-  UserCheck,
-  Lock,
-  Megaphone,
-  FileEdit,
-  Archive,
-  BookOpen,
-  BarChart3,
-  Settings,
-  Plus,
-  ShieldAlert,
-} from 'lucide-react';
+import { Inbox, Mail, Send, UserCheck, Lock, Megaphone, FileEdit, Archive, BookOpen, BarChart3, Settings, ShieldAlert } from 'lucide-react';
 import { ChannelType } from '../types';
 
 export const FolderSidebar: React.FC = () => {

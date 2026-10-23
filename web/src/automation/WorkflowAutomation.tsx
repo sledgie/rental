@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { Activity, AlertCircle, Braces, Check, CheckCircle2, Clock3, Code2, Copy, FlaskConical, Info, Pencil, Play, Plus, Power, SearchX, ShieldCheck, Trash2, Workflow, X, XCircle } from "lucide-react";
-import { Button as TnButton, IconButton, Overlay } from "../tenants/components/ui";
+import { Activity, AlertCircle, Check, CheckCircle2, Clock3, Code2, Copy, FlaskConical, Pencil, Play, Plus, Power, SearchX, ShieldCheck, Trash2, Workflow, X, XCircle } from "lucide-react";
+import { Button as TnButton, Overlay } from "../tenants/components/ui";
 import { FilterField, FilterPopover, SearchField } from "../shell/directory";
 import { ApiError, listRules, listTemplates, ruleApi as communicationApi, subscribeTemplates, templatesVersion } from "../msgtemplates/lib/client-api";
 import { ALL_EVENTS, CONDITION_FIELDS, EVENT_GROUPS, EVENT_MAP, PROPERTIES, TIMEZONES } from "../msgtemplates/lib/catalog";

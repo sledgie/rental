@@ -3,7 +3,7 @@ import { useStore } from "../lib/store";
 import { computeRecon, withinPeriod } from "../lib/calc";
 import { Alert, Button, Card, DataTableWrap, EmptyState, SegmentedTabs, Select, Th, Td } from "../components/ui";
 import { Icon } from "../components/icons";
-import { downloadCSV, fmtDate, money, moneySigned, num } from "../lib/format";
+import { downloadCSV, fmtDate, money, moneySigned } from "../lib/format";
 import { Reconciliation } from "../lib/types";
 
 const REPORTS = [

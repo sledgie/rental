@@ -2,10 +2,9 @@ import { useMemo, useState } from "react";
 import Link from "../shim/link";
 import { useStore } from "../lib/store";
 import { computeRecon } from "../lib/calc";
-import { Badge, Button, Card, DataTableWrap, EmptyState, Input, Select, Th, Td, Toolbar, reconStatusBadge } from "../components/ui";
+import { Button, Card, DataTableWrap, EmptyState, Input, Select, Th, Td, Toolbar, reconStatusBadge } from "../components/ui";
 import { Icon } from "../components/icons";
 import { fmtDate, fmtDateTime, money, moneySigned } from "../lib/format";
-import { ReconStatus } from "../lib/types";
 
 export default function HistoryPage() {
   const { state } = useStore();

@@ -20,12 +20,7 @@ import {
   History,
   MessageSquare,
 } from 'lucide-react';
-import {
-  getPriorityBadge,
-  getStatusBadge,
-  getRoleBadge,
-  getChannelDetails,
-} from '../utils/formatters';
+import { getPriorityBadge, getStatusBadge, getChannelDetails } from '../utils/formatters';
 import { ConversationStatus, Priority, MessageCategory } from '../types';
 
 interface ConversationDetailProps {

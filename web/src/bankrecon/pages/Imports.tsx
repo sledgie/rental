@@ -1,10 +1,9 @@
 import { Suspense, useRef, useState, useEffect } from "react";
 import { useSearchParams } from "../shim/route";
 import { useStore } from "../lib/store";
-import { parseCSV, suggestMapping, validateBankRows, buildSampleCSV, RowValidationResult, detectDelimiter } from "../lib/csv";
-import { Alert, Badge, Button, Card, Checkbox, Field, Input, Select, Th, Td } from "../components/ui";
-import { Icon } from "../components/icons";
-import { downloadCSV, fingerprint, fmtDate, money, r2, uid } from "../lib/format";
+import { parseCSV, suggestMapping, validateBankRows, buildSampleCSV, RowValidationResult } from "../lib/csv";
+import { Alert, Badge, Button, Card, Field, Input, Select } from "../components/ui";
+import { downloadCSV, fmtDate, money, uid } from "../lib/format";
 import { ColumnMapping } from "../lib/types";
 
 const MAPPING_FIELDS: { key: keyof ColumnMapping; label: string }[] = [

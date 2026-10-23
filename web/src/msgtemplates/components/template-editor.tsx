@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, ArrowLeft, Check, Eye, FileText, Info, Paperclip, Save, Send, ShieldAlert, X } from "lucide-react";
+import { AlertCircle, Check, Eye, FileText, Info, Paperclip, Save, Send, ShieldAlert, X } from "lucide-react";
 import { ApiError, communicationApi } from "../lib/client-api";
 import { CANADIAN_JURISDICTIONS, CATEGORIES, EVENT_GROUPS, PROPERTIES } from "../lib/catalog";
 import { emptyTemplate } from "../lib/defaults";

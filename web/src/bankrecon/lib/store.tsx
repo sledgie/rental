@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useReducer, useCallback } from "react";
-import { StoreState, Reconciliation, BankAccount, BookTransaction, BankTransaction, Match, Adjustment, ImportBatch, ImportMapping, AuditEntry, Settings, BookTxType, ReconStatus, ColumnMapping } from "./types";
+import { StoreState, Reconciliation, BankAccount, BookTransaction, BankTransaction, Match, Adjustment, ImportBatch, ImportMapping, AuditEntry, Settings, ReconStatus, ColumnMapping } from "./types";
 import { buildSeed } from "./seed";
 import { computeRecon } from "./calc";
-import { r2, uid, fingerprint as makeFingerprint, todayISO } from "./format";
+import { r2, uid, fingerprint as makeFingerprint } from "./format";
 
 const STORAGE_KEY = "rms-bank-recon-state-v3";
 

@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
 import Link from "../shim/link";
 import { useStore } from "../lib/store";
-import { computeRecon, withinPeriod } from "../lib/calc";
+import { computeRecon } from "../lib/calc";
 import { Alert, Badge, Button, Card, DataTableWrap, EmptyState, SegmentedTabs, StatCard, Th, Td, confidenceBadge, reconStatusBadge } from "../components/ui";
 import { Icon } from "../components/icons";
 import { FinalizeModal, ReopenModal, CancelModal } from "../components/recon/WorkflowModals";
-import { fmtDate, fmtDateTime, money, moneySigned, num } from "../lib/format";
-import { ReconStatus } from "../lib/types";
+import { fmtDate, fmtDateTime, money, moneySigned } from "../lib/format";
 
 export default function HistoryDetailPage({ id }: { id: string }) {
   const { state, can } = useStore();

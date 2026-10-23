@@ -9,5 +9,6 @@ try {
   if (t === 'blue') document.documentElement.dataset.accent = 'blue';
 } catch { document.documentElement.dataset.theme = 'dark'; }
 import App from './App.jsx';
+import AuthGate from './auth/AuthGate';
 
-createRoot(document.getElementById('root')).render(<App />);
+createRoot(document.getElementById('root')).render(<AuthGate><App /></AuthGate>);
