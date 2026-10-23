@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "@inv/router";
 import { Download, FilePlus2, Plus, RotateCcw, SearchX } from "lucide-react";
 import { PageHeader } from "@inv/components/PageHeader";

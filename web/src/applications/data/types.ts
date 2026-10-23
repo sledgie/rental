@@ -235,6 +235,8 @@ export interface ApplicationDocument {
   versions: DocumentVersion[];
   deletedAt?: string | null;
   retentionUntil?: string;
+  /** the chosen file, uploaded when the document is saved (not kept after a reload) */
+  file?: File;
 }
 
 export interface ApplicationReview {

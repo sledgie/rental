@@ -1,6 +1,10 @@
 // In-memory audit trail that replaces the module's database. Events are seeded once per session and
 // chained with SHA-256 hashes exactly as the original repository did; exports append an audit event.
 import { sha256 } from "./sha256";
+import { isSupabaseConfigured, supabase } from "../../lib/supabase";
+import { fetchAll } from "../../lib/financeData";
+
+/* eslint-disable @typescript-eslint/no-explicit-any -- rows come from untyped PostgREST responses */
 import { propertyRows, sampleEvents, tenantRows, unitRows } from "./seed";
 import {
   actionLabel, formatActorType,
@@ -95,7 +99,8 @@ function append(input: ActivityInput): StoredEvent {
   return stored;
 }
 
-let seeded = false;
+// with Supabase the trail is the organization's own (activity_events), read by loadActivityFromDatabase; nothing is seeded
+let seeded = isSupabaseConfigured;
 function ensureSeeded() {
   if (seeded) return;
   seeded = true;
@@ -103,9 +108,46 @@ function ensureSeeded() {
   version = 0;
 }
 
-const propertyById = new Map(propertyRows.map((row) => [row.id, row]));
-const unitById = new Map(unitRows.map((row) => [row.id, row]));
-const tenantById = new Map(tenantRows.map((row) => [row.id, row]));
+type PropertyRow = { id: string; name: string; address: string; city: string };
+type UnitRow = { id: string; propertyId: string; unitNumber: string; monthlyRent: number; occupancy: string };
+type TenantRow = { id: string; name: string; email: string; status: string };
+let properties: PropertyRow[] = isSupabaseConfigured ? [] : (propertyRows as unknown as PropertyRow[]);
+let units: UnitRow[] = isSupabaseConfigured ? [] : (unitRows as unknown as UnitRow[]);
+let propertyById = new Map(properties.map((row) => [row.id, row]));
+let unitById = new Map(units.map((row) => [row.id, row]));
+let tenantById = new Map<string, TenantRow>(isSupabaseConfigured ? [] : (tenantRows as unknown as TenantRow[]).map((row) => [row.id, row]));
+let loadedFor: string | null = null;
+
+/** Reads the organization's audit trail and the property, unit and tenant names it refers to (Supabase mode). */
+export async function loadActivityFromDatabase(orgId: string, force = false): Promise<void> {
+  if (!isSupabaseConfigured || (!force && loadedFor === orgId)) return;
+  const [rows, props, unitList, tenants] = await Promise.all([
+    fetchAll("activity_events", "id, occurred_at, recorded_at, actor_id, actor_type, actor_display_name, action, category, description, entity_type, entity_id, related_record_label, property_id, unit_id, tenant_id, changes, outcome, severity, source_module, correlation_id, reason, metadata, error, previous_hash, event_hash, chain_seq", orgId, "chain_seq"),
+    fetchAll("properties", "id, name, address_line1, city", orgId, "name"),
+    fetchAll("units", "id, property_id, unit_number, market_rent, unit_status", orgId, "unit_number"),
+    fetchAll("tenants", "id, first_name, last_name, email, status", orgId, "last_name"),
+  ]);
+  properties = props.map((p: any) => ({ id: p.id, name: p.name, address: p.address_line1 ?? "", city: p.city ?? "" }));
+  units = unitList.map((u: any) => ({ id: u.id, propertyId: u.property_id, unitNumber: u.unit_number, monthlyRent: Number(u.market_rent ?? 0), occupancy: String(u.unit_status).replace(/_/g, " ") }));
+  propertyById = new Map(properties.map((row) => [row.id, row]));
+  unitById = new Map(units.map((row) => [row.id, row]));
+  tenantById = new Map(tenants.map((t: any) => [t.id, { id: t.id, name: `${t.first_name} ${t.last_name ?? ""}`.trim(), email: t.email ?? "", status: t.status }]));
+  const stored = rows.map((r: any): StoredEvent => ({
+    id: r.id, occurredAt: new Date(r.occurred_at), recordedAt: new Date(r.recorded_at), actorId: r.actor_id ?? r.actor_type, actorType: r.actor_type, actorDisplayName: r.actor_display_name,
+    action: r.action as ActivityAction, category: r.category as Category, description: r.description, entityType: r.entity_type as EntityType, entityId: r.entity_id, relatedRecordLabel: r.related_record_label || r.entity_id,
+    propertyId: r.property_id, unitId: r.unit_id, tenantId: r.tenant_id, changes: Array.isArray(r.changes) ? r.changes : [], outcome: r.outcome, severity: r.severity, sourceModule: r.source_module ?? "",
+    correlationId: r.correlation_id ?? "", reason: r.reason, metadata: r.metadata ?? {}, error: r.error, previousHash: r.previous_hash, eventHash: r.event_hash,
+  }));
+  events.splice(0, events.length, ...stored);
+  loadedFor = orgId;
+  version += 1;
+  listeners.forEach((listener) => listener());
+}
+
+/** Actions that occur in the trail (Supabase mode), so the action filter offers what modules really record. */
+export function recordedActions(): string[] {
+  return [...new Set(events.map((e) => e.action as string))].sort();
+}
 
 function toDTO(event: StoredEvent, ctx: AccessContext): ActivityEventDTO {
   const metadata = { ...event.metadata };
@@ -215,8 +257,8 @@ function filterOptions(): ActivityFilterOptions {
   events.forEach((e) => actors.set(e.actorId, { id: e.actorId, name: e.actorDisplayName, type: e.actorType }));
   return {
     actors: [...actors.values()].sort((a, b) => a.name.localeCompare(b.name)),
-    properties: [...propertyRows].sort((a, b) => a.name.localeCompare(b.name)).map(({ id, name }) => ({ id, name })),
-    units: [...unitRows].map((u) => ({ id: u.id, number: u.unitNumber, propertyId: u.propertyId, propertyName: propertyById.get(u.propertyId)?.name ?? "" }))
+    properties: [...properties].sort((a, b) => a.name.localeCompare(b.name)).map(({ id, name }) => ({ id, name })),
+    units: [...units].map((u) => ({ id: u.id, number: u.unitNumber, propertyId: u.propertyId, propertyName: propertyById.get(u.propertyId)?.name ?? "" }))
       .sort((a, b) => a.propertyName.localeCompare(b.propertyName) || a.number.localeCompare(b.number, undefined, { numeric: true })),
   };
 }
@@ -228,7 +270,7 @@ export function getActivityLogs(filters: ActivityFilters, ctx: AccessContext): A
   return {
     items: rows.slice((page - 1) * filters.pageSize, page * filters.pageSize).map((e) => toDTO(e, ctx)),
     total, page, pageSize: filters.pageSize, totalPages: Math.max(1, Math.ceil(total / filters.pageSize)),
-    summary: summaryFor(filters, ctx), options: filterOptions(), sampleData: true,
+    summary: summaryFor(filters, ctx), options: filterOptions(), sampleData: !isSupabaseConfigured,
   };
 }
 
@@ -288,7 +330,14 @@ export function exportActivityLogs(filters: ActivityFilters, ctx: AccessContext)
     actorId: ctx.userId, actorType: "user", actorDisplayName: ctx.userName, action: "audit.exported", category: "Users & Security",
     description: `Activity log export created: ${rows.length} records (CSV).`, entityType: "audit_export", entityId: newId("exp"), relatedRecordLabel: fileName,
     sourceModule: "Activity Logs", severity: "warning", reason: "User-initiated filtered audit export",
-    metadata: { rowCount: rows.length, format: "CSV", filterFields: Object.entries(filters).filter(([, value]) => Boolean(value)).map(([key]) => key), changeValuesIncluded: false, sampleWorkspace: true },
+    metadata: { rowCount: rows.length, format: "CSV", filterFields: Object.entries(filters).filter(([, value]) => Boolean(value)).map(([key]) => key), changeValuesIncluded: false, sampleWorkspace: !isSupabaseConfigured },
   });
+  if (isSupabaseConfigured && loadedFor) {
+    // the export itself is recorded in the organization's audit trail
+    void supabase.rpc("record_activity", {
+      p_org: loadedFor, p_action: "audit.exported", p_category: "Users & Security", p_description: audit.description, p_entity_type: "audit_export", p_entity_id: audit.entityId,
+      p_label: fileName, p_severity: "warning", p_reason: "User-initiated filtered audit export", p_metadata: { rowCount: rows.length, format: "CSV" }, p_source_module: "Activity Logs",
+    });
+  }
   return { csv, rowCount: rows.length, fileName, auditEventId: audit.id };
 }

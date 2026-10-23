@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../lib/supabase";
 import { useEffect } from 'react';
 import { AlertTriangle, Award, CalendarCheck2, CheckSquare2, DollarSign, GitPullRequestDraft, HardHat, LayoutDashboard, RefreshCw, Sliders, Printer } from 'lucide-react';
 import { Button as TnButton, IconButton } from '../tenants/components/ui';
@@ -197,7 +198,7 @@ function ProjectReportsView({ initialTab }: { initialTab?: string }) {
             </section>
 
             <div className="directory-footnote no-print">
-              <span>Mock project data held in memory for this session; nothing is saved.</span>
+              <span>{isSupabaseConfigured ? "Built from your projects. Risks, handover checklists and outcome reviews are not recorded yet, so those sections stay empty." : "Mock project data held in memory for this session; nothing is saved."}</span>
             </div>
           </main>
         </div>

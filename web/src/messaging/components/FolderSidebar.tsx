@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from '../../lib/supabase';
 import React from 'react';
 import { useApp, MessageFolder } from '../context/AppContext';
 import { Inbox, Mail, Send, UserCheck, Lock, Megaphone, FileEdit, Archive, BookOpen, BarChart3, Settings, ShieldAlert } from 'lucide-react';
@@ -190,7 +191,7 @@ export const FolderSidebar: React.FC = () => {
       <div className="p-3 border-t border-u-line/80 text-[11px] text-u-muted flex items-center justify-between">
         <span className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-u-ok animate-pulse"></span>
-          <span>Sync Status: Realtime Mock</span>
+          <span>{isSupabaseConfigured ? 'Saved to your organization' : 'Sync Status: Realtime Mock'}</span>
         </span>
         <span className="font-mono text-[10px] text-u-muted">v2.4</span>
       </div>

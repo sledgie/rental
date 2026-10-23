@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from '../lib/supabase';
 import { useEffect } from 'react';
 import { Mail, Plus, Search } from 'lucide-react';
 import { AppProvider, useApp, type MessageFolder } from './context/AppContext';
@@ -59,7 +60,7 @@ function Page({ tab }: { tab?: string }) {
               </div>
             </section>
             <div className="directory-footnote no-print">
-              <span>Demonstration data held in memory for this visit. Nothing is delivered to real recipients.</span>
+              <span>{isSupabaseConfigured ? 'Conversations are saved to your organization. Email, SMS and WhatsApp delivery is not connected yet, so messages are recorded only.' : 'Demonstration data held in memory for this visit. Nothing is delivered to real recipients.'}</span>
             </div>
           </main>
         </div>

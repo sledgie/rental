@@ -1,3 +1,5 @@
+import { isSupabaseConfigured } from "../../../lib/supabase";
+import { emptyDataset } from "./live";
 import type {
   BankStatement,
   BankTxn,
@@ -1973,7 +1975,11 @@ export function buildDataset(): Dataset {
 }
 
 let cached: Dataset | null = null;
+/** Supabase mode: the organization's books (./live.ts). Until they are loaded the reports show an empty dataset. */
+export function setLiveDataset(ds: Dataset) {
+  cached = ds;
+}
 export function getDataset(): Dataset {
-  if (!cached) cached = buildDataset();
+  if (!cached) cached = isSupabaseConfigured ? emptyDataset(APP_TODAY) : buildDataset();
   return cached;
 }

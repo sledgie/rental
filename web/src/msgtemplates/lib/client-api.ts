@@ -1,7 +1,7 @@
 // In-memory stand-in for the original /api routes and Postgres service. Same call shapes as the original client, so the
 // components are unchanged; everything lives for the browser session (module scope, so it survives page navigation).
 import { getProvider } from "./providers";
-import { isSupabaseConfigured } from "../../lib/supabase";
+import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 import { getActiveOrgId, subscribeActiveOrg } from "../../lib/activeOrg";
 import * as db from "./db";
 import { DEFAULT_SENDER, PROPERTIES } from "./catalog";
@@ -236,6 +236,26 @@ export const communicationApi = {
       isMock: true, initiatedBy: ACTOR, createdAt: stamp, updatedAt: stamp,
     };
     store.logs.unshift(log);
+    if (isSupabaseConfigured) {
+      // the delivery history is kept in the database (the sample property/tenant ids of the scenario are not real records, so they are not stored)
+      const org = getActiveOrgId();
+      const isUuid = (v: unknown) => typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+      if (org) {
+        void (async () => {
+          const { data: auth } = await supabase.auth.getUser();
+          const saved = await supabase.from("communication_logs").insert({
+            organization_id: org, template_id: isUuid(log.templateId) ? log.templateId : null, template_version: log.templateVersion, recipient_name: recipient.name, recipient_email: recipient.email,
+            recipient_phone: recipient.phone, related_entity_type: log.relatedEntityType, related_entity_id: log.relatedEntityId, rendered_subject: log.renderedSubject, rendered_body: log.renderedBody,
+            channel: log.channel, category: log.category, status, trigger_source: log.triggerSource, attempt_count: log.attemptCount, provider_message_id: log.providerMessageId,
+            provider_response: log.providerResponse, queued_at: log.timestamps.queuedAt ?? null, sent_at: log.timestamps.sentAt ?? null, failed_at: log.timestamps.failedAt ?? null,
+            error_details: log.errorDetails, is_mock: true, initiated_by: auth.user?.id ?? null,
+          }).select("id").single();
+          if (!saved.error && saved.data) {
+            await supabase.from("communication_log_attempts").insert(log.attempts.map((a) => ({ organization_id: org, log_id: saved.data.id, attempted_at: a.at, status: a.status, detail: a.detail })));
+          }
+        })().catch(() => undefined); // a logging failure never blocks the screen
+      }
+    }
     return {
       ok: result.ok,
       disposition: (result.ok ? "accepted_by_provider" : "not_sent") as "accepted_by_provider" | "not_sent",

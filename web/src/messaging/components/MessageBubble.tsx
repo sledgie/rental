@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from '../../lib/supabase';
 import React, { useState } from 'react';
 import { Message, User } from '../types';
 import { formatFileSize, getRoleBadge, getChannelDetails } from '../utils/formatters';
@@ -83,10 +84,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, sender, i
                   <p className="font-medium truncate text-[11px] text-u-ink">{att.filename}</p>
                   <p className="text-[10px] text-u-muted">{formatFileSize(att.sizeBytes)}</p>
                 </div>
-                <button type="button" onClick={() => setPreviewAttachment(att.filename)} title="Preview" className="p-1 rounded text-u-muted hover:bg-u-s3">
+                <button type="button" onClick={() => (att.mockUrl ? window.open(att.mockUrl, '_blank', 'noopener') : setPreviewAttachment(att.filename))} title="Preview" className="p-1 rounded text-u-muted hover:bg-u-s3">
                   <Eye className="w-3.5 h-3.5" />
                 </button>
-                <button type="button" onClick={() => alert(`Mock downloading attachment: ${att.filename} (${formatFileSize(att.sizeBytes)})`)} title="Download" className="p-1 rounded text-u-muted hover:bg-u-s3">
+                <button type="button" onClick={() => (att.mockUrl ? window.open(att.mockUrl, '_blank', 'noopener') : alert(`Mock downloading attachment: ${att.filename} (${formatFileSize(att.sizeBytes)})`))} title="Download" className="p-1 rounded text-u-muted hover:bg-u-s3">
                   <Download className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -101,7 +102,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, sender, i
         ) : (
           <>
             <CheckCheck className="w-3 h-3 text-u-ok" />
-            <span>Delivered (simulated)</span>
+            <span>{isSupabaseConfigured ? 'Recorded' : 'Delivered (simulated)'}</span>
           </>
         )}
       </footer>

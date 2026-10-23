@@ -25,17 +25,25 @@ import { Report14FutureAvailability } from './components/reports/Report14FutureA
 import { Report15OccupancyExceptions } from './components/reports/Report15OccupancyExceptions';
 import type { CurrentOccupancyStatus, Lease, ReportCategory, ReportFilterState, Unit, UnitType } from './types/occupancy';
 import { OccupancyService } from './services/occupancyService';
+import { loadOccupancyData } from './services/liveData';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { useOrganization } from '../auth/contexts/OrganizationContext';
 import { MOCK_PROPERTIES } from './mock/properties';
 import { REPORTS_CATALOG } from './mock/reportsCatalog';
 import { exportToCSV } from './utils/exportUtils';
 import { formatCurrency, formatPercent } from './utils/formatters';
 import './occupancy.css';
 
-const PORTFOLIO = 'Metropolitan Living Portfolio';
+const PORTFOLIO = isSupabaseConfigured ? 'Portfolio' : 'Metropolitan Living Portfolio';
+const TODAY = new Date().toISOString().slice(0, 10);
+const monthBounds = () => {
+  const d = new Date();
+  return { startDate: `${TODAY.slice(0, 7)}-01`, endDate: new Date(d.getFullYear(), d.getMonth() + 1, 0, 12).toISOString().slice(0, 10) };
+};
 
 const DEFAULT_FILTERS: ReportFilterState = {
-  asOfDate: '2026-10-24',
-  dateRange: { startDate: '2026-10-01', endDate: '2026-10-31' },
+  asOfDate: isSupabaseConfigured ? TODAY : '2026-10-24',
+  dateRange: isSupabaseConfigured ? monthBounds() : { startDate: '2026-10-01', endDate: '2026-10-31' },
   periodPreset: 'today',
   propertyId: 'all',
   unitType: 'all',
@@ -79,6 +87,18 @@ export default function OccupancyReports({ params }: { params?: Record<string, s
   const [category, setCategory] = useState<ReportCategory>('all');
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<ReportFilterState>(DEFAULT_FILTERS);
+  // Supabase mode: the reports are built from the organization's units, leases, tenants and applications
+  const { activeOrganization } = useOrganization();
+  const [loadState, setLoadState] = useState<{ loading: boolean; error: string | null }>({ loading: isSupabaseConfigured, error: null });
+  useEffect(() => {
+    if (!isSupabaseConfigured || !activeOrganization) return;
+    let live = true;
+    setLoadState({ loading: true, error: null });
+    loadOccupancyData(activeOrganization.id)
+      .then(() => { if (live) { setLoadState({ loading: false, error: null }); setFilters((f) => ({ ...f })); } })
+      .catch((error) => { if (live) setLoadState({ loading: false, error: error instanceof Error ? error.message : 'Unable to load occupancy data.' }); });
+    return () => { live = false; };
+  }, [activeOrganization]);
   const [recent, setRecent] = useState<string[]>(['report-occupancy-summary', 'report-vacancy-available', 'report-lease-expiration']);
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [selectedLease, setSelectedLease] = useState<Lease | null>(null);
@@ -136,7 +156,7 @@ export default function OccupancyReports({ params }: { params?: Record<string, s
     </FilterPopover>
   );
 
-  const summaryMetrics = useMemo(() => OccupancyService.getLandingSummaryMetrics(filters.asOfDate, filters.propertyId), [filters.asOfDate, filters.propertyId]);
+  const summaryMetrics = useMemo(() => OccupancyService.getLandingSummaryMetrics(filters.asOfDate, filters.propertyId), [filters]);
   const { propertyRows } = useMemo(() => OccupancyService.getOccupancySummary(filters), [filters]);
   const { trendTimeline } = useMemo(() => OccupancyService.getOccupancyTrend(filters), [filters]);
 
@@ -226,6 +246,7 @@ export default function OccupancyReports({ params }: { params?: Record<string, s
                       <span className="muted">{REPORTS_CATALOG.length} reports</span>
                     </div>
                     <p>Monitor portfolio occupancy, available units, lease expirations, turnover and rental performance.</p>
+                    {loadState.loading ? <p className="text-u-muted">Loading your units and leases…</p> : loadState.error ? <p className="text-u-danger">{loadState.error}</p> : null}
                   </div>
                   <div className="page-heading-actions">
                     <TnButton onClick={() => open('report-occupancy-summary')}><BarChart3 size={15} />Quick summary</TnButton>

@@ -14,6 +14,10 @@ import { DEFAULT_WEIGHTS, DEFAULT_THRESHOLDS } from "../lib/scoring";
 import { exportReportToCsv, triggerPrintReport } from "../lib/export";
 import { db } from "../db/memory";
 import { computePortfolioKPIs, computePropertyScorecards, fetchFullReportingData, getDeterministicMonthlyTrends, getManagementAttentionList } from "../db/dataService";
+import { isSupabaseConfigured } from "../../lib/supabase";
+import { getActiveOrgId } from "../../lib/activeOrg";
+import { loadPerformanceData } from "../db/liveLoad";
+import { computeLiveKPIs, computeLiveTrends } from "../db/liveMetrics";
 
 interface RawApiData {
   properties: any[];
@@ -146,14 +150,20 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     try {
       setIsRecalculating(true);
       const activeWeights = weightsParam || weights;
+      if (isSupabaseConfigured) {
+        const org = getActiveOrgId();
+        if (!org) throw new Error("Select an organization first.");
+        // read the organization's records the first time; recalculating with new weights reuses them
+        await loadPerformanceData(org, !weightsParam);
+      }
       const base = fetchFullReportingData();
       const scorecards = computePropertyScorecards(base, activeWeights, base.thresholds);
       const data = {
         ...base,
         weights: activeWeights,
         scorecards,
-        kpis: computePortfolioKPIs(scorecards),
-        trends: getDeterministicMonthlyTrends(),
+        kpis: isSupabaseConfigured ? computeLiveKPIs(base, activeWeights, base.thresholds) : computePortfolioKPIs(scorecards),
+        trends: isSupabaseConfigured ? computeLiveTrends(base, activeWeights, base.thresholds) : getDeterministicMonthlyTrends(),
         attentionList: getManagementAttentionList(base),
       } as RawApiData;
       setRawData(data);

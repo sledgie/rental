@@ -1,4 +1,4 @@
-import { COMPANY, getDataset } from "../data";
+import { COMPANY, getDataset, SYS } from "../data";
 import { REPORT_CATALOG } from "../data/catalog";
 import type {
   AgingBucketRow,
@@ -852,7 +852,7 @@ export function getNoiByProperty(filters: ReportFilters, ds = getDataset()): Rep
 
 export function getCashFlowStatement(filters: ReportFilters, ds = getDataset()): ReportResult {
   const entries = postedEntries(ds, { transactionStatus: "posted" });
-  const cashAccounts = new Set(["1020", "1030"]);
+  const cashAccounts = new Set([SYS.cash, SYS.trust]);
   const cashLines = enrichLines(ds, entries).filter((l) => cashAccounts.has(l.accountId));
   const opening = round2(
     sum(
@@ -901,7 +901,7 @@ export function getCashFlowStatement(filters: ReportFilters, ds = getDataset()):
     else if (src === "insurance_prepayment") bucket.opexPaid += signed;
     else if (src === "mortgage_payment") {
       const principalLine = line.entry.lines.find((l) => l.accountId.startsWith("25"));
-      const interestLine = line.entry.lines.find((l) => l.accountId === "6000");
+      const interestLine = line.entry.lines.find((l) => l.accountId === SYS.interest);
       bucket.principal += principalLine ? -principalLine.debitAmount : 0;
       bucket.otherOp += interestLine ? -interestLine.debitAmount : signed;
     } else if (src === "owner_contribution") bucket.contrib += signed;
@@ -1216,7 +1216,7 @@ export function getSecurityDepositRegister(filters: ReportFilters, ds = getDatas
     );
   });
   const total = round2(sum(rows.map((r) => r.amount)));
-  const gl = asOfBalanceByAccount(ds, filters).get("2100") ?? 0;
+  const gl = asOfBalanceByAccount(ds, filters).get(SYS.securityDeposits) ?? 0;
   rows.push(moneyRow("dep-total", "Total deposit liability", total, { isGrandTotal: true }));
   return {
     ...baseResult("security-deposit-register", "Security Deposit Liability Register", filters, ds),
@@ -1403,7 +1403,7 @@ export function getCashDisbursements(filters: ReportFilters, ds = getDataset()):
   );
   mtg.forEach((je) => {
     if (filters.propertyId !== "all" && je.propertyId !== filters.propertyId) return;
-    const cash = je.lines.find((l) => l.accountId === "1020");
+    const cash = je.lines.find((l) => l.accountId === SYS.cash);
     rows.push(
       moneyRow(je.journalEntryId, je.description, cash ? cash.creditAmount : je.debitTotal, {
         sourceType: "journal",
@@ -1434,8 +1434,8 @@ export function getCashDisbursements(filters: ReportFilters, ds = getDataset()):
 export function getBankAccountActivity(filters: ReportFilters, ds = getDataset()): ReportResult {
   const accountId =
     filters.bankAccountId === "all"
-      ? "1020"
-      : ds.bankAccounts.find((b) => b.bankAccountId === filters.bankAccountId)?.accountId ?? "1020";
+      ? SYS.cash
+      : ds.bankAccounts.find((b) => b.bankAccountId === filters.bankAccountId)?.accountId ?? SYS.cash;
   return getAccountActivityReport({ ...filters, accountId }, ds);
 }
 
@@ -1452,7 +1452,7 @@ export function getBankReconciliation(
   const depositsInTransit = txns.filter((t) => t.type === "deposit" && !matched(t));
   const outstanding = txns.filter((t) => t.type === "withdrawal" && !matched(t));
   const gl = asOfBalanceByAccount(ds, { ...filters, asOfDate: statement?.endingDate ?? filters.asOfDate, propertyId: "all" });
-  const book = gl.get(account?.accountId ?? "1020") ?? 0;
+  const book = gl.get(account?.accountId ?? SYS.cash) ?? 0;
   const stmtBal = statement?.endingBalance ?? 0;
   const dit = round2(sum(depositsInTransit.map((t) => t.amount)));
   const op = round2(sum(outstanding.map((t) => Math.abs(t.amount))));
@@ -1701,7 +1701,7 @@ export function getOperatingExpenseRatio(filters: ReportFilters, ds = getDataset
 
 export function getPropertyTaxReport(filters: ReportFilters, ds = getDataset()): ReportResult {
   const map = periodPnlByAccount(ds, filters);
-  const amount = map.get("5300") ?? 0;
+  const amount = map.get(SYS.propertyTax) ?? 0;
   const bills = ds.bills.filter(
     (b) =>
       b.expenseCategory === "Property Taxes" &&
@@ -1720,7 +1720,7 @@ export function getPropertyTaxReport(filters: ReportFilters, ds = getDataset()):
       },
     }),
   );
-  rows.push(moneyRow("pt-gl", "GL Property tax expense (5300)", amount, { isGrandTotal: true, accountId: "5300" }));
+  rows.push(moneyRow("pt-gl", "GL Property tax expense", amount, { isGrandTotal: true, accountId: SYS.propertyTax }));
   return {
     ...baseResult("property-tax", "Property Tax Expense Report", filters, ds),
     columns: [
@@ -1745,7 +1745,7 @@ export function getLoanMortgageSummary(filters: ReportFilters, ds = getDataset()
     .map((m) => {
       const gl = asOfBalanceByAccount(ds, { ...filters, propertyId: m.propertyId });
       const balance = gl.get(m.accountId) ?? 0;
-      const interest = periodPnlByAccount(ds, { ...filters, propertyId: m.propertyId }).get("6000") ?? 0;
+      const interest = periodPnlByAccount(ds, { ...filters, propertyId: m.propertyId }).get(SYS.interest) ?? 0;
       const principalPaid = round2(m.openingBalance - balance);
       return moneyRow(m.mortgageId, `${ds.properties.find((p) => p.propertyId === m.propertyId)?.propertyName} — ${m.lender}`, balance, {
         propertyId: m.propertyId,

@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../../lib/supabase";
 import { db } from "./memory";
 import { ensureSeeded } from "./seed";
 import {
@@ -190,7 +191,7 @@ export function computePropertyScorecards(
       averageTenancyMonths: avgTenancy,
       avgTurnoverDays: avgTurnover,
       targetTurnoverDays: 7,
-      contractorOnTimeRate: prop.id === "prop-5" ? 62 : 91,
+      contractorOnTimeRate: prop.contractorOnTimeRate ?? (isSupabaseConfigured ? 85 : prop.id === "prop-5" ? 62 : 91),
       totalAssetsTracked: propAssets.length,
       criticalAssetsCount: criticalAssets.length,
       deferredMaintenanceAssetsCount: deferredAssets.length,
@@ -263,7 +264,7 @@ export function getManagementAttentionList(
         issue: `Critical Safety Defect: ${f.description}`,
         category: "Safety Finding",
         severity: "Critical",
-        dateIdentified: "2025-01-10",
+        dateIdentified: f.dueDate ?? new Date().toISOString().slice(0, 10),
         responsiblePerson: f.assignedTo ?? "Unassigned",
         recommendedAction: f.correctiveActionRequired,
         dueDate: f.dueDate,
@@ -274,7 +275,7 @@ export function getManagementAttentionList(
 
   // 2. Overdue critical work orders
   data.workOrders
-    .filter((w) => (w.priority === "Urgent" || w.priority === "High") && w.slaCompliant === false && w.status !== "Completed")
+    .filter((w) => (w.priority === "Urgent" || w.priority === "Emergency" || w.priority === "High") && w.slaCompliant === false && w.status !== "Completed")
     .forEach((w) => {
       const prop = data.properties.find((p) => p.id === w.propertyId);
       items.push({
@@ -326,10 +327,10 @@ export function getManagementAttentionList(
         issue: `Degraded Asset Past Useful Life: ${a.componentName} (${a.assetTag})`,
         category: "Asset Risk",
         severity: "High",
-        dateIdentified: a.lastInspectionDate ?? "2025-01-10",
-        responsiblePerson: "Sarah Jenkins (Asset Mgr)",
+        dateIdentified: a.lastInspectionDate ?? new Date().toISOString().slice(0, 10),
+        responsiblePerson: isSupabaseConfigured ? "Asset manager" : "Sarah Jenkins (Asset Mgr)",
         recommendedAction: `Approve capital project replacement RFP; remaining useful life is 0 years with ${a.repairCount} recorded repairs.`,
-        dueDate: "2025-03-01",
+        dueDate: isSupabaseConfigured ? new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10) : "2025-03-01",
         relatedRecordType: "Asset",
         relatedRecordId: a.id,
       });
