@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../../lib/supabase";
 import type { Lease, Property, ServiceProvider, Tenant, Unit } from "../types";
 
 export const properties: Property[] = [
@@ -223,6 +224,18 @@ export const providers: ServiceProvider[] = [
     phone: "1-833-253-2872",
   },
 ];
+
+/** Replaces the lists in place (the rest of the module imports these arrays directly). */
+export function replaceCatalog(next: { properties: Property[]; units: Unit[]; tenants: Tenant[]; leases: Lease[]; providers: ServiceProvider[] }) {
+  properties.splice(0, properties.length, ...next.properties);
+  units.splice(0, units.length, ...next.units);
+  tenants.splice(0, tenants.length, ...next.tenants);
+  leases.splice(0, leases.length, ...next.leases);
+  providers.splice(0, providers.length, ...next.providers);
+}
+
+// With Supabase the sample properties, tenants and providers must never show: the lists start empty and are filled by replaceCatalog.
+if (isSupabaseConfigured) replaceCatalog({ properties: [], units: [], tenants: [], leases: [], providers: [] });
 
 export function getProperty(id: string) {
   return properties.find((p) => p.id === id);

@@ -2,10 +2,11 @@ import { Hammer } from "lucide-react";
 import { Field } from "../ui/Field";
 import { Input, Textarea } from "../ui/Input";
 import { TagSelect } from "../ui/TagSelect";
-import { VENDORS } from "../../data/mockProperties";
+import { useAppStore } from "../../store/AppStore";
 import type { SectionProps } from "./PropertyFormSection";
 
 export function MaintenanceFields({ form, set, errors }: SectionProps) {
+  const { vendors: VENDORS } = useAppStore();
   const vendorLabels = VENDORS.map((v) => `${v.name} · ${v.trade}`);
   const selectedLabels = form.preferredContractorIds
     .map((id) => {

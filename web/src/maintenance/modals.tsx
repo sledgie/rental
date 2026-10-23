@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from '../lib/supabase';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle, Building2, CheckCircle2, ClipboardList, FileUp,
@@ -5,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useStore } from './store';
 import {
-  Field, FormSection, GhostButton, Modal, MoneyInput, PaymentBadge, PrimaryButton,
+  DrawerSection, Field, FormDrawer, FormError, FormSection, GhostButton, Modal, MoneyInput, PaymentBadge, PrimaryButton,
   SelectInput, TextArea, TextInput, Chip,
 } from './ui';
 import {
@@ -29,11 +30,12 @@ interface StagedFile {
   name: string;
   size: string;
   url?: string;
+  file?: File;
 }
 
 function stageFiles(files: FileList | null): StagedFile[] {
   if (!files) return [];
-  return Array.from(files).map((f) => ({ name: f.name, size: fileSize(f.size), url: URL.createObjectURL(f) }));
+  return Array.from(files).map((f) => ({ name: f.name, size: fileSize(f.size), url: URL.createObjectURL(f), file: f }));
 }
 
 
@@ -71,7 +73,7 @@ function AssetDocsField({ docs, onChange }: { docs: StagedDoc[]; onChange: (d: S
 }
 
 function saveAssetDocs(s: ReturnType<typeof useStore>, assetId: string, docs: StagedDoc[]) {
-  docs.forEach((d) => s.addAttachment({ id: uid('AT'), assetId, name: d.name, category: d.category, size: d.size, uploadedBy: s.currentUser.name, uploadedAt: nowISO(), url: d.url, mock: true }));
+  docs.forEach((d) => s.addAttachment({ id: uid('AT'), assetId, name: d.name, category: d.category, size: d.size, uploadedBy: s.currentUser.name, uploadedAt: nowISO(), url: d.url, mock: true }, d.file));
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -242,7 +244,7 @@ export function RequestFormModal({
         s.addAttachment({
           id: uid('AT'), requestId: id, name: f.name, category: docCategory, size: f.size,
           uploadedBy: s.currentUser.name, uploadedAt: nowISO(), url: f.url, mock: true,
-        })
+        }, f.file)
       );
     }
     if (apptDate && contractorId) {
@@ -258,12 +260,12 @@ export function RequestFormModal({
   };
 
   return (
-    <Modal
+    <FormDrawer
       open={open}
       onClose={onClose}
-      title={editing ? `Edit Request ${editing.id}` : 'New Maintenance Request'}
+      title={editing ? `Edit request ${editing.id}` : 'New maintenance request'}
+      note={editing ? undefined : <>Will be created as <span className="u-num">{s.nextRequestId()}</span></>}
       subtitle={editing ? 'Changes are recorded in the activity history.' : 'Log an issue, locate it, and optionally assign it right away.'}
-      xwide
       footer={
         <>
           <GhostButton onClick={onClose}>Cancel</GhostButton>
@@ -280,7 +282,7 @@ export function RequestFormModal({
       }
     >
       <div className="space-y-4">
-        <FormSection title="1 · Issue Information" icon={<ClipboardList size={14} />}>
+        <DrawerSection step="A" title="Issue information" note="What is wrong">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Request Title" required error={errors.title} className="sm:col-span-2">
               <TextInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Refrigerator not cooling" />
@@ -357,9 +359,9 @@ export function RequestFormModal({
               Emergency priority — target first response within {s.settings.emergencyResponseHours} hours (configurable in Settings). This request will be pinned to the top of the queue.
             </div>
           )}
-        </FormSection>
+        </DrawerSection>
 
-        <FormSection title="2 · Location" icon={<Building2 size={14} />}>
+        <DrawerSection step="B" title="Location" note="Where it is">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Property" required error={errors.propertyId}>
               <SelectInput value={propertyId} onChange={(e) => { setPropertyId(e.target.value); setUnitId(''); setAssetId(''); }}>
@@ -394,9 +396,9 @@ export function RequestFormModal({
               <span>Rent {fmtMoney(lease.rent)}/mo</span>
             </div>
           )}
-        </FormSection>
+        </DrawerSection>
 
-        <FormSection title="3 · Related Appliance / Equipment" icon={<Wrench size={14} />}>
+        <DrawerSection step="C" title="Appliance / equipment" note="Optional">
           <div className="flex items-center gap-2">
             <span className="text-[12.5px] text-u-ink2">Is this request related to an appliance or equipment?</span>
             {(['No', 'Yes'] as const).map((opt) => (
@@ -473,9 +475,9 @@ export function RequestFormModal({
               )}
             </div>
           )}
-        </FormSection>
+        </DrawerSection>
 
-        <FormSection title="4 · Assignment (Optional)" icon={<UserCheck size={14} />}>
+        <DrawerSection step="D" title="Assignment" note="Optional">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Assigned Staff">
               <SelectInput value={staffId} onChange={(e) => setStaffId(e.target.value)}>
@@ -499,10 +501,10 @@ export function RequestFormModal({
               <TextInput value={contractorNotes} onChange={(e) => setContractorNotes(e.target.value)} placeholder="Anything the contractor should know or bring" />
             </Field>
           </div>
-        </FormSection>
+        </DrawerSection>
 
         {!editing && (
-          <FormSection title="5 · Attachments" icon={<FileUp size={14} />}>
+          <DrawerSection step="E" title="Attachments" note="Optional">
             <div className="flex flex-wrap items-end gap-3">
               <Field label="Document Category" className="w-56">
                 <SelectInput value={docCategory} onChange={(e) => setDocCategory(e.target.value)}>
@@ -531,12 +533,12 @@ export function RequestFormModal({
               </ul>
             )}
             <p className="mt-2 flex items-center gap-1.5 text-[11px] text-u-muted">
-              <Info size={12} /> Prototype upload: files are referenced locally for this session only and are not stored on a server.
+              <Info size={12} /> {isSupabaseConfigured ? 'Files are stored securely and only visible to your team.' : 'Prototype upload: files are referenced locally for this session only and are not stored on a server.'}
             </p>
-          </FormSection>
+          </DrawerSection>
         )}
       </div>
-    </Modal>
+    </FormDrawer>
   );
 }
 
@@ -1628,7 +1630,7 @@ export function UploadModal({
   if (assetId && !requestId) {
     const saveDocs = () => {
       saveAssetDocs(s, assetId, assetDocs);
-      if (assetDocs.length) s.toast(`${assetDocs.length} document${assetDocs.length === 1 ? '' : 's'} added to ${assetId} (session-only prototype storage).`, 'info');
+      if (assetDocs.length) s.toast(`${assetDocs.length} document${assetDocs.length === 1 ? '' : 's'} added to ${assetId} .`, 'info');
       onClose();
     };
     return (
@@ -1643,7 +1645,7 @@ export function UploadModal({
           <AssetDocsField docs={assetDocs} onChange={setAssetDocs} />
           <div className="flex items-start gap-2 rounded-lg border border-u-warn/25 bg-u-warn/5 px-3 py-2 text-[11.5px] text-u-warn/90">
             <Info size={13} className="mt-0.5 shrink-0" />
-            Prototype note: no file server is connected. Documents can be opened during this browser session only and will not persist after a refresh.
+            {isSupabaseConfigured ? 'Files are stored securely and only visible to your team.' : 'Prototype note: no file server is connected. Documents can be opened during this browser session only and will not persist after a refresh.'}
           </div>
         </div>
       </Modal>
@@ -1655,9 +1657,9 @@ export function UploadModal({
       s.addAttachment({
         id: uid('AT'), requestId, assetId, name: f.name, category, size: f.size,
         uploadedBy: s.currentUser.name, uploadedAt: nowISO(), url: f.url, mock: true,
-      })
+      }, f.file)
     );
-    if (files.length) s.toast(`${files.length} file${files.length === 1 ? '' : 's'} attached (session-only prototype storage).`, 'info');
+    if (files.length) s.toast(`${files.length} file${files.length === 1 ? '' : 's'} attached.`, 'info');
     onClose();
   };
 
@@ -1698,7 +1700,7 @@ export function UploadModal({
         ))}
         <div className="flex items-start gap-2 rounded-lg border border-u-warn/25 bg-u-warn/5 px-3 py-2 text-[11.5px] text-u-warn/90">
           <Info size={13} className="mt-0.5 shrink-0" />
-          Prototype note: no file server is connected. Attachments are previewable during this browser session only and will not persist after a refresh.
+          {isSupabaseConfigured ? 'Files are stored securely and only visible to your team.' : 'Prototype note: no file server is connected. Attachments are previewable during this browser session only and will not persist after a refresh.'}
         </div>
       </div>
     </Modal>
@@ -1781,11 +1783,12 @@ export function AssetFormModal({
   };
 
   return (
-    <Modal
+    <FormDrawer
       open={open}
       onClose={onClose}
-      title={asset ? `Edit Asset ${asset.id}` : 'New Asset / Appliance'}
-      xwide
+      title={asset ? `Edit asset ${asset.id}` : 'New asset / appliance'}
+      subtitle={asset ? 'Changes are recorded in the activity history.' : 'Registers the asset only; no service or work order is created automatically.'}
+      note={asset ? undefined : <>Will be created as <span className="u-num">{s.nextAssetId()}</span></>}
       footer={
         <>
           <GhostButton onClick={onClose}>Cancel</GhostButton>
@@ -1794,8 +1797,8 @@ export function AssetFormModal({
       }
     >
       <div className="space-y-4">
-        {error && <div className="rounded-lg border border-u-danger/30 bg-u-danger/10 px-3 py-2 text-[12px] text-u-danger">{error}</div>}
-        <FormSection title="Identification">
+        <FormError message={error} />
+        <DrawerSection step="A" title="Identification" note="Required: name and property">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Field label="Asset Name" required><TextInput value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Kitchen Refrigerator" /></Field>
             <Field label="Asset Type">
@@ -1825,8 +1828,8 @@ export function AssetFormModal({
               </SelectInput>
             </Field>
           </div>
-        </FormSection>
-        <FormSection title="Purchase & Warranty">
+        </DrawerSection>
+        <DrawerSection step="B" title="Purchase & warranty" note="Optional">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Field label="Purchase Date"><TextInput type="date" value={f.purchaseDate} onChange={(e) => set('purchaseDate', e.target.value)} /></Field>
             <Field label="Purchase Price"><MoneyInput value={f.purchasePrice} onChange={(v) => set('purchasePrice', v)} /></Field>
@@ -1838,8 +1841,8 @@ export function AssetFormModal({
             <Field label="Warranty Reference"><TextInput value={f.warrantyRef} onChange={(e) => set('warrantyRef', e.target.value)} /></Field>
             <Field label="Warranty Coverage Notes"><TextInput value={f.warrantyNotes} onChange={(e) => set('warrantyNotes', e.target.value)} /></Field>
           </div>
-        </FormSection>
-        <FormSection title="Lifecycle">
+        </DrawerSection>
+        <DrawerSection step="C" title="Lifecycle" note="Retired assets keep their history">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Field label="Status" hint="Retired/replaced assets keep their full history.">
               <SelectInput value={f.status} onChange={(e) => set('status', e.target.value)}>
@@ -1851,13 +1854,13 @@ export function AssetFormModal({
             <Field label="Next Recommended Service"><TextInput type="date" value={f.nextService} onChange={(e) => set('nextService', e.target.value)} /></Field>
             <Field label="Disposal / Retirement Notes" className="sm:col-span-2"><TextInput value={f.disposalNotes} onChange={(e) => set('disposalNotes', e.target.value)} /></Field>
           </div>
-        </FormSection>
-        <FormSection title="Documents">
+        </DrawerSection>
+        <DrawerSection step="D" title="Documents" note="Optional">
           <AssetDocsField docs={docs} onChange={setDocs} />
           {asset && <p className="mt-2 text-[11.5px] text-u-muted">New files are added to the asset's existing documents. Manage existing ones from the asset record.</p>}
-        </FormSection>
+        </DrawerSection>
       </div>
-    </Modal>
+    </FormDrawer>
   );
 }
 
@@ -1925,11 +1928,12 @@ export function WorkOrderFormModal({
   };
 
   return (
-    <Modal
+    <FormDrawer
       open={open}
       onClose={onClose}
-      title={workOrder ? `Edit Work Order ${workOrder.id}` : 'New Work Order'}
-      wide
+      title={workOrder ? `Edit work order ${workOrder.id}` : 'New work order'}
+      subtitle={workOrder ? 'Changes are recorded in the activity history.' : 'Creates a work order against an existing maintenance request.'}
+      note={workOrder ? undefined : <>Will be created as <span className="u-num">{s.nextWorkOrderId()}</span></>}
       footer={
         <>
           <GhostButton onClick={onClose}>Cancel</GhostButton>
@@ -1937,44 +1941,58 @@ export function WorkOrderFormModal({
         </>
       }
     >
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="Related Maintenance Request" required error={error} className="sm:col-span-2">
-          <SelectInput value={requestId} onChange={(e) => setRequestId(e.target.value)} disabled={!!presetRequest || !!workOrder}>
-            <option value="">Select request…</option>
-            {s.requests.map((r) => <option key={r.id} value={r.id}>{r.id} · {r.title} ({r.status})</option>)}
-          </SelectInput>
-        </Field>
-        <Field label="Title" required className="sm:col-span-2"><TextInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Replace drain pump & test" /></Field>
-        <Field label="Work Description" className="sm:col-span-2"><TextArea value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
-        <Field label="Scope of Work" className="sm:col-span-2"><TextArea value={scope} onChange={(e) => setScope(e.target.value)} placeholder="Inclusions, exclusions, authorization limits…" /></Field>
-        <Field label="Contractor">
-          <SelectInput value={contractorId} onChange={(e) => setContractorId(e.target.value)}>
-            <option value="">Unassigned</option>
-            {s.contractors.filter((c) => c.active).map((c) => <option key={c.id} value={c.id}>{c.company}</option>)}
-          </SelectInput>
-        </Field>
-        <Field label="Assigned Staff">
-          <SelectInput value={staffId} onChange={(e) => setStaffId(e.target.value)}>
-            <option value="">Unassigned</option>
-            {s.staff.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </SelectInput>
-        </Field>
-        <Field label="Priority">
-          <SelectInput value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
-            {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
-          </SelectInput>
-        </Field>
-        <Field label="Status">
-          <SelectInput value={status} onChange={(e) => setStatus(e.target.value)}>
-            {WORKORDER_STATUSES.map((st) => <option key={st} value={st}>{st}</option>)}
-          </SelectInput>
-        </Field>
-        <Field label="Scheduled Date"><TextInput type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} /></Field>
-        <Field label="Target Completion"><TextInput type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} /></Field>
-        <Field label="Estimate"><MoneyInput value={estimate} onChange={setEstimate} /></Field>
-        <Field label="Approved Budget"><MoneyInput value={approvedBudget} onChange={setApprovedBudget} /></Field>
-      </div>
-    </Modal>
+      <FormError message={error} />
+
+      <DrawerSection step="A" title="Request & scope" note="Required: a work order belongs to a request">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Related Maintenance Request" required className="sm:col-span-2">
+            <SelectInput value={requestId} onChange={(e) => setRequestId(e.target.value)} disabled={!!presetRequest || !!workOrder}>
+              <option value="">Select request…</option>
+              {s.requests.map((r) => <option key={r.id} value={r.id}>{r.id} · {r.title} ({r.status})</option>)}
+            </SelectInput>
+          </Field>
+          <Field label="Title" required className="sm:col-span-2"><TextInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Replace drain pump & test" /></Field>
+          <Field label="Work Description" className="sm:col-span-2"><TextArea value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
+          <Field label="Scope of Work" className="sm:col-span-2"><TextArea value={scope} onChange={(e) => setScope(e.target.value)} placeholder="Inclusions, exclusions, authorization limits…" /></Field>
+        </div>
+      </DrawerSection>
+
+      <DrawerSection step="B" title="Assignment & schedule" note="Optional">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Contractor">
+            <SelectInput value={contractorId} onChange={(e) => setContractorId(e.target.value)}>
+              <option value="">Unassigned</option>
+              {s.contractors.filter((c) => c.active).map((c) => <option key={c.id} value={c.id}>{c.company}</option>)}
+            </SelectInput>
+          </Field>
+          <Field label="Assigned Staff">
+            <SelectInput value={staffId} onChange={(e) => setStaffId(e.target.value)}>
+              <option value="">Unassigned</option>
+              {s.staff.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </SelectInput>
+          </Field>
+          <Field label="Priority">
+            <SelectInput value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
+              {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+            </SelectInput>
+          </Field>
+          <Field label="Status">
+            <SelectInput value={status} onChange={(e) => setStatus(e.target.value)}>
+              {WORKORDER_STATUSES.map((st) => <option key={st} value={st}>{st}</option>)}
+            </SelectInput>
+          </Field>
+          <Field label="Scheduled Date"><TextInput type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} /></Field>
+          <Field label="Target Completion"><TextInput type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} /></Field>
+        </div>
+      </DrawerSection>
+
+      <DrawerSection step="C" title="Budget" note="Optional">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Estimate"><MoneyInput value={estimate} onChange={setEstimate} /></Field>
+          <Field label="Approved Budget"><MoneyInput value={approvedBudget} onChange={setApprovedBudget} /></Field>
+        </div>
+      </DrawerSection>
+    </FormDrawer>
   );
 }
 
@@ -2123,11 +2141,12 @@ export function PreventiveFormModal({
   const propertyAssets = s.assets.filter((a) => a.propertyId === f.propertyId && ['Active', 'Under Inspection', 'Under Repair'].includes(a.status));
 
   return (
-    <Modal
+    <FormDrawer
       open={open}
       onClose={onClose}
-      title={schedule ? `Edit Schedule ${schedule.id}` : 'New Preventive Maintenance Schedule'}
-      wide
+      title={schedule ? `Edit schedule ${schedule.id}` : 'New inspection schedule'}
+      subtitle={schedule ? 'Changes are recorded in the activity history.' : 'A recurring inspection or service task for a property, unit or asset.'}
+      note={schedule ? undefined : <>Will be created as <span className="u-num">{s.nextScheduleId()}</span></>}
       footer={
         <>
           <GhostButton onClick={onClose}>Cancel</GhostButton>
@@ -2135,71 +2154,89 @@ export function PreventiveFormModal({
         </>
       }
     >
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {error && <div className="rounded-lg border border-u-danger/30 bg-u-danger/10 px-3 py-2 text-[12px] text-u-danger sm:col-span-2">{error}</div>}
-        <Field label="Task Name" required className="sm:col-span-2">
-          <TextInput value={f.task} onChange={(e) => set('task', e.target.value)} placeholder="e.g. Annual furnace service & safety check" />
-        </Field>
-        <Field label="Category">
-          <SelectInput value={f.category} onChange={(e) => set('category', e.target.value)}>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </SelectInput>
-        </Field>
-        <Field label="Frequency">
-          <SelectInput value={f.frequency} onChange={(e) => set('frequency', e.target.value)}>
-            {FREQUENCIES.map((x) => <option key={x} value={x}>{x}</option>)}
-          </SelectInput>
-        </Field>
-        {f.frequency === 'Custom' && (
-          <Field label="Custom Interval (days)"><TextInput type="number" min="1" value={f.customDays} onChange={(e) => set('customDays', e.target.value)} /></Field>
-        )}
-        <Field label="Property" required>
-          <SelectInput value={f.propertyId} onChange={(e) => { set('propertyId', e.target.value); set('unitId', ''); set('assetId', ''); }}>
-            <option value="">Select property…</option>
-            {s.properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </SelectInput>
-        </Field>
-        <Field label="Unit / Common Area">
-          <SelectInput value={f.unitId} onChange={(e) => set('unitId', e.target.value)} disabled={!f.propertyId}>
-            <option value="">Whole property / common areas</option>
-            {s.unitsForProperty(f.propertyId).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </SelectInput>
-        </Field>
-        <Field label="Related Asset">
-          <SelectInput value={f.assetId} onChange={(e) => set('assetId', e.target.value)} disabled={!f.propertyId}>
-            <option value="">— None —</option>
-            {propertyAssets.map((a) => <option key={a.id} value={a.id}>{a.id} · {a.name}</option>)}
-          </SelectInput>
-        </Field>
-        <Field label="Assigned Contractor">
-          <SelectInput value={f.contractorId} onChange={(e) => set('contractorId', e.target.value)}>
-            <option value="">In-house / TBD</option>
-            {s.contractors.filter((c) => c.active).map((c) => <option key={c.id} value={c.id}>{c.company}</option>)}
-          </SelectInput>
-        </Field>
-        <Field label="Last Completed"><TextInput type="date" value={f.lastCompleted} onChange={(e) => set('lastCompleted', e.target.value)} /></Field>
-        <Field label="Next Due Date" required><TextInput type="date" value={f.nextDue} onChange={(e) => set('nextDue', e.target.value)} /></Field>
-        <Field label="Estimated Cost"><MoneyInput value={f.estimatedCost} onChange={(v) => set('estimatedCost', v)} /></Field>
-        <Field label="Status">
-          <div className="flex h-[38px] items-center gap-2">
-            <button
-              type="button"
-              onClick={() => set('active', !f.active)}
-              className={cn('relative h-5.5 w-10 rounded-full transition', f.active ? 'bg-u-accent' : 'bg-u-s3')}
-              style={{ height: 22 }}
-            >
-              <span className={cn('absolute top-0.5 h-[18px] w-[18px] rounded-full bg-u-ink transition-all', f.active ? 'left-[20px]' : 'left-0.5')} />
-            </button>
-            <span className="text-[12.5px] text-u-ink2">{f.active ? 'Active' : 'Inactive'}</span>
-          </div>
-        </Field>
-        <Field label="Checklist (one item per line)" className="sm:col-span-2">
-          <TextArea value={f.checklist} onChange={(e) => set('checklist', e.target.value)} placeholder={'Inspect heat exchanger\nClean burners\nTest CO levels'} />
-        </Field>
-        <Field label="Instructions" className="sm:col-span-2">
-          <TextArea value={f.instructions} onChange={(e) => set('instructions', e.target.value)} />
-        </Field>
-      </div>
-    </Modal>
+      <FormError message={error} />
+
+      <DrawerSection step="A" title="Task" note="Required: name and frequency">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Task Name" required className="sm:col-span-2">
+            <TextInput value={f.task} onChange={(e) => set('task', e.target.value)} placeholder="e.g. Annual furnace service & safety check" />
+          </Field>
+          <Field label="Category">
+            <SelectInput value={f.category} onChange={(e) => set('category', e.target.value)}>
+              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </SelectInput>
+          </Field>
+          <Field label="Frequency">
+            <SelectInput value={f.frequency} onChange={(e) => set('frequency', e.target.value)}>
+              {FREQUENCIES.map((x) => <option key={x} value={x}>{x}</option>)}
+            </SelectInput>
+          </Field>
+          {f.frequency === 'Custom' && (
+            <Field label="Custom Interval (days)"><TextInput type="number" min="1" value={f.customDays} onChange={(e) => set('customDays', e.target.value)} /></Field>
+          )}
+        </div>
+      </DrawerSection>
+
+      <DrawerSection step="B" title="Location & asset" note="Property is required">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Property" required>
+            <SelectInput value={f.propertyId} onChange={(e) => { set('propertyId', e.target.value); set('unitId', ''); set('assetId', ''); }}>
+              <option value="">Select property…</option>
+              {s.properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </SelectInput>
+          </Field>
+          <Field label="Unit / Common Area">
+            <SelectInput value={f.unitId} onChange={(e) => set('unitId', e.target.value)} disabled={!f.propertyId}>
+              <option value="">Whole property / common areas</option>
+              {s.unitsForProperty(f.propertyId).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </SelectInput>
+          </Field>
+          <Field label="Related Asset" className="sm:col-span-2">
+            <SelectInput value={f.assetId} onChange={(e) => set('assetId', e.target.value)} disabled={!f.propertyId}>
+              <option value="">— None —</option>
+              {propertyAssets.map((a) => <option key={a.id} value={a.id}>{a.id} · {a.name}</option>)}
+            </SelectInput>
+          </Field>
+        </div>
+      </DrawerSection>
+
+      <DrawerSection step="C" title="Schedule & assignment" note="Next due date is required">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Assigned Contractor">
+            <SelectInput value={f.contractorId} onChange={(e) => set('contractorId', e.target.value)}>
+              <option value="">In-house / TBD</option>
+              {s.contractors.filter((c) => c.active).map((c) => <option key={c.id} value={c.id}>{c.company}</option>)}
+            </SelectInput>
+          </Field>
+          <Field label="Estimated Cost"><MoneyInput value={f.estimatedCost} onChange={(v) => set('estimatedCost', v)} /></Field>
+          <Field label="Last Completed"><TextInput type="date" value={f.lastCompleted} onChange={(e) => set('lastCompleted', e.target.value)} /></Field>
+          <Field label="Next Due Date" required><TextInput type="date" value={f.nextDue} onChange={(e) => set('nextDue', e.target.value)} /></Field>
+          <Field label="Status">
+            <div className="flex h-[38px] items-center gap-2">
+              <button
+                type="button"
+                onClick={() => set('active', !f.active)}
+                className={cn('relative h-5.5 w-10 rounded-full transition', f.active ? 'bg-u-accent' : 'bg-u-s3')}
+                style={{ height: 22 }}
+              >
+                <span className={cn('absolute top-0.5 h-[18px] w-[18px] rounded-full bg-u-ink transition-all', f.active ? 'left-[20px]' : 'left-0.5')} />
+              </button>
+              <span className="text-[12.5px] text-u-ink2">{f.active ? 'Active' : 'Inactive'}</span>
+            </div>
+          </Field>
+        </div>
+      </DrawerSection>
+
+      <DrawerSection step="D" title="Checklist & instructions" note="Optional">
+        <div className="grid grid-cols-1 gap-3">
+          <Field label="Checklist (one item per line)">
+            <TextArea value={f.checklist} onChange={(e) => set('checklist', e.target.value)} placeholder={'Inspect heat exchanger\nClean burners\nTest CO levels'} />
+          </Field>
+          <Field label="Instructions">
+            <TextArea value={f.instructions} onChange={(e) => set('instructions', e.target.value)} />
+          </Field>
+        </div>
+      </DrawerSection>
+    </FormDrawer>
   );
 }

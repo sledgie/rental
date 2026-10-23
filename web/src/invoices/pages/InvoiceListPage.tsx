@@ -10,9 +10,10 @@ import { InvoiceFormModal, type InvoiceFormValues } from "@inv/components/invoic
 import { RecordPaymentModal } from "@inv/components/invoices/RecordPaymentModal";
 import { InvoiceTable, type SortState } from "@inv/components/invoices/InvoiceTable";
 import { Pagination } from "@inv/components/Pagination";
-import { properties, statusRank, tenants } from "@inv/data/mockInvoices";
+import { statusRank } from "@inv/data/mockInvoices";
+import { isSupabaseConfigured } from "../../lib/supabase";
 import { formatCAD, monthRange, todayISO, weekRange } from "@inv/lib/format";
-import { useInvoices } from "@inv/store/InvoiceStore";
+import { onInvoiceSyncError, useInvoices } from "@inv/store/InvoiceStore";
 import { InvoiceRegister } from "@inv/components/invoices/InvoiceRegister";
 import {
   defaultFilters,
@@ -48,8 +49,18 @@ const readFilters = (sp: URLSearchParams): InvoiceFilters => {
 
 export default function InvoiceListPage({ startCreate = false }: { startCreate?: boolean }) {
   const toast = useToast();
-  const { invoices, createInvoice, updateInvoice, recordPayment, voidInvoice, resetDemoData } =
+  const { invoices, createInvoice, updateInvoice, recordPayment, voidInvoice, resetDemoData, refs, ready, loadError, reload } =
     useInvoices();
+  const properties = refs.properties;
+  const tenants = useMemo(() => refs.tenants.map((t) => t.name), [refs.tenants]);
+
+  // a change that could not be saved to the database is reported here (the register then shows what the database really holds)
+  useEffect(() => onInvoiceSyncError((message) => toast({ kind: "warning", title: "The change was not saved", body: message })), [toast]);
+  // tenants, leases or units may have changed on other pages since the last load
+  useEffect(() => {
+    void reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [sp, setSp] = useSearchParams();
   const filters = useMemo(() => readFilters(sp), [sp]);
@@ -194,9 +205,13 @@ export default function InvoiceListPage({ startCreate = false }: { startCreate?:
     return `INV-2026-${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3, "0")}`;
   }, [invoices]);
 
-  const submitCreate = (values: InvoiceFormValues) => {
-    createInvoice({
+  const submitCreate = async (values: InvoiceFormValues) => {
+    try {
+    const created = await createInvoice({
       id: values.id,
+      tenantId: values.tenantId,
+      unitId: values.unitId,
+      leaseId: values.leaseId,
       tenant: {
         name: values.tenantName,
         email: `${values.tenantName.toLowerCase().replace(/[^a-z ]/g, "").trim().replace(/\s+/g, ".")}@example.com`,
@@ -226,14 +241,20 @@ export default function InvoiceListPage({ startCreate = false }: { startCreate?:
     closeCreate();
     toast({
       kind: "success",
-      title: `${values.id} created as a draft`,
-      body: "Stored in this browser session only — no tenant has been notified.",
+      title: isSupabaseConfigured ? `${created.id} created` : `${values.id} created as a draft`,
+      body: isSupabaseConfigured ? "Saved. No tenant has been notified." : "Stored in this browser session only \u2014 no tenant has been notified.",
     });
+    } catch (error) {
+      toast({ kind: "warning", title: "The invoice was not created", body: error instanceof Error ? error.message : "Please try again." });
+    }
   };
 
   const submitEdit = (values: InvoiceFormValues) => {
     if (!editTarget) return;
     updateInvoice(editTarget.id, {
+      tenantId: values.tenantId,
+      unitId: values.unitId,
+      leaseId: values.leaseId,
       propertyName: values.propertyName,
       propertyId: values.propertyId,
       unit: values.unit,
@@ -248,7 +269,7 @@ export default function InvoiceListPage({ startCreate = false }: { startCreate?:
       lineItems: values.lineItems.filter((i) => i.description.trim() !== ""),
     });
     setEditTarget(null);
-    toast({ kind: "success", title: `${editTarget.id} updated`, body: "Changes saved to demo state." });
+    toast({ kind: "success", title: `${editTarget.id} updated`, body: isSupabaseConfigured ? "Changes saved." : "Changes saved to demo state." });
   };
 
   const exportCsv = () => {
@@ -293,6 +314,23 @@ export default function InvoiceListPage({ startCreate = false }: { startCreate?:
       </div>
     </div>
   );
+
+  if (isSupabaseConfigured && (!ready || loadError)) {
+    return (
+      <div className="tn">
+        <div className="app-shell">
+          <div className="main-shell">
+            <main className="main-content">
+              <div className="empty-state">
+                <h3>{loadError ? "We couldn't load your invoices" : "Loading invoices…"}</h3>
+                <p>{loadError ?? "Fetching your invoice register."}</p>
+              </div>
+            </main>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

@@ -5,6 +5,9 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
+  useState,
+  useSyncExternalStore,
   type Dispatch,
   type ReactNode,
 } from "react";
@@ -40,6 +43,11 @@ import {
   type Tenant,
   type Unit,
 } from "../data/types";
+import { PERMISSIONS } from "../data/types";
+import { isSupabaseConfigured } from "../../lib/supabase";
+import { getActiveOrgId, subscribeActiveOrg } from "../../lib/activeOrg";
+import { reloadLeaseData } from "../../leases/store";
+import * as repo from "../repo";
 
 /* --------------------------------- State --------------------------------- */
 
@@ -53,6 +61,7 @@ export interface Toast {
 
 export interface AppState {
   currentUser: Staff;
+  staff: Staff[];
   properties: Property[];
   units: Unit[];
   people: Person[];
@@ -68,8 +77,9 @@ export interface AppState {
   seq: number;
 }
 
-const initialState: AppState = {
+const demoState: AppState = {
   currentUser: seedStaff[0],
+  staff: seedStaff,
   properties: seedProperties,
   units: seedUnits,
   people: seedPeople,
@@ -85,9 +95,20 @@ const initialState: AppState = {
   seq: 100,
 };
 
+// with Supabase nothing sample is shown: the lists are filled from the organization
+const liveState: AppState = {
+  currentUser: { id: "", name: "", role: "", email: "", permissions: Object.values(PERMISSIONS) },
+  staff: [],
+  properties: [], units: [], people: [], tenants: [], leases: [], applications: [], parties: [], documents: [], reviews: [], activities: [], communications: [],
+  toasts: [],
+  seq: 100,
+};
+const initialState: AppState = isSupabaseConfigured ? liveState : demoState;
+
 /* -------------------------------- Actions -------------------------------- */
 
 export type Action =
+  | { type: "LOAD"; loaded: repo.Loaded }
   | { type: "SET_USER"; id: ID }
   | {
       type: "ADD_APPLICATION";
@@ -116,7 +137,7 @@ export type Action =
   | {
       type: "REPLACE_DOCUMENT";
       id: ID;
-      version: { fileName: string; fileSize: number; fileType: string; notes?: string };
+      version: { fileName: string; fileSize: number; fileType: string; notes?: string; file?: File };
       updatedBy: string;
     }
   | { type: "DELETE_DOCUMENT"; id: ID; deletedBy: string }
@@ -130,7 +151,8 @@ export type Action =
   | { type: "DISMISS_TOAST"; id: string };
 
 let seqCounter = 500;
-const uid = (prefix: string) => `${prefix}-${++seqCounter}`;
+// with Supabase every new record needs a real UUID, because the id becomes its database primary key
+const uid = (prefix: string) => (isSupabaseConfigured ? crypto.randomUUID() : `${prefix}-${++seqCounter}`);
 
 export type ActivityInput = Omit<Partial<ApplicationActivity>, "description"> & {
   description: string;
@@ -155,8 +177,17 @@ function withActivity(
 
 export function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
+    case "LOAD": {
+      const l = action.loaded;
+      return {
+        ...state,
+        currentUser: l.me ?? state.currentUser, staff: l.staff, properties: l.properties, units: l.units, people: l.people, tenants: l.tenants, leases: l.leases, applications: l.applications,
+        parties: l.parties, documents: l.documents, reviews: l.reviews, activities: l.activities, communications: l.communications,
+      };
+    }
+
     case "SET_USER":
-      return { ...state, currentUser: state.currentUser.id === action.id ? state.currentUser : seedStaff.find((s) => s.id === action.id) ?? state.currentUser };
+      return { ...state, currentUser: state.currentUser.id === action.id ? state.currentUser : state.staff.find((s) => s.id === action.id) ?? state.currentUser };
 
     case "ADD_APPLICATION": {
       const activities = withActivity(state, action.application.id, {
@@ -171,7 +202,7 @@ export function reducer(state: AppState, action: Action): AppState {
       // pipeline does, so a real storage adapter can slot in later.
       const normalized: ApplicationDocument[] = action.documents.map((partial) => {
         const version = {
-          id: `${partial.id ?? uid("doc")}-v1`,
+          id: isSupabaseConfigured ? uid("ver") : `${partial.id ?? uid("doc")}-v1`,
           versionNumber: 1,
           fileName: partial.fileName ?? "document.pdf",
           fileSize: partial.fileSize ?? 0,
@@ -179,6 +210,7 @@ export function reducer(state: AppState, action: Action): AppState {
           uploadedAt: partial.uploadedAt ?? new Date().toISOString().slice(0, 10),
           uploadedBy: state.currentUser.name,
           notes: partial.notes,
+          file: partial.file,
         };
         return {
           id: partial.id ?? uid("doc"),
@@ -348,7 +380,7 @@ export function reducer(state: AppState, action: Action): AppState {
     case "ADD_DOCUMENTS": {
       const created: ApplicationDocument[] = action.documents.map((partial) => {
         const version = {
-          id: `${partial.id ?? uid("doc")}-v1`,
+          id: isSupabaseConfigured ? uid("ver") : `${partial.id ?? uid("doc")}-v1`,
           versionNumber: 1,
           fileName: partial.fileName ?? `${partial.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.pdf`,
           fileSize: partial.fileSize ?? 0,
@@ -356,6 +388,7 @@ export function reducer(state: AppState, action: Action): AppState {
           uploadedAt: partial.uploadedAt ?? new Date().toISOString().slice(0, 10),
           uploadedBy: action.uploadedBy,
           notes: partial.notes,
+          file: partial.file,
         };
         return {
           id: partial.id ?? uid("doc"),
@@ -427,7 +460,7 @@ export function reducer(state: AppState, action: Action): AppState {
       if (!doc) return state;
       const nextVersion = doc.versionNumber + 1;
       const version = {
-        id: `${doc.id}-v${nextVersion}`,
+        id: isSupabaseConfigured ? uid("ver") : `${doc.id}-v${nextVersion}`,
         versionNumber: nextVersion,
         fileName: action.version.fileName,
         fileSize: action.version.fileSize,
@@ -435,6 +468,7 @@ export function reducer(state: AppState, action: Action): AppState {
         uploadedAt: new Date().toISOString().slice(0, 10),
         uploadedBy: action.updatedBy,
         notes: action.version.notes,
+        file: action.version.file,
       };
       return {
         ...state,
@@ -576,8 +610,8 @@ export function reducer(state: AppState, action: Action): AppState {
 
 /* ------------------------------- Selectors ------------------------------- */
 
-export const staffName = (_state: AppState, id?: ID | null) =>
-  seedStaff.find((s) => s.id === id)?.name ?? "Unassigned";
+export const staffName = (state: AppState, id?: ID | null) =>
+  state.staff.find((s) => s.id === id)?.name ?? "Unassigned";
 
 export const propertyOf = (state: AppState, id?: ID) =>
   state.properties.find((p) => p.id === id);
@@ -624,7 +658,7 @@ export const nextApplicationNumber = (state: AppState) => {
     const n = Number(a.applicationNumber.replace(/\D/g, ""));
     return Number.isFinite(n) ? Math.max(acc, n) : acc;
   }, 0);
-  return `APP-${String(max + 1).padStart(4, "0")}`;
+  return `APP-${String(max + 1).padStart(isSupabaseConfigured ? 5 : 4, "0")}`;
 };
 
 export const nextLeaseNumber = (state: AppState) => {
@@ -636,6 +670,9 @@ export const nextLeaseNumber = (state: AppState) => {
 /* -------------------------------- Provider ------------------------------- */
 
 interface StoreValue {
+  /** false while the first load from Supabase is running */
+  ready: boolean;
+  loadError: string | null;
   state: AppState;
   dispatch: Dispatch<Action>;
   can: (permission: string) => boolean;
@@ -647,6 +684,13 @@ const StoreContext = createContext<StoreValue | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [status, setStatus] = useState({ ready: !isSupabaseConfigured, error: null as string | null });
+  const orgId = useSyncExternalStore(subscribeActiveOrg, getActiveOrgId);
+  // last state known to be in the database; changes are written as the difference from it
+  const saved = useRef<repo.Slices>(repo.emptySlices());
+  const chain = useRef<Promise<void>>(Promise.resolve());
+  const userRef = useRef(state.currentUser);
+  userRef.current = state.currentUser;
 
   const can = useCallback(
     (permission: string) => state.currentUser.permissions.includes(permission),
@@ -654,8 +698,66 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const toast = useCallback((t: Omit<Toast, "id">) => {
+    if (isSupabaseConfigured) {
+      // the prototype wording ("saved to client state", "simulated") no longer applies once the data lives in the database
+      const description = t.description
+        ?.replace(/^Simulated — no email or text was sent\.$/, "Logged. No email or text was sent.")
+        .replace(/^Mock record — nothing was sent\.$/, "Logged. Nothing was sent to the applicant.");
+      const stale = /client state|locally|local\b|no backend|not connected|prototype|no bytes|nothing was uploaded/i.test(description ?? "");
+      dispatch({ type: "PUSH_TOAST", toast: { ...t, simulated: false, description: stale ? undefined : description, id: uid("toast") } });
+      return;
+    }
     dispatch({ type: "PUSH_TOAST", toast: { ...t, id: uid("toast") } });
   }, []);
+
+  const slicesOf = (s: AppState): repo.Slices => ({
+    people: s.people, leases: s.leases, applications: s.applications, parties: s.parties, documents: s.documents, reviews: s.reviews, activities: s.activities, communications: s.communications,
+  });
+
+  const reload = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    const org = getActiveOrgId();
+    if (!org) return;
+    try {
+      await chain.current; // let pending writes finish so they are not overwritten by an older read
+      const loaded = await repo.loadAll(org);
+      if (getActiveOrgId() !== org) return;
+      saved.current = {
+        people: loaded.people, leases: loaded.leases, applications: loaded.applications, parties: loaded.parties, documents: loaded.documents, reviews: loaded.reviews, activities: loaded.activities, communications: loaded.communications,
+      };
+      dispatch({ type: "LOAD", loaded });
+      setStatus({ ready: true, error: null });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to load applications.";
+      setStatus({ ready: true, error: message });
+      dispatch({ type: "PUSH_TOAST", toast: { id: uid("toast"), title: "Applications could not be loaded", description: message, variant: "error" } });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    setStatus({ ready: false, error: null });
+    if (orgId) void reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId]);
+
+  // every change is written to the database as a difference from what is already saved
+  useEffect(() => {
+    if (!isSupabaseConfigured || !status.ready) return;
+    const next = slicesOf(state);
+    const prev = saved.current;
+    const strip = (x: repo.Slices) => JSON.stringify({ ...x, documents: x.documents.map((d) => ({ ...d, versions: d.versions.map((v) => ({ ...v, file: undefined })) })) });
+    if (strip(prev) === strip(next)) return;
+    saved.current = next;
+    const createdLease = next.leases.length > prev.leases.length;
+    chain.current = chain.current
+      .then(() => repo.persist(prev, next, userRef.current))
+      .then(() => { if (createdLease) void reloadLeaseData(true); })
+      .catch((error) => {
+        dispatch({ type: "PUSH_TOAST", toast: { id: uid("toast"), title: "The change could not be saved", description: error instanceof Error ? error.message : undefined, variant: "error" } });
+        return reload();
+      });
+  }, [state, status.ready, reload]);
 
   useEffect(() => {
     if (!state.toasts.length) return;
@@ -666,8 +768,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [state.toasts]);
 
   const value = useMemo<StoreValue>(
-    () => ({ state, dispatch, can, toast, uid }),
-    [state, can, toast],
+    () => ({ ready: status.ready, loadError: status.error, state, dispatch, can, toast, uid }),
+    [status, state, can, toast],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

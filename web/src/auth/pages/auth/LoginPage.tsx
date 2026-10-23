@@ -17,7 +17,7 @@ import { Alert, Button, CheckInput, Spinner, TextInput } from "../../components/
 import { useAuth } from "../../contexts/AuthContext";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import { isValidEmail } from "../../lib/format";
-import { resolveEntryRoute } from "../../services/mockOrganizationService";
+import { organizationService, usingSupabase } from "../../services";
 import { cn } from "../../utils/cn";
 
 const demoAccounts = [
@@ -75,7 +75,7 @@ export default function LoginPage() {
 
     try {
       const user = await signIn(nextEmail, nextPassword, rememberMe);
-      const destination = await resolveEntryRoute(user.id);
+      const destination = await organizationService.resolveEntryRoute(user.id);
       if (!mountedRef.current) return;
       setSignedInAs(user.fullName.split(" ")[0]);
       timeoutRef.current = window.setTimeout(() => {
@@ -132,7 +132,7 @@ export default function LoginPage() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.14em] text-u-accent uppercase">Welcome back</p>
-            <h1 className="mt-2 text-[27px] font-semibold tracking-[-0.035em] text-u-ink">Sign in to Rentflow</h1>
+            <h1 className="mt-2 text-[27px] font-semibold tracking-[-0.035em] text-u-ink">Sign in to L.O.F.T.</h1>
             <p className="mt-1.5 text-[13px] text-u-muted">
               Enter your workspace credentials to continue.
             </p>
@@ -220,12 +220,14 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-4 text-center text-[12.5px] text-u-muted">
-          New to Rentflow?{" "}
+          New to L.O.F.T.?{" "}
           <Link to="/signup" className="font-semibold text-u-accent transition hover:text-u-accent hover:underline">
             Create an account
           </Link>
         </p>
 
+        {!usingSupabase ? (
+          <>
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center" aria-hidden>
             <div className="w-full border-t border-u-line" />
@@ -319,6 +321,9 @@ export default function LoginPage() {
             </div>
           )}
         </div>
+
+          </>
+        ) : null}
 
         <div className="mt-5 flex items-start gap-2 rounded-lg border border-u-line border-dashed px-3 py-2.5">
           <Building2 className="mt-0.5 size-3.5 shrink-0 text-u-muted" />

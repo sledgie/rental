@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Copy, Eye, FilePlus2, FileText, Grid2X2, List, MoreHorizontal, Pencil, Power, SearchX, Send, Sparkles, Trash2, Workflow } from 'lucide-react';
 import { Button as TnButton, IconButton, Overlay } from '../tenants/components/ui';
 import { FilterField, FilterPopover, SearchField } from '../shell/directory';
-import { ApiError, communicationApi, getSettings, listTemplates, subscribeTemplates, templatesVersion } from './lib/client-api';
+import { ApiError, communicationApi, getSettings, listTemplates, subscribeTemplates, templatesStatus, templatesVersion } from './lib/client-api';
+import { isSupabaseConfigured } from '../lib/supabase';
 import { CATEGORIES, CATEGORY_MAP, PROPERTIES } from './lib/catalog';
 import type { MessageTemplate } from './lib/types';
 import { Badge, Button, ChannelBadge, ConfirmDialog, Modal, Pagination, StatusBadge, ToastRegion, useToast } from './components/ui';
@@ -77,6 +78,9 @@ export default function MessageTemplates({ params }: { params?: Record<string, s
   const templates = listTemplates();
   const settings = getSettings();
   const { toasts, notify, dismiss } = useToast();
+  const loadError = templatesStatus().error;
+  useEffect(() => { if (loadError) notify(loadError, 'error'); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadError]);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [channel, setChannel] = useState(params?.channel ?? '');
@@ -192,7 +196,7 @@ export default function MessageTemplates({ params }: { params?: Record<string, s
                     {label}<span>{channelCount(value)}</span>
                   </button>
                 ))}
-                <div className="directory-tabs-end"><span className="live-dot" />Demo data</div>
+                <div className="directory-tabs-end"><span className="live-dot" />{isSupabaseConfigured ? 'Live' : 'Demo data'}</div>
               </div>
               <div className="directory-toolbar no-print">
                 <SearchField label="Search templates" placeholder="Search templates, subjects or content..." value={search} onChange={setSearch} />
@@ -294,7 +298,7 @@ export default function MessageTemplates({ params }: { params?: Record<string, s
             </section>
 
             <div className="directory-footnote no-print">
-              <span>Demonstration data held in memory for this session. Test sends are validated and recorded; no email, SMS or in-app message is actually delivered.</span>
+              <span>{isSupabaseConfigured ? 'Templates are saved to your organization. Test sends are validated and recorded; no email, SMS or in-app message is delivered from here.' : 'Demonstration data held in memory for this session. Test sends are validated and recorded; no email, SMS or in-app message is actually delivered.'}</span>
             </div>
           </main>
         </div>

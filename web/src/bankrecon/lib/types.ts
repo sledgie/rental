@@ -59,6 +59,8 @@ export type ConfidenceLevel = "High" | "Medium" | "Low" | "None";
 
 export interface BankAccount {
   id: string; // unique internal identifier (e.g. BA-OP-01)
+  /** human-readable ID assigned by the database (BA-001) when the data comes from Supabase */
+  code?: string;
   name: string;
   institution: string;
   maskedAccount: string; // masked account number, e.g. ****4521

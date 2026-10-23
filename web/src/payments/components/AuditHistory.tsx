@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../../lib/supabase";
 import { useMemo, useState } from "react";
 import type { AuditEvent, StaffUser } from "../types";
 import { ACTION_LABELS, formatDateTime } from "../utils/paymentUtils";
@@ -101,9 +102,11 @@ export function AuditTrailPanel({ audits, users }: { audits: AuditEvent[]; users
           </select>
         </div>
       </div>
-      <p className="border-b border-u-line bg-u-warn-soft/60 px-4 py-2 text-[11px] text-u-warn">
-        Demonstration audit log stored in frontend state only — not a tamper-proof production audit system.
-      </p>
+      {!isSupabaseConfigured && (
+        <p className="border-b border-u-line bg-u-warn-soft/60 px-4 py-2 text-[11px] text-u-warn">
+          Demonstration audit log stored in frontend state only — not a tamper-proof production audit system.
+        </p>
+      )}
       {shown.length === 0 ? (
         <EmptyState icon="clock" title="No audit events match this filter" />
       ) : (

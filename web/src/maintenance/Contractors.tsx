@@ -10,8 +10,9 @@ import { FilterField, FilterPopover, SearchField, SortControl } from "../shell/d
 import { Drawer } from "../projects/components/Drawer";
 import { useStore } from "./store";
 import { Toasts } from "./Toasts";
-import { Field, GhostButton, Modal, PrimaryButton, TextArea, TextInput, Chip, PriorityBadge, StatusBadge } from "./ui";
+import { DrawerSection, Field, FormDrawer, FormError, GhostButton, PrimaryButton, TextArea, TextInput, Chip, PriorityBadge, StatusBadge } from "./ui";
 import { Pager, StatusPill, colorFor, initialsOf, useRowMenu } from "./common";
+import { isSupabaseConfigured } from "../lib/supabase";
 import { CATEGORIES, OPEN_STATUSES, type Contractor } from "./types";
 import { fmtDate, fmtMoney, uid } from "./utils";
 import { cn } from "./utils/cn";
@@ -23,6 +24,12 @@ const short = (c: string) => (c === "Heating, Ventilation & Air Conditioning" ? 
 
 export default function Contractors({ params }: { params?: Record<string, string> } = {}) {
   const s = useStore();
+
+  // properties, tenants or contractors may have changed elsewhere since the last load
+  useEffect(() => {
+    void s.reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [tab, setTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
   const [fCategory, setFCategory] = useState("");
@@ -108,6 +115,23 @@ export default function Contractors({ params }: { params?: Record<string, string
     URL.revokeObjectURL(url);
     s.toast(`Exported ${filtered.length} contractor${filtered.length === 1 ? "" : "s"} to CSV.`);
   };
+
+  if (isSupabaseConfigured && (!s.ready || s.loadError)) {
+    return (
+      <div className="tn">
+        <div className="app-shell">
+          <div className="main-shell">
+            <main className="main-content">
+              <EmptyState
+                title={s.loadError ? "We couldn't load your contractors" : "Loading contractors\u2026"}
+                description={s.loadError ?? "Fetching your contractors and vendors."}
+              />
+            </main>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="tn">
@@ -389,21 +413,25 @@ function ContractorForm({ open, editing, onClose, onSaved }: { open: boolean; ed
   };
 
   return (
-    <Modal
+    <FormDrawer
       open={open}
       onClose={onClose}
       title={editing ? "Edit contractor" : "New contractor"}
       subtitle="Contractors appear in assignment, estimate and work order dropdowns while they are active."
       footer={<><GhostButton onClick={onClose}>Cancel</GhostButton><PrimaryButton onClick={submit}>{editing ? "Save changes" : "Add contractor"}</PrimaryButton></>}
     >
-      <div className="space-y-4">
-        {error && <p className="rounded-lg border border-u-danger/30 bg-u-danger/10 px-3 py-2 text-[12.5px] text-u-danger">{error}</p>}
-        <Field label="Company" required><TextInput value={company} onChange={(e) => setCompany(e.target.value)} placeholder="e.g. ProFlow Plumbing" /></Field>
+      <FormError message={error} />
+
+      <DrawerSection step="A" title="Company & contact" note="Company name is required">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Company" required className="sm:col-span-2"><TextInput value={company} onChange={(e) => setCompany(e.target.value)} placeholder="e.g. ProFlow Plumbing" /></Field>
           <Field label="Contact person"><TextInput value={contact} onChange={(e) => setContact(e.target.value)} /></Field>
           <Field label="Phone"><TextInput value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
+          <Field label="Email" className="sm:col-span-2"><TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
         </div>
-        <Field label="Email"><TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
+      </DrawerSection>
+
+      <DrawerSection step="B" title="Services" note="Pick at least one category">
         <Field label="Service categories" required>
           <div className="flex flex-wrap gap-1.5">
             {CATEGORIES.map((cat) => {
@@ -416,9 +444,14 @@ function ContractorForm({ open, editing, onClose, onSaved }: { open: boolean; ed
             })}
           </div>
         </Field>
-        <Field label="Notes"><TextArea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Terms, after-hours line, preferred jobs…" /></Field>
-        <label className="flex items-center gap-2 text-[12.5px] text-u-ink2"><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className="h-4 w-4 accent-u-accent" /> Active (available for new assignments)</label>
-      </div>
-    </Modal>
+      </DrawerSection>
+
+      <DrawerSection step="C" title="Notes & availability" note="Optional">
+        <div className="space-y-3">
+          <Field label="Notes"><TextArea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Terms, after-hours line, preferred jobs…" /></Field>
+          <label className="flex items-center gap-2 text-[12.5px] text-u-ink2"><input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className="h-4 w-4 accent-u-accent" /> Active (available for new assignments)</label>
+        </div>
+      </DrawerSection>
+    </FormDrawer>
   );
 }

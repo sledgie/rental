@@ -29,6 +29,7 @@ import {
 import { Button, DataField, EmptyState, IconButton, SectionTitle, TextLink } from "../tenants/components/ui";
 import { FilterCheckbox, FilterField, FilterPopover, SearchField, SortControl } from "../shell/directory";
 import { useStore } from "./store/appStore";
+import { isSupabaseConfigured } from "../lib/supabase";
 import {
   emptyFilters,
   filterRows,
@@ -192,7 +193,13 @@ function ExpandedUnit({ row, onView }: { row: UnitRow; onView: () => void }) {
 }
 
 export default function Units({ params }: { params?: Record<string, string> } = {}) {
-  const { db, rows, loading, archiveUnit, restoreUnit, pushToast } = useStore();
+  const { db, rows, loading, archiveUnit, restoreUnit, pushToast, refresh } = useStore();
+
+  // the Properties page may have added units since the last load
+  useEffect(() => {
+    if (isSupabaseConfigured) refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [tab, setTab] = useState<Tab>("all");
   const [filters, setFilters] = useState<UnitFilters>(emptyFilters);
@@ -383,7 +390,7 @@ export default function Units({ params }: { params?: Record<string, string> } = 
                                 <span className={`avatar avatar-md avatar-${colorFor(u.id)}`} aria-hidden="true">{u.unitNumber.slice(0, 3)}</span>
                                 <div>
                                   <button className="tenant-name" onClick={() => openProfile(u.id)}>Unit {u.unitNumber}</button>
-                                  <span className="tenant-number">{u.id}<span>{u.unitType}</span></span>
+                                  <span className="tenant-number">{u.code ?? u.id}<span>{u.unitType}</span></span>
                                 </div>
                               </div>
                             </td>
@@ -506,9 +513,9 @@ export default function Units({ params }: { params?: Record<string, string> } = 
           </>
         }
         details={archiveTarget && <p>Historical leases ({archiveTarget.ctx.all.length}), tenants ({archiveTarget.occupants.length}), transactions, maintenance, documents and activity are all preserved.</p>}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (!archiveTarget) return;
-          archiveUnit(archiveTarget.unit.id);
+          if (!(await archiveUnit(archiveTarget.unit.id))) return;
           pushToast({ tone: "amber", title: `Unit ${archiveTarget.unit.unitNumber} archived`, message: "All history retained. Restore it any time from the row menu." });
           setExpandedId(null);
         }}
@@ -521,9 +528,9 @@ export default function Units({ params }: { params?: Record<string, string> } = 
         title={`Restore unit ${restoreTarget?.unit.unitNumber ?? ""}?`}
         confirmLabel="Restore to register"
         body={<p>The unit returns to active reporting. Its historical records are untouched.</p>}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (!restoreTarget) return;
-          restoreUnit(restoreTarget.unit.id);
+          if (!(await restoreUnit(restoreTarget.unit.id))) return;
           pushToast({ tone: "jade", title: `Unit ${restoreTarget.unit.unitNumber} restored`, message: "Back in active reporting." });
         }}
       />

@@ -7,6 +7,7 @@ import {
   EyeOff,
   Lock,
   Mail,
+  MailCheck,
   ShieldCheck,
   User,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import { useToast } from "../../contexts/ToastContext";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import { isValidEmail, passwordChecks, passwordIsStrong } from "../../lib/format";
 import { PASSWORD_REQUIREMENTS } from "../../lib/constants";
+import { ConfirmationRequiredError } from "../../lib/errors";
 import { cn } from "../../utils/cn";
 
 type Errors = {
@@ -31,7 +33,7 @@ type Errors = {
 export default function SignUpPage() {
   useDocumentTitle("Create your account");
   const navigate = useNavigate();
-  const { signUp, authenticating } = useAuth();
+  const { signUp, resendSignupEmail, authenticating } = useAuth();
   const { toast } = useToast();
 
   const [fullName, setFullName] = useState("");
@@ -41,6 +43,8 @@ export default function SignUpPage() {
   const [terms, setTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
+  const [confirmEmail, setConfirmEmail] = useState<string | null>(null);
+  const [resendState, setResendState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
   const [legalOpen, setLegalOpen] = useState<"terms" | "privacy" | null>(null);
 
   const checks = passwordChecks(password);
@@ -74,6 +78,10 @@ export default function SignUpPage() {
       });
       navigate("/onboarding", { replace: true });
     } catch (error) {
+      if (error instanceof ConfirmationRequiredError) {
+        setConfirmEmail(error.email);
+        return;
+      }
       const message = error instanceof Error ? error.message : "Unable to create your account.";
       if (message.toLowerCase().includes("already exists")) {
         setErrors({ email: message });
@@ -81,6 +89,81 @@ export default function SignUpPage() {
         setErrors({ form: message });
       }
     }
+  }
+
+  async function handleResend() {
+    if (!confirmEmail) return;
+    setResendState("sending");
+    try {
+      await resendSignupEmail(confirmEmail);
+      setResendState("sent");
+    } catch {
+      setResendState("failed");
+    }
+  }
+
+  if (confirmEmail) {
+    return (
+      <AuthLayout>
+        <div className="animate-fade-up py-2">
+          <span className="flex size-12 items-center justify-center rounded-2xl bg-u-accent-soft ring-1 ring-u-accent/30">
+            <MailCheck className="size-6 text-u-accent" />
+          </span>
+          <p className="mt-5 text-[11px] font-semibold tracking-[0.14em] text-u-accent uppercase">Almost there</p>
+          <h1 className="mt-2 text-[27px] font-semibold tracking-[-0.035em] text-u-ink">Welcome to L.O.F.T.!</h1>
+          <p className="mt-2 text-[13.5px] leading-relaxed text-u-muted">
+            We've sent a confirmation link to{" "}
+            <span className="font-medium text-u-ink2">{confirmEmail}</span>. Open it to activate your account,
+            then come back and sign in.
+          </p>
+          <ol className="mt-5 space-y-2.5 text-[12.5px] text-u-ink2">
+            {["Open the email from L.O.F.T.", "Click “Confirm my email”", "Sign in and set up your workspace"].map((step, index) => (
+              <li key={step} className="flex items-center gap-2.5">
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-u-accent-soft text-[10px] font-semibold text-u-accent">
+                  {index + 1}
+                </span>
+                {step}
+              </li>
+            ))}
+          </ol>
+          <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+            <Link to="/login" className="flex-1">
+              <Button fullWidth iconRight={ArrowRight}>
+                Go to sign in
+              </Button>
+            </Link>
+            <Button
+              variant="ghost"
+              className="flex-1"
+              onClick={handleResend}
+              loading={resendState === "sending"}
+              disabled={resendState === "sending" || resendState === "sent"}
+            >
+              {resendState === "sent" ? "Email sent again" : "Resend email"}
+            </Button>
+          </div>
+          {resendState === "failed" ? (
+            <Alert tone="danger" className="mt-4">
+              We couldn't resend the email just now. Please wait a minute and try again.
+            </Alert>
+          ) : null}
+          <p className="mt-5 text-[11.5px] leading-relaxed text-u-muted">
+            Can't find it? Check your spam folder, or{" "}
+            <button
+              type="button"
+              className="font-medium text-u-accent hover:underline"
+              onClick={() => {
+                setConfirmEmail(null);
+                setResendState("idle");
+              }}
+            >
+              use a different email
+            </button>
+            .
+          </p>
+        </div>
+      </AuthLayout>
+    );
   }
 
   return (
@@ -277,7 +360,7 @@ export default function SignUpPage() {
           {legalOpen === "privacy" ? (
             <>
               <p>
-                Rentflow is a frontend demonstration. All users, organizations, invitations, and financial
+                L.O.F.T. is a frontend demonstration. All users, organizations, invitations, and financial
                 figures are mock records stored in your browser's local storage.
               </p>
               <p>

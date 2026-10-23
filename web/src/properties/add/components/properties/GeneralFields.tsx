@@ -16,6 +16,7 @@ export function GeneralFields({ form, set, errors }: SectionProps) {
     reader.onload = () => {
       set("coverImage", reader.result as string);
       set("coverImageName", file.name);
+      set("coverImageFile", file);
     };
     reader.readAsDataURL(file);
   };
@@ -111,6 +112,7 @@ export function GeneralFields({ form, set, errors }: SectionProps) {
                 onClick={() => {
                   set("coverImage", null);
                   set("coverImageName", "");
+                  set("coverImageFile", null);
                 }}
               >
                 <Trash2 size={14} /> Remove

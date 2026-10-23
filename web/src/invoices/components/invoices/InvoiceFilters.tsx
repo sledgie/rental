@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Filter, Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@inv/components/ui/Button";
 import { Input, Select } from "@inv/components/ui/Field";
-import { properties } from "@inv/data/mockInvoices";
+import { useInvoices } from "@inv/store/InvoiceStore";
 import { typeLabels, type InvoiceFilters, type InvoiceStatus, type InvoiceType } from "@inv/types/invoice";
 import { cn } from "@inv/utils/cn";
 
@@ -44,6 +44,8 @@ export function InvoiceFiltersBar({
   resultCount,
   activeCount,
 }: InvoiceFiltersBarProps) {
+  const { refs } = useInvoices();
+  const properties = refs.properties;
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   return (

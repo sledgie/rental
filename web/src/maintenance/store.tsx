@@ -1,4 +1,9 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { getActiveOrgId, subscribeActiveOrg } from '../lib/activeOrg';
+import * as repo from './repo';
+import * as records from './recordsRepo';
+import { deleteDocument, openDocument, uploadDocument } from '../lib/documents';
 import { buildSeed, CURRENT_USER } from './data';
 import type {
   ActivityEvent, AppSettings, Asset, Attachment, Contractor, Estimate, Expense,
@@ -28,6 +33,10 @@ export interface Toast {
 }
 
 interface Store {
+  /** false while the first load from Supabase is running */
+  ready: boolean;
+  loadError: string | null;
+  reload: () => Promise<void>;
   // data
   properties: Property[]; units: Unit[]; tenants: Tenant[]; leases: Lease[];
   staff: StaffMember[]; contractors: Contractor[]; requests: MaintenanceRequest[];
@@ -80,7 +89,9 @@ interface Store {
   addVisit: (v: Visit) => void;
   updateVisit: (id: string, patch: Partial<Visit>, activityDesc?: string) => void;
   addWorkLog: (wl: WorkLogEntry) => void;
-  addAttachment: (att: Attachment) => void;
+  addAttachment: (att: Attachment, file?: File) => void;
+  /** opens the stored file (or the session copy) in a new tab */
+  openAttachment: (att: Attachment) => void;
   removeAttachment: (id: string) => void;
   addWorkOrder: (wo: WorkOrder) => void;
   updateWorkOrder: (id: string, patch: Partial<WorkOrder>, activityDesc?: string) => void;
@@ -121,8 +132,23 @@ function nextSeq(ids: string[], segment: number): number {
 }
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [seed] = useState(buildSeed);
+  const [seed, setSeed] = useState(() => {
+    const initial = buildSeed();
+    // with Supabase the sample properties, tenants and staff never show: the lists are filled from the organization
+    return isSupabaseConfigured ? { ...initial, properties: [], units: [], tenants: [], leases: [], staff: [] } : initial;
+  });
+  const [currentUser, setCurrentUser] = useState(CURRENT_USER);
+  const currentUserRef = useRef(currentUser);
+  currentUserRef.current = currentUser;
+  const [ready, setReady] = useState(!isSupabaseConfigured);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const orgId = useSyncExternalStore(subscribeActiveOrg, getActiveOrgId);
   const [requests, setRequests] = useState(seed.requests);
+  // last state known to be in the database; changes are written as the difference from it
+  const saved = useRef<records.Records>(records.emptyRecords());
+  const chain = useRef<Promise<void>>(Promise.resolve());
+  // files waiting to be uploaded once the request / asset they belong to is saved
+  const uploads = useRef<{ att: Attachment; file: File }[]>([]);
   const [estimates, setEstimates] = useState(seed.estimates);
   const [visits, setVisits] = useState(seed.visits);
   const [workLogs, setWorkLogs] = useState(seed.workLogs);
@@ -147,6 +173,72 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setToasts((t) => t.filter((x) => x.id !== id));
   }, []);
 
+  /** Reads the organization's properties, units, tenants, leases, staff and contractors (the database is the source of truth). */
+  const reload = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    const org = getActiveOrgId();
+    if (!org) return;
+    try {
+      await chain.current; // let pending writes finish so they are not overwritten by an older read
+      const loaded = await repo.loadReference(org);
+      const rec = await records.loadRecords(org, loaded.staff);
+      if (getActiveOrgId() !== org) return; // the user switched organization meanwhile
+      saved.current = rec;
+      setRequests(rec.requests); setEstimates(rec.estimates); setVisits(rec.visits); setWorkLogs(rec.workLogs); setWorkOrders(rec.workOrders);
+      setAssets(rec.assets); setExpenses(rec.expenses); setSchedules(rec.schedules); setActivity(rec.activity); setAttachments(rec.attachments);
+      setSeed((prev) => ({ ...prev, properties: loaded.properties, units: loaded.units, tenants: loaded.tenants, leases: loaded.leases, staff: loaded.staff }));
+      setContractors(loaded.contractors);
+      if (loaded.me) setCurrentUser(loaded.me);
+      setLoadError(null);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Unable to load maintenance data.');
+    } finally {
+      if (getActiveOrgId() === org) setReady(true);
+    }
+  }, []);
+
+  // every change to the records is written to the database as a difference from what is already saved
+  useEffect(() => {
+    if (!isSupabaseConfigured || !ready) return;
+    const next: records.Records = { requests, estimates, visits, workLogs, workOrders, assets, expenses, schedules, activity, attachments };
+    const prev = saved.current;
+    if (JSON.stringify({ ...prev, attachments: [] }) !== JSON.stringify({ ...next, attachments: [] })) {
+      saved.current = next;
+      chain.current = chain.current
+        .then(() => records.persist(prev, next, currentUserRef.current))
+        .catch((error) => {
+          toast(error instanceof Error ? error.message : 'The change could not be saved.', 'error');
+          return reload();
+        });
+    }
+    if (uploads.current.length) {
+      const batch = uploads.current.splice(0);
+      chain.current = chain.current.then(async () => {
+        const failed: string[] = [];
+        for (const { att, file } of batch) {
+          const request = att.requestId ? records.rowIdOf('request', att.requestId) : undefined;
+          const asset = att.assetId ? records.rowIdOf('asset', att.assetId) : undefined;
+          const order = att.workOrderId && !att.requestId && !att.assetId ? records.rowIdOf('workOrder', att.workOrderId) : undefined;
+          const target = request ? { type: 'maintenance_request' as const, id: request, label: att.requestId } : asset ? { type: 'asset' as const, id: asset, label: att.assetId } : order ? { type: 'work_order' as const, id: order, label: att.workOrderId } : null;
+          try {
+            if (!target) throw new Error('The record for this file was not saved.');
+            await uploadDocument({ id: att.id, bucket: 'maintenance-attachments', area: target.type === 'asset' ? 'assets' : target.type === 'work_order' ? 'work-orders' : 'requests', file, entityType: target.type, entityId: target.id, entityLabel: target.label, category: att.category, originModule: 'Maintenance' });
+          } catch (error) {
+            failed.push(`${att.name}: ${error instanceof Error ? error.message : 'upload failed'}`);
+            setAttachments((a) => a.filter((x) => x.id !== att.id));
+          }
+        }
+        if (failed.length) toast(failed.join(' '), 'error');
+      });
+    }
+  }, [ready, requests, estimates, visits, workLogs, workOrders, assets, expenses, schedules, activity, attachments, toast, reload]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    setReady(false);
+    if (orgId) void reload();
+  }, [orgId, reload]);
+
   // Cross-links between the maintenance pages are hash routes in the host app (#/maintenance-requests?request=MR-1001 ...)
   const navigate = useCallback((page: PageKey, opts?: Partial<Route>) => {
     const target = ROUTES[page] ?? page;
@@ -163,7 +255,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     (requestId: string | undefined, type: string, description: string, assetId?: string) => {
       setActivity((a) => [
         ...a,
-        { id: uid('AC'), requestId, assetId, type, description, user: CURRENT_USER.name, timestamp: nowISO() },
+        { id: uid('AC'), requestId, assetId, type, description, user: currentUserRef.current.name, timestamp: nowISO() },
       ]);
     },
     []
@@ -270,7 +362,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const nextAssetId = useCallback(() => `AST-${nextSeq(assets.map((a) => a.id), 1)}`, [assets]);
   const nextWorkOrderId = useCallback(() => `WO-${nextSeq(workOrders.map((w) => w.id), 1)}`, [workOrders]);
   const nextExpenseId = useCallback(() => `EXP-${nextSeq(expenses.map((e) => e.id), 1)}`, [expenses]);
-  const nextEstimateId = useCallback(() => `EST-${nextSeq(estimates.map((e) => e.id), 1)}`, [estimates]);
+  const nextEstimateId = useCallback(() => (isSupabaseConfigured ? crypto.randomUUID() : `EST-${nextSeq(estimates.map((e) => e.id), 1)}`), [estimates]);
   const nextScheduleId = useCallback(() => `PM-${nextSeq(schedules.map((s) => s.id), 1)}`, [schedules]);
 
   // ── actions ──────────────────────────────────────────────────────────────
@@ -374,8 +466,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const addAttachment = useCallback(
-    (att: Attachment) => {
-      setAttachments((a) => [att, ...a]);
+    (att: Attachment, file?: File) => {
+      if (isSupabaseConfigured && file) {
+        // shown at once; the file is uploaded as soon as the record it belongs to is saved
+        uploads.current.push({ att: { ...att, url: undefined, mock: false }, file });
+        setAttachments((a) => [{ ...att, url: undefined, mock: false }, ...a]);
+      } else {
+        setAttachments((a) => [att, ...a]);
+      }
       if (att.requestId) logActivity(att.requestId, 'document', `Document added: ${att.name} (${att.category})`);
     },
     [logActivity]
@@ -383,7 +481,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const removeAttachment = useCallback((id: string) => {
     setAttachments((a) => a.filter((x) => x.id !== id));
-  }, []);
+    if (isSupabaseConfigured) {
+      chain.current = chain.current.then(() => deleteDocument(id)).catch((error) => {
+        toast(error instanceof Error ? error.message : 'The file could not be removed.', 'error');
+        return reload();
+      });
+    }
+  }, [toast, reload]);
+
+  const openAttachment = useCallback((att: Attachment) => {
+    if (att.url) { window.open(att.url, '_blank'); return; }
+    if (att.bucket && att.path) {
+      openDocument(att.bucket, att.path).catch((error) => toast(error instanceof Error ? error.message : 'The file could not be opened.', 'error'));
+      return;
+    }
+    toast('This file is not available to open.', 'info');
+  }, [toast]);
 
   const addWorkOrder = useCallback(
     (wo: WorkOrder) => {
@@ -436,8 +549,31 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     (id: string, patch: Partial<Asset>) => setAssets((as) => as.map((a) => (a.id === id ? { ...a, ...patch } : a))),
     []
   );
-  const addContractor = useCallback((c: Contractor) => setContractors((cs) => [...cs, c]), []);
-  const updateContractor = useCallback((id: string, patch: Partial<Contractor>) => setContractors((cs) => cs.map((c) => (c.id === id ? { ...c, ...patch } : c))), []);
+  /** Runs a database write for a change already shown on screen; on failure it says why and shows what the database holds. */
+  const sync = useCallback(
+    (work: () => Promise<unknown>) => {
+      if (!isSupabaseConfigured) return;
+      work()
+        .catch((error) => toast(error instanceof Error ? error.message : 'The change could not be saved.', 'error'))
+        .finally(() => void reload());
+    },
+    [toast, reload]
+  );
+
+  const addContractor = useCallback(
+    (c: Contractor) => {
+      setContractors((cs) => [...cs, c]);
+      sync(() => repo.createContractor(c));
+    },
+    [sync]
+  );
+  const updateContractor = useCallback(
+    (id: string, patch: Partial<Contractor>) => {
+      setContractors((cs) => cs.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+      sync(() => repo.updateContractor(id, patch));
+    },
+    [sync]
+  );
   const addSchedule = useCallback((s: PreventiveSchedule) => setSchedules((ss) => [s, ...ss]), []);
   const updateSchedule = useCallback(
     (id: string, patch: Partial<PreventiveSchedule>) => setSchedules((ss) => ss.map((s) => (s.id === id ? { ...s, ...patch } : s))),
@@ -465,7 +601,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       properties: seed.properties, units: seed.units, tenants: seed.tenants, leases: seed.leases,
       staff: seed.staff, contractors, requests, estimates, visits, workLogs, workOrders, assets,
       expenses, schedules, attachments, activity, projects: seed.projects, settings,
-      currentUser: CURRENT_USER, route, toasts,
+      ready, loadError, reload,
+      currentUser, route, toasts,
       navigate, toast, dismissToast,
       getProperty, getUnit, getTenant, getLease, getContractor, getStaff, getAsset, getExpense,
       unitsForProperty, leaseForUnit,
@@ -473,12 +610,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       requestActivity, estimatedCost, actualCost, assetRequests, assetRepairSpend, assetExpenses,
       nextRequestId, nextAssetId, nextWorkOrderId, nextExpenseId, nextEstimateId, nextScheduleId,
       logActivity, addRequest, updateRequest, setRequestStatus, addEstimate, updateEstimate,
-      addVisit, updateVisit, addWorkLog, addAttachment, removeAttachment, addWorkOrder,
+      addVisit, updateVisit, addWorkLog, addAttachment, removeAttachment, openAttachment, addWorkOrder,
       updateWorkOrder, addExpense, updateExpense, linkExpense, unlinkExpense, addAsset,
       updateAsset, addContractor, updateContractor, addSchedule, updateSchedule, completeSchedule, updateSettings,
     }),
     [
-      seed, contractors, requests, estimates, visits, workLogs, workOrders, assets, expenses,
+      seed, currentUser, ready, loadError, reload, contractors, requests, estimates, visits, workLogs, workOrders, assets, expenses,
       schedules, attachments, activity, settings, route, toasts, navigate, toast, dismissToast,
       getProperty, getUnit, getTenant, getLease, getContractor, getStaff, getAsset, getExpense,
       unitsForProperty, leaseForUnit, requestEstimates, requestVisits, requestWorkLogs,
@@ -486,7 +623,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       assetRequests, assetRepairSpend, assetExpenses, nextRequestId, nextAssetId, nextWorkOrderId,
       nextExpenseId, nextEstimateId, nextScheduleId, logActivity, addRequest, updateRequest,
       setRequestStatus, addEstimate, updateEstimate, addVisit, updateVisit, addWorkLog,
-      addAttachment, removeAttachment, addWorkOrder, updateWorkOrder, addExpense, updateExpense,
+      addAttachment, removeAttachment, openAttachment, addWorkOrder, updateWorkOrder, addExpense, updateExpense,
       linkExpense, unlinkExpense, addAsset, updateAsset, addContractor, updateContractor, addSchedule,
       updateSchedule, completeSchedule, updateSettings,
     ]

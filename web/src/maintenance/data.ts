@@ -531,10 +531,14 @@ export function buildSeed(): SeedData {
     { id: 'PRJ-3', name: 'Riverside B Bathroom Renovation', propertyId: 'P2', unitId: 'U8', status: 'Completed', budget: 6200, spent: 5940, progress: 100, start: dOff(-120), end: dOff(-85) },
   ];
 
+  // The sample requests, work orders, assets, inspection schedules, contractors/vendors and projects built above are no longer
+  // loaded: these registers start empty. The property / unit / tenant / lease / staff lists stay because the forms pick from them.
+  void contractors; void requests; void estimates; void visits; void workLogs; void workOrders; void assets;
+  void expenses; void schedules; void attachments; void activity; void projects;
   return {
-    properties, units, tenants, leases, staff, contractors, requests, estimates,
-    visits, workLogs, workOrders, assets, expenses, schedules, attachments,
-    activity, projects,
+    properties, units, tenants, leases, staff,
+    contractors: [], requests: [], estimates: [], visits: [], workLogs: [], workOrders: [], assets: [],
+    expenses: [], schedules: [], attachments: [], activity: [], projects: [],
     settings: { emergencyResponseHours: 4, highResponseHours: 24, approvalThreshold: 250 },
   };
 }

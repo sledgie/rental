@@ -106,7 +106,7 @@ export function seedDatabase() {
     { id: "PM-03", name: "Sarah Jenkins", email: "sarah.jenkins@apexrentals.com", phone: "(512) 555-0188", title: "Renovation & Fitout PM", department: "Asset Preservation" },
     { id: "PM-04", name: "David Kim", email: "david.kim@apexrentals.com", phone: "(512) 555-0115", title: "Sustainability & MEP PM", department: "Sustainability & Compliance" },
   ];
-  db.insert(projectManagers).values(pmData);
+  db.insert(projectManagers).values([]);
 
   // 4. Contractors & Vendors
   const contractorData = [
@@ -177,7 +177,7 @@ export function seedDatabase() {
       rating: "4.9",
     },
   ];
-  db.insert(contractors).values(contractorData);
+  db.insert(contractors).values([]);
 
   // 5. Projects
   const projectList = [
@@ -530,7 +530,7 @@ export function seedDatabase() {
       dataNotes: "In final inspection stage with civil geotechnical engineer.",
     },
   ];
-  db.insert(projects).values(projectList);
+  db.insert(projects).values([]);
 
   // 6. Milestones
   const milestoneList = [
@@ -571,7 +571,7 @@ export function seedDatabase() {
     { id: "MLS-24", milestoneCode: "MLS-06-B", projectId: "PRJ-06", name: "Hallway & Stairwell Fixture Retrofit", plannedStart: "2025-02-16", plannedEnd: "2025-04-10", forecastEnd: "2025-04-10", actualEnd: "2025-04-08", responsiblePerson: "EcoLux (S. Green)", dependency: "MLS-06-A", status: "Completed", notes: "1,200 fixtures converted to high-CRI LED." },
     { id: "MLS-25", milestoneCode: "MLS-06-C", projectId: "PRJ-06", name: "Exterior Parking & Landscape Fixtures & Verification", plannedStart: "2025-04-11", plannedEnd: "2025-05-30", forecastEnd: "2025-05-30", actualEnd: "2025-05-28", responsiblePerson: "EcoLux (S. Green)", dependency: "MLS-06-B", status: "Completed", notes: "Utility rebate check of $24,500 received." },
   ];
-  db.insert(milestones).values(milestoneList);
+  db.insert(milestones).values([]);
 
   // 7. Monthly Spending
   const spendingList = [
@@ -619,7 +619,7 @@ export function seedDatabase() {
     { id: "SP-31", projectId: "PRJ-06", period: "2025-04", budgetAllocated: "35000.00", committedAmount: "35000.00", actualIncurred: "32400.00" },
     { id: "SP-32", projectId: "PRJ-06", period: "2025-05", budgetAllocated: "20000.00", committedAmount: "20000.00", actualIncurred: "20000.00" },
   ];
-  db.insert(monthlySpending).values(spendingList);
+  db.insert(monthlySpending).values([]);
 
   // 8. Change Orders
   const coList = [
@@ -760,7 +760,7 @@ export function seedDatabase() {
       supportingDocs: "Sample-Rejection-Notice.pdf",
     },
   ];
-  db.insert(changeOrders).values(coList);
+  db.insert(changeOrders).values([]);
 
   // 9. Risks
   const riskList = [
@@ -867,7 +867,7 @@ export function seedDatabase() {
       status: "Mitigated",
     },
   ];
-  db.insert(risks).values(riskList);
+  db.insert(risks).values([]);
 
   // 10. Issues
   const issueList = [
@@ -947,7 +947,7 @@ export function seedDatabase() {
       resolutionNotes: "Project temporarily placed on hold to avoid daily mobilization burn rates.",
     },
   ];
-  db.insert(issues).values(issueList);
+  db.insert(issues).values([]);
 
   // 11. Handover Items
   const handoverData = [
@@ -977,7 +977,7 @@ export function seedDatabase() {
     { id: "HO-19", projectId: "PRJ-10", category: "Financial Reconciliation", itemKey: "FR-01", title: "Final reconciliation & retainage release", required: true, status: "Completed", completedDate: "2025-05-25", verifiedBy: "David Sterling", notes: "Closed with $3,800 savings.", waiverReason: null },
     { id: "HO-20", projectId: "PRJ-10", category: "Formal Closure", itemKey: "FC-01", title: "Formal project closure signoff", required: true, status: "Completed", completedDate: "2025-05-30", verifiedBy: "David Sterling", notes: "Project officially closed.", waiverReason: null },
   ];
-  db.insert(handoverItems).values(handoverData);
+  db.insert(handoverItems).values([]);
 
   // 12. Outcome Reviews
   const outcomeList = [
@@ -1020,7 +1020,7 @@ export function seedDatabase() {
       outstandingDefects: 0,
     },
   ];
-  db.insert(outcomeReviews).values(outcomeList);
+  db.insert(outcomeReviews).values([]);
 
   // 13. Audit Logs
   const logList = [
@@ -1030,7 +1030,7 @@ export function seedDatabase() {
     { id: "LOG-04", projectId: "PRJ-05", entityType: "Status", action: "StatusChanged", fieldChanged: "Status", oldValue: "In Progress", newValue: "Completed", changedBy: "Marcus Vance", timestamp: "2025-07-18 11:20:00", notes: "Physical construction and TDLR inspection passed." },
     { id: "LOG-05", projectId: "PRJ-06", entityType: "Handover", action: "ProjectClosed", fieldChanged: "Status", oldValue: "Completed", newValue: "Completed & Archived", changedBy: "David Sterling", timestamp: "2025-06-10 15:00:00", notes: "Final reconciliation complete, full closure approved." },
   ];
-  db.insert(auditLogs).values(logList);
+  db.insert(auditLogs).values([]);
 }
 
 let seeded = false;

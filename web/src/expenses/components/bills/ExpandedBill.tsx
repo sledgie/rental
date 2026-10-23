@@ -3,6 +3,8 @@ import { Badge } from "../ui/Badge";
 import { useApp } from "../../context/AppContext";
 import { getProvider, getTenant, getUnit, propertyLabel } from "../../data/catalog";
 import type { Bill, DocumentType } from "../../types";
+import { isSupabaseConfigured } from "../../../lib/supabase";
+import { openDocument } from "../../../lib/documents";
 import {
   landlordShare,
   providerBalance,
@@ -66,8 +68,8 @@ export function ExpandedBill({
         type,
         mockFileName: file.name,
         addedAt: todayISO(),
-      });
-      pushToast(`Mock file “${file.name}” attached locally. Nothing was uploaded to storage.`);
+      }, file);
+      pushToast(isSupabaseConfigured ? `Uploading “${file.name}”.` : `Mock file “${file.name}” attached locally. Nothing was uploaded to storage.`);
       input.value = "";
     };
     input.click();
@@ -261,7 +263,7 @@ export function ExpandedBill({
           Documents
         </div>
         <p className="mb-3 text-[11px] text-u-muted">
-          Mock attachments only. This workspace does not persist files to remote storage.
+          {isSupabaseConfigured ? "Files are stored securely and only visible to your team." : "Mock attachments only. This workspace does not persist files to remote storage."}
         </p>
         <div className="space-y-2">
           {bill.documents.length === 0 && (
@@ -278,7 +280,17 @@ export function ExpandedBill({
                   {d.type.split("_").join(" ")} · {d.mockFileName} · {formatDate(d.addedAt)}
                 </p>
               </div>
-              <Badge tone="neutral">Local mock</Badge>
+              {d.path && d.bucket ? (
+                <button
+                  type="button"
+                  className="text-xs font-medium text-u-accent hover:underline"
+                  onClick={() => openDocument(d.bucket!, d.path!).catch((error) => pushToast(error instanceof Error ? error.message : "The file could not be opened.", "error"))}
+                >
+                  Open
+                </button>
+              ) : (
+                <Badge tone="neutral">Local mock</Badge>
+              )}
             </div>
           ))}
         </div>

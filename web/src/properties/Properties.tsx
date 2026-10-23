@@ -6,7 +6,9 @@ import { PropertyForm } from "./add/components/properties/PropertyForm";
 import { ToastProvider } from "./add/components/ui/Toast";
 import { toProperty, toRecord } from "./add/convert";
 import PropertiesView from "./PropertiesView";
-import { getRecord, saveProperty, useProperties } from "./store";
+import { EmptyState } from "../tenants/components/ui";
+import { reloadRefData } from "./add/store/AppStore";
+import { getRecord, reloadProperties, saveProperty, useProperties, usePropertiesStatus } from "./store";
 
 export default function Properties({
   params,
@@ -16,6 +18,13 @@ export default function Properties({
   notify?: (message: string) => void;
 }) {
   const properties = useProperties();
+  const status = usePropertiesStatus();
+
+  // units may have been added or archived on the Units page since the last load
+  useEffect(() => {
+    void reloadProperties(true);
+    void reloadRefData(); // contractors, owners and staff may have changed elsewhere
+  }, []);
   // null = directory; { property: null } = adding; { property } = editing
   const [form, setForm] = useState<{ property: Property | null } | null>(null);
 
@@ -27,11 +36,30 @@ export default function Properties({
     window.dispatchEvent(new HashChangeEvent("hashchange"));
   }, [params?.new]);
 
-  const onSave = (record: PropertyRecord) => {
+  const onSave = async (record: PropertyRecord) => {
     const prev = properties.find((x) => x.code === record.id);
-    saveProperty(toProperty(record, prev), record);
+    // with Supabase this resolves once the database accepted the property (and rejects with a readable message otherwise)
+    const code = await saveProperty(toProperty(record, prev), record);
     setForm(null);
+    return code ?? undefined;
   };
+
+  if (!form && (!status.ready || status.error)) {
+    return (
+      <div className="tn">
+        <div className="app-shell">
+          <div className="main-shell">
+            <main className="main-content">
+              <EmptyState
+                title={status.error ? "We couldn't load your properties" : "Loading properties…"}
+                description={status.error ?? "Fetching your portfolio."}
+              />
+            </main>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     // the toast container renders outside the page wrapper, so give it the .rd colour scope too

@@ -141,7 +141,7 @@ export function AssetDetail({ asset, onEdit, onReplace, onNewRequest, onUpload }
               <div key={d.id} className="flex items-center justify-between gap-2 py-1.5 text-[12.5px]">
                 <span className="flex min-w-0 items-center gap-2 text-u-ink">
                   <FileText size={13} className="shrink-0 text-u-muted" />
-                  {d.url ? <a href={d.url} target="_blank" rel="noreferrer" className="truncate text-u-accent hover:underline">{d.name}</a> : <span className="truncate">{d.name}</span>}
+                  {d.url || d.path ? <button type="button" onClick={() => s.openAttachment(d)} className="truncate text-u-accent hover:underline">{d.name}</button> : <span className="truncate">{d.name}</span>}
                 </span>
                 <span className="flex shrink-0 items-center gap-2 text-[11px] text-u-muted">
                   {d.category} · {d.size} · {fmtDate(d.uploadedAt)}

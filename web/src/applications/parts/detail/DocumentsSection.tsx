@@ -1,3 +1,5 @@
+import { isSupabaseConfigured } from "../../../lib/supabase";
+import { openDocument } from "../../../lib/documents";
 import { useMemo, useRef, useState } from "react";
 import { useStore, documentsOf, partiesOf } from "../../state/store";
 import { PERMISSIONS, DOCUMENT_CATEGORIES, type DocumentCategory } from "../../data/types";
@@ -33,6 +35,7 @@ interface Staged {
   category: DocumentCategory;
   partyId?: string;
   notes?: string;
+  file?: File;
   status: "Ready" | "Uploading" | "Failed";
 }
 
@@ -55,6 +58,19 @@ export function DocumentsSection({
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+
+  /** Opens the stored file through a short-lived private link. */
+  const openStored = (doc: { storageReference?: string; fileName: string }) => {
+    const reference = doc.storageReference;
+    if (!isSupabaseConfigured || !reference || !reference.includes("/")) {
+      toast({ variant: "warn", title: "No stored file", description: `${doc.fileName} has no stored file.` });
+      return;
+    }
+    const [bucket, ...rest] = reference.split("/");
+    openDocument(bucket, rest.join("/")).catch((error) =>
+      toast({ variant: "error", title: "The file could not be opened", description: error instanceof Error ? error.message : undefined }),
+    );
+  };
   const inputRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(
@@ -82,6 +98,7 @@ export function DocumentsSection({
       fileType: fileExt(f.name),
       title: f.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " "),
       category: guessCategory(f.name),
+      file: f,
       status: "Ready",
     }));
     setStaged((s) => [...s, ...next]);
@@ -106,18 +123,22 @@ export function DocumentsSection({
           fileSize: f.fileSize,
           uploadedAt: new Date().toISOString().slice(0, 10),
           notes: f.notes,
+          file: f.file,
           id: uid("doc"),
         })),
       });
       setStaged([]);
       setUploading(false);
-      toast({
-        variant: "warn",
-        title: `${batch.length} document${batch.length === 1 ? "" : "s"} recorded`,
-        description:
-          "Metadata saved in client state only. File storage is not connected in this prototype, so nothing was uploaded.",
-        simulated: true,
-      });
+      toast(
+        isSupabaseConfigured
+          ? { variant: "success", title: `${batch.length} document${batch.length === 1 ? "" : "s"} uploading`, description: "Files are stored privately with the application." }
+          : {
+              variant: "warn",
+              title: `${batch.length} document${batch.length === 1 ? "" : "s"} recorded`,
+              description: "Metadata saved in client state only. File storage is not connected in this prototype, so nothing was uploaded.",
+              simulated: true,
+            },
+      );
     }, 750);
   };
 
@@ -167,8 +188,7 @@ export function DocumentsSection({
         <IconFile className="mx-auto mb-2 text-u-muted" width={20} height={20} />
         <p className="text-[13px] font-medium text-u-ink">Drag and drop files here</p>
         <p className="mx-auto mt-1 max-w-lg text-[11.5px] leading-relaxed text-u-muted">
-          Multiple file selection is supported. Files are read for name, size, and type only — no bytes leave the
-          browser because document storage is not connected in this prototype.
+          {isSupabaseConfigured ? "Multiple file selection is supported. PDF and image files are stored privately with the application." : "Multiple file selection is supported. Files are read for name, size, and type only — no bytes leave the browser because document storage is not connected in this prototype."}
         </p>
         <div className="mt-2.5 flex flex-wrap items-center justify-center gap-1.5">
           <Button size="xs" variant="secondary" icon={<IconUpload width={12} height={12} />} onClick={() => inputRef.current?.click()}>
@@ -351,7 +371,7 @@ export function DocumentsSection({
                 </Td>
                 <Td>
                   <div className="flex items-center gap-0.5">
-                    <Tooltip label="Preview (requires connected storage)">
+                    <Tooltip label={isSupabaseConfigured ? "Preview" : "Preview (requires connected storage)"}>
                       <IconButton
                         label="Preview document"
                         disabled={!allowed}
@@ -360,18 +380,11 @@ export function DocumentsSection({
                         <IconEye width={14} height={14} />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip label="Download (simulated)">
+                    <Tooltip label={isSupabaseConfigured ? "Download" : "Download (simulated)"}>
                       <IconButton
                         label="Download document"
                         disabled={!allowed}
-                        onClick={() =>
-                          toast({
-                            variant: "warn",
-                            title: "Download simulated",
-                            description: `${doc.fileName} — no object storage is connected, so no file was fetched.`,
-                            simulated: true,
-                          })
-                        }
+                        onClick={() => { const d = all.find((x) => x.id === doc.id); if (isSupabaseConfigured && d) openStored(d); else toast({ variant: "warn", title: "Download simulated", description: `${doc.fileName} — no object storage is connected, so no file was fetched.`, simulated: true }); }}
                       >
                         <IconDownload width={14} height={14} />
                       </IconButton>
@@ -454,12 +467,19 @@ export function DocumentsSection({
         open={!!preview}
         onClose={() => setPreview(null)}
         title="Document preview"
-        description="A real preview streams the file from object storage. Storage is not connected in this prototype."
+        description={isSupabaseConfigured ? "The file is opened from private storage." : "A real preview streams the file from object storage. Storage is not connected in this prototype."}
         size="md"
         footer={
-          <Button variant="secondary" onClick={() => setPreview(null)}>
-            Close
-          </Button>
+          <>
+            {isSupabaseConfigured && (
+              <Button variant="primary" onClick={() => { const d = all.find((x) => x.id === preview); if (d) openStored(d); }}>
+                Open file
+              </Button>
+            )}
+            <Button variant="secondary" onClick={() => setPreview(null)}>
+              Close
+            </Button>
+          </>
         }
       >
         {(() => {

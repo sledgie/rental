@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../../../lib/supabase";
 import type { ReactNode } from "react";
 import { cn } from "../../utils/cn";
 import type {
@@ -118,6 +119,7 @@ export function MockTag({
   label?: string;
   className?: string;
 }) {
+  if (isSupabaseConfigured) return null; // the "prototype" tags only belong to the demo
   return (
     <span
       className={cn(

@@ -56,6 +56,11 @@ export interface PropertyDocument {
   uploadDate: string;
   expiryDate?: string;
   notes?: string;
+  /** a newly chosen file, uploaded when the property is saved */
+  file?: File;
+  /** where a stored file lives; opened through a short-lived link */
+  bucket?: string;
+  path?: string;
 }
 
 export interface OwnerShare {
@@ -71,6 +76,8 @@ export interface PropertyFormData {
   description: string;
   coverImage: string | null; // data URL for preview
   coverImageName: string;
+  /** a newly chosen cover picture, uploaded when the property is saved */
+  coverImageFile?: File | null;
   dateAcquired: string;
 
   // Section 2 — Address

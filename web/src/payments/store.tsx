@@ -1,6 +1,6 @@
 // Payments ledger state. The original single-page App kept all of this in useState; it lives in a provider here so the Payments
 // page and the Dashboard share one ledger. Nothing is persisted (a refresh restores the demo data).
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import {
   ALLOCATIONS,
   AUDITS,
@@ -27,6 +27,7 @@ import type {
 import {
   buildCreditBalances,
   buildInvoiceBalances,
+  COMPANY,
   fmtCAD,
   nextAuditId,
   nextCreditId,
@@ -37,6 +38,9 @@ import {
   todayISO,
 } from "./utils/paymentUtils";
 import { downloadReceiptHtml } from "./components/ReceiptPreview";
+import { isSupabaseConfigured, supabase } from "../lib/supabase";
+import { getActiveOrgId, subscribeActiveOrg } from "../lib/activeOrg";
+import * as repo from "./repo";
 import type { ToastItem } from "./components/ui";
 
 interface PostResult {
@@ -196,13 +200,46 @@ function buildPost(
 export const STATIC = { INVOICES, LEASES, PROPERTIES, TENANTS, UNITS, USERS };
 
 function useLedger() {
-  const [payments, setPayments] = useState<Payment[]>(PAYMENTS);
-  const [allocations, setAllocations] = useState<Allocation[]>(ALLOCATIONS);
-  const [credits, setCredits] = useState<TenantCredit[]>(CREDITS);
-  const [creditApplications, setCreditApplications] = useState<CreditApplication[]>(CREDIT_APPLICATIONS);
-  const [audits, setAudits] = useState<AuditEvent[]>(AUDITS);
-  const [currentUserId, setCurrentUserId] = useState(DEFAULT_USER_ID);
+  const [payments, setPayments] = useState<Payment[]>(isSupabaseConfigured ? [] : PAYMENTS);
+  const [allocations, setAllocations] = useState<Allocation[]>(isSupabaseConfigured ? [] : ALLOCATIONS);
+  const [credits, setCredits] = useState<TenantCredit[]>(isSupabaseConfigured ? [] : CREDITS);
+  const [creditApplications, setCreditApplications] = useState<CreditApplication[]>(isSupabaseConfigured ? [] : CREDIT_APPLICATIONS);
+  const [audits, setAudits] = useState<AuditEvent[]>(isSupabaseConfigured ? [] : AUDITS);
+  const [currentUserId, setCurrentUserId] = useState(isSupabaseConfigured ? "" : DEFAULT_USER_ID);
   const [loading, setLoading] = useState(true);
+  // the lists the page picks from: demo constants, or what was loaded from Supabase for the active organization
+  const [lists, setLists] = useState(isSupabaseConfigured ? { INVOICES: [], LEASES: [], PROPERTIES: [], TENANTS: [], UNITS: [], USERS: [] } as unknown as typeof STATIC : STATIC);
+  const orgId = useSyncExternalStore(subscribeActiveOrg, getActiveOrgId);
+  const posting = useRef(false);
+
+  const reload = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    const org = getActiveOrgId();
+    if (!org) return;
+    try {
+      const data = await repo.loadLedger(org);
+      if (getActiveOrgId() !== org) return; // the user switched organization meanwhile
+      Object.assign(COMPANY, data.company); // receipts carry the organization's own details
+      setLists({ INVOICES: data.invoices, LEASES: data.leases, PROPERTIES: data.properties, TENANTS: data.tenants, UNITS: data.units, USERS: data.users });
+      setPayments(data.payments);
+      setAllocations(data.allocations);
+      setCredits(data.credits);
+      setCreditApplications(data.creditApplications);
+      setAudits(data.audits);
+      const { data: auth } = await supabase.auth.getUser();
+      setCurrentUserId(auth.user?.id ?? "");
+    } catch (error) {
+      setToasts((prev) => [...prev, { id: Date.now() + Math.random(), tone: "danger", title: "Could not load payments", message: error instanceof Error ? error.message : "Please try again." }]);
+    } finally {
+      if (getActiveOrgId() === org) setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    setLoading(true);
+    if (orgId) void reload();
+  }, [orgId, reload]);
   const [formOpen, setFormOpen] = useState(false);
   const [detailsId, setDetailsId] = useState<string | null>(null);
   const [receiptForId, setReceiptForId] = useState<string | null>(null);
@@ -210,13 +247,14 @@ function useLedger() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   useEffect(() => {
+    if (isSupabaseConfigured) return;
     const t = window.setTimeout(() => setLoading(false), 650);
     return () => window.clearTimeout(t);
   }, []);
 
   const balances = useMemo(
-    () => buildInvoiceBalances(INVOICES, payments, allocations, creditApplications),
-    [payments, allocations, creditApplications],
+    () => buildInvoiceBalances(lists.INVOICES, payments, allocations, creditApplications),
+    [lists.INVOICES, payments, allocations, creditApplications],
   );
   const creditBalances = useMemo(
     () => buildCreditBalances(credits, creditApplications, payments),
@@ -234,6 +272,40 @@ function useLedger() {
   const handlePost = useCallback(
     (input: NewPaymentInput) => {
       const result = buildPost(input, { payments, credits, creditApplications, audits }, currentUserId);
+      if (isSupabaseConfigured) {
+        // the database decides the numbers and validates the allocations; this page only works out who gets how much
+        if (posting.current) return; // ignore a second click while the first one is saving
+        posting.current = true;
+        repo
+          .postPayment(
+            {
+              tenantId: input.tenantId, leaseId: input.leaseId, date: input.date, amountCents: input.amountCents, method: input.method,
+              reference: input.reference, notes: input.notes,
+              cash: result.newAllocations.map((a) => ({ invoiceId: a.invoiceId, amount: a.amount })),
+              credits: result.newCreditApps.map((c) => ({ creditId: c.creditId, invoiceId: c.invoiceId, amount: c.amount })),
+              keepCredit: !!result.newCredit,
+            },
+            fmtCAD,
+          )
+          .then(async (posted) => {
+            await reload();
+            setLastAddedId(posted.paymentNumber);
+            setFormOpen(false);
+            pushToast(
+              "success",
+              `Payment ${posted.paymentNumber} posted \u00b7 ${fmtCAD(input.amountCents)}`,
+              `${posted.receiptNumber ? `Receipt ${posted.receiptNumber} issued.` : ""}${posted.creditNumber ? ` ${fmtCAD(result.newCredit?.originalAmount ?? 0)} kept as tenant credit.` : ""}`,
+            );
+          })
+          .catch(async (error) => {
+            pushToast("danger", "Payment not posted", error instanceof Error ? error.message : "Please try again.");
+            await reload(); // a payment may have been saved before a later step failed
+          })
+          .finally(() => {
+            posting.current = false;
+          });
+        return;
+      }
       setPayments((prev) => [result.payment, ...prev]);
       setAllocations((prev) => [...prev, ...result.newAllocations]);
       setCreditApplications((prev) => [...prev, ...result.newCreditApps]);
@@ -247,13 +319,30 @@ function useLedger() {
         `Receipt ${result.payment.receiptId} issued.${result.newCredit ? ` ${fmtCAD(result.newCredit.originalAmount)} kept as tenant credit.` : ""}`,
       );
     },
-    [payments, credits, creditApplications, audits, currentUserId, pushToast],
+    [payments, credits, creditApplications, audits, currentUserId, pushToast, reload],
   );
 
   // ---------------------------------------------------- reversal & refund
 
   const handleReverse = useCallback(
     (paymentId: string, reason: string) => {
+      if (isSupabaseConfigured) {
+        const invalidated = credits.filter((c) => {
+          const b = creditBalances.get(c.id);
+          return c.sourcePaymentId === paymentId && b?.valid && !b.exhausted;
+        });
+        repo
+          .reversePayment(paymentId, reason, [
+            { action: "payment.reversed", entityType: "payment", entityId: paymentId, summary: `${paymentId} reversed \u2014 invoice balances recalculated, excluded from collection totals.`, reason, prev: { status: "posted" }, next: { status: "reversed" } },
+            ...invalidated.map((c) => ({ action: "credit.invalidated" as const, entityType: "credit" as const, entityId: c.id, summary: `${c.id} invalidated \u2014 its source payment ${paymentId} was reversed.`, reason })),
+          ])
+          .then(async () => {
+            await reload();
+            pushToast("danger", `Payment ${paymentId} reversed`, "History preserved \u00b7 balances recalculated.");
+          })
+          .catch((error) => pushToast("danger", "Payment not reversed", error instanceof Error ? error.message : "Please try again."));
+        return;
+      }
       const at = new Date().toISOString();
       setPayments((prev) =>
         prev.map((p) =>
@@ -298,11 +387,23 @@ function useLedger() {
       setAudits((prev) => [...prev, ...newAudits]);
       pushToast("danger", `Payment ${paymentId} reversed`, "History preserved · balances recalculated.");
     },
-    [audits, credits, creditBalances, currentUserId, pushToast],
+    [audits, credits, creditBalances, currentUserId, pushToast, reload],
   );
 
   const handleRefund = useCallback(
     (paymentId: string, amountCents: number, reason: string) => {
+      if (isSupabaseConfigured) {
+        repo
+          .recordRefund(paymentId, amountCents, reason, [
+            { action: "refund.recorded", entityType: "refund", entityId: paymentId, summary: `Refund of ${fmtCAD(amountCents)} recorded against ${paymentId}. Payment stays posted.`, reason, next: { refundAmount: fmtCAD(amountCents) } },
+          ])
+          .then(async () => {
+            await reload();
+            pushToast("info", `Refund recorded on ${paymentId}`, `${fmtCAD(amountCents)} returned \u2014 the payment remains posted.`);
+          })
+          .catch((error) => pushToast("danger", "Refund not recorded", error instanceof Error ? error.message : "Please try again."));
+        return;
+      }
       const at = new Date().toISOString();
       setPayments((prev) =>
         prev.map((p) =>
@@ -325,11 +426,17 @@ function useLedger() {
       ]);
       pushToast("info", `Refund recorded on ${paymentId}`, `${fmtCAD(amountCents)} returned — the payment remains posted.`);
     },
-    [currentUserId, pushToast],
+    [currentUserId, pushToast, reload],
   );
 
   const logReceiptAction = useCallback(
     (payment: Payment, action: "receipt.reprinted" | "receipt.downloaded") => {
+      if (isSupabaseConfigured) {
+        void repo
+          .recordAudits([{ action, entityType: "receipt", entityId: payment.receiptId ?? payment.id, summary: `${payment.receiptId ?? payment.id} ${action === "receipt.reprinted" ? "reprinted" : "downloaded"} \u2014 receipt number reused, no new payment created.` }])
+          .then(reload);
+        return;
+      }
       setAudits((prev) => [
         ...prev,
         {
@@ -343,12 +450,16 @@ function useLedger() {
         },
       ]);
     },
-    [currentUserId],
+    [currentUserId, reload],
   );
 
   // ------------------------------------------------------------- demo reset
 
   const handleReset = useCallback(() => {
+    if (isSupabaseConfigured) {
+      void reload();
+      return;
+    }
     setPayments(PAYMENTS);
     setAllocations(ALLOCATIONS);
     setCredits(CREDITS);
@@ -358,11 +469,12 @@ function useLedger() {
     setDetailsId(null);
     setReceiptForId(null);
     pushToast("info", "Demo data restored", "The ledger was reset to its original fictional state.");
-  }, [pushToast]);
+  }, [pushToast, reload]);
 
   // ------------------------------------------------- acceptance test (spec §6)
 
   const runAcceptanceTest = useCallback(() => {
+    if (isSupabaseConfigured) return; // demo scenario only
     const inv9 = NORA_INVOICE_IDS.september;
     const inv10 = NORA_INVOICE_IDS.october;
     const b9 = balances.get(inv9);
@@ -394,7 +506,7 @@ function useLedger() {
 
     // Verify against the expected outcomes before committing.
     const nextBalances = buildInvoiceBalances(
-      INVOICES,
+      lists.INVOICES,
       [result.payment, ...payments],
       [...allocations, ...result.newAllocations],
       [...creditApplications, ...result.newCreditApps],
@@ -435,10 +547,10 @@ function useLedger() {
   const receiptPayment = receiptForId ? payments.find((p) => p.id === receiptForId) : undefined;
 
   const lookup = (payment?: Payment) => {
-    const tenant = payment ? TENANTS.find((t) => t.id === payment.tenantId) : undefined;
-    const lease = payment ? LEASES.find((l) => l.id === payment.leaseId) : undefined;
-    const unit = lease ? UNITS.find((u) => u.id === lease.unitId) : undefined;
-    const property = unit ? PROPERTIES.find((p) => p.id === unit.propertyId) : undefined;
+    const tenant = payment ? lists.TENANTS.find((t) => t.id === payment.tenantId) : undefined;
+    const lease = payment ? lists.LEASES.find((l) => l.id === payment.leaseId) : undefined;
+    const unit = lease ? lists.UNITS.find((u) => u.id === lease.unitId) : undefined;
+    const property = unit ? lists.PROPERTIES.find((p) => p.id === unit.propertyId) : undefined;
     return { tenant, lease, unit, property };
   };
 
@@ -446,12 +558,12 @@ function useLedger() {
     payment,
     issuedAt: payment.createdAt,
     ...lookup(payment),
-    invoices: INVOICES,
+    invoices: lists.INVOICES,
     balances,
     allocations,
     creditsFromPayment: credits.filter((c) => c.sourcePaymentId === payment.id),
     creditApplications,
-    users: USERS,
+    users: lists.USERS,
   });
 
   const printReceiptFor = (paymentId: string) => {
@@ -469,10 +581,10 @@ function useLedger() {
     pushToast("info", "Receipt downloaded", `${payment.receiptId}.html saved — the same receipt number is reused.`);
   };
 
-  const currentUser = USERS.find((u) => u.id === currentUserId);
+  const currentUser = lists.USERS.find((u) => u.id === currentUserId);
 
   return {
-    ...STATIC,
+    ...lists,
     payments, allocations, credits, creditApplications, audits,
     currentUserId, setCurrentUserId, currentUser, loading,
     formOpen, setFormOpen, detailsId, setDetailsId, receiptForId, setReceiptForId, lastAddedId,

@@ -211,6 +211,8 @@ export interface DocumentVersion {
   uploadedAt: string;
   uploadedBy: string;
   notes?: string;
+  /** the chosen file, uploaded when the document is saved (not kept after a reload) */
+  file?: File;
 }
 
 export interface ApplicationDocument {

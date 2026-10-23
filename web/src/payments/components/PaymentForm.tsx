@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../../lib/supabase";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   AllocationStrategy,
@@ -401,7 +402,7 @@ export function PaymentForm({
       <ModalHeader
         id="pf-title"
         title="Record a payment"
-        subtitle="Fictional demo transaction — posted to the in-memory ledger only. Card numbers and CVVs are never entered here; external terminals process card data separately."
+        subtitle={isSupabaseConfigured ? "Card numbers and CVVs are never entered here; external terminals process card data separately." : "Fictional demo transaction — posted to the in-memory ledger only. Card numbers and CVVs are never entered here; external terminals process card data separately."}
         onClose={onCancel}
       >
         <ol className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium">
@@ -445,7 +446,7 @@ export function PaymentForm({
               error={attemptedStep >= 0 ? validation.errors.lease : undefined}
               hint={
                 tenantId && tenantLeases.length === 0
-                  ? "This tenant has no leases in the demo data."
+                  ? "This tenant has no leases yet."
                   : tenantLeases.length > 1
                     ? "This tenant has multiple leases — choose one."
                     : undefined

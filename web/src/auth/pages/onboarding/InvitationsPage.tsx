@@ -31,7 +31,7 @@ import { useToast } from "../../contexts/ToastContext";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import { daysUntil, formatDate, orgGradient, orgMonogram, roleDescriptions } from "../../lib/format";
 import { cn } from "../../utils/cn";
-import type { InvitationWithContext } from "../../services/mockInvitationService";
+import type { InvitationWithContext } from "../../services";
 
 type FilterKey = "all" | "pending" | "archived";
 
@@ -375,7 +375,7 @@ export default function InvitationsPage() {
                 {workspaces.length ? "Choose an existing workspace" : "Return to sign in"}
               </span>
               <span className="block text-[10.5px] text-u-muted">
-                {workspaces.length ? "Open a workspace you belong to" : "Use a different demo account"}
+                {workspaces.length ? "Open a workspace you belong to" : "Use a different account"}
               </span>
             </span>
           </button>

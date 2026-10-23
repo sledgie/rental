@@ -1,6 +1,10 @@
 // In-memory stand-in for the original /api routes and Postgres service. Same call shapes as the original client, so the
 // components are unchanged; everything lives for the browser session (module scope, so it survives page navigation).
 import { getProvider } from "./providers";
+import { isSupabaseConfigured } from "../../lib/supabase";
+import { getActiveOrgId, subscribeActiveOrg } from "../../lib/activeOrg";
+import * as db from "./db";
+import { DEFAULT_SENDER, PROPERTIES } from "./catalog";
 import { previewTemplate, sanitizeMessageHtml } from "./renderer";
 import { analyzeSms, getTemplateVariables, relatedEntityForEvent, validateMergeFields, validateTemplateInput } from "./engine";
 import { evaluateAutomationRule } from "./automation-engine";
@@ -15,7 +19,10 @@ export class ApiError extends Error {
 }
 
 type Store = { templates: MessageTemplate[]; rules: AutomationRule[]; logs: CommunicationLog[]; settings: NotificationConfiguration; seeded: boolean; counter: number; listeners: Set<() => void>; version: number };
-const store: Store = { templates: [], rules: [], logs: [], settings: DEFAULT_NOTIFICATION_CONFIGURATION, seeded: false, counter: 0, listeners: new Set(), version: 0 };
+// with Supabase the library comes from the organization and nothing is seeded
+const store: Store = { templates: [], rules: [], logs: [], settings: DEFAULT_NOTIFICATION_CONFIGURATION, seeded: isSupabaseConfigured, counter: 0, listeners: new Set(), version: 0 };
+let loadState = { ready: !isSupabaseConfigured, error: null as string | null };
+export const templatesStatus = () => loadState;
 
 const nextId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(++store.counter).toString(36)}`;
 const now = () => new Date().toISOString();
@@ -35,6 +42,43 @@ function insertTemplate(input: TemplateInput, offsetMs = 0): MessageTemplate {
   store.templates.push(template);
   return template;
 }
+
+/** Reads the organization's templates, properties and company details (Supabase mode). */
+export async function reloadTemplates() {
+  if (!isSupabaseConfigured) return;
+  const org = getActiveOrgId();
+  if (!org) { store.templates = []; store.rules = []; loadState = { ready: true, error: null }; emit(); return; }
+  try {
+    const [reference, templates] = await Promise.all([db.loadReference(org), db.loadTemplates(org)]);
+    const rules = await db.loadRules(org); // after the templates: it uses the same name lookup
+    if (getActiveOrgId() !== org) return;
+    // the shared lists the editor offers are replaced in place
+    PROPERTIES.splice(0, PROPERTIES.length, ...reference.properties);
+    Object.assign(DEFAULT_SENDER, { fromName: reference.company.name, fromEmail: reference.company.email, replyTo: reference.company.email });
+    Object.assign(store.settings, { companyName: reference.company.name, defaultSenderName: reference.company.name, defaultSenderEmail: reference.company.email, replyTo: reference.company.email });
+    store.templates = templates;
+    store.rules = rules;
+    loadState = { ready: true, error: null };
+  } catch (error) {
+    loadState = { ready: true, error: error instanceof Error ? error.message : "Unable to load templates." };
+  }
+  emit();
+}
+if (isSupabaseConfigured) {
+  subscribeActiveOrg(() => { loadState = { ready: false, error: null }; void reloadTemplates(); });
+  void reloadTemplates();
+}
+
+/** Turns a database problem into the error shape the editor already understands. */
+function asApiError(error: unknown): never {
+  if (error instanceof db.FieldProblem) throw new ApiError(error.message, 422, { fields: error.fields });
+  throw new ApiError(error instanceof Error ? error.message : "The change could not be saved.", 500, {});
+}
+const orgOrThrow = () => {
+  const org = getActiveOrgId();
+  if (!org) throw new ApiError("Select an organization first.", 400, {});
+  return org;
+};
 
 /** Seeds the example library and inactive automation rules the first time the page is opened. */
 export function ensureSeeded() {
@@ -70,6 +114,14 @@ export const communicationApi = {
     const input = { ...template, availableVariables: getTemplateVariables(template) };
     const errors = validateTemplateInput(input);
     if (Object.keys(errors).length) failValidation(errors);
+    if (isSupabaseConfigured) {
+      try {
+        const [created] = await db.insertTemplates(orgOrThrow(), [prepared(input)]);
+        store.templates.push(created);
+        emit();
+        return { template: created };
+      } catch (error) { return asApiError(error); }
+    }
     const created = insertTemplate(input);
     emit();
     return { template: created };
@@ -81,6 +133,14 @@ export const communicationApi = {
     const errors = validateTemplateInput(input);
     if (Object.keys(errors).length) failValidation(errors);
     const current = store.templates[index];
+    if (isSupabaseConfigured) {
+      try {
+        const saved = await db.updateTemplate(orgOrThrow(), id, prepared(input));
+        store.templates[index] = { ...saved, createdBy: current.createdBy };
+        emit();
+        return { template: store.templates[index] };
+      } catch (error) { return asApiError(error); }
+    }
     store.templates[index] = { ...current, ...prepared(input), version: current.version + 1, updatedAt: now(), updatedBy: ACTOR };
     emit();
     return { template: store.templates[index] };
@@ -89,12 +149,21 @@ export const communicationApi = {
     const original = store.templates.find((item) => item.id === id);
     if (!original) throw notFound();
     const { id: _id, version: _v, createdAt: _c, updatedAt: _u, createdBy: _cb, updatedBy: _ub, automationIds: _ai, automationNames: _an, ...input } = original;
+    if (isSupabaseConfigured) {
+      try {
+        const [copy] = await db.insertTemplates(orgOrThrow(), [{ ...input, name: `Copy of ${original.name}`, status: "draft" }]);
+        store.templates.push(copy);
+        emit();
+        return { template: copy };
+      } catch (error) { return asApiError(error); }
+    }
     const copy = insertTemplate({ ...input, name: `Copy of ${original.name}`, status: "draft" });
     emit();
     return { template: copy };
   },
   async deleteTemplate(id: string) {
     if (!store.templates.some((item) => item.id === id)) throw notFound();
+    if (isSupabaseConfigured) { try { await db.removeTemplate(id); } catch (error) { return asApiError(error); } }
     store.templates = store.templates.filter((item) => item.id !== id);
     // Rules stay but lose their template selection, as the original warns.
     store.rules = store.rules.map((rule) => (rule.templateId === id ? { ...rule, templateId: null } : rule));
@@ -108,6 +177,7 @@ export const communicationApi = {
       const errors = validateTemplateInput(store.templates[index]);
       if (Object.keys(errors).length) throw new ApiError("Complete template validation before activation.", 422, { fields: errors });
     }
+    if (isSupabaseConfigured) { try { await db.setStatus(id, active ? "active" : "inactive"); } catch (error) { return asApiError(error); } }
     store.templates[index] = { ...store.templates[index], status: active ? "active" : "inactive", updatedAt: now(), updatedBy: ACTOR };
     emit();
     return { template: store.templates[index] };
@@ -119,7 +189,9 @@ export const communicationApi = {
     ensureSeeded();
     const names = new Set(store.templates.map((item) => item.name));
     const missing = buildSeedTemplates().filter((item) => !names.has(item.name));
-    missing.forEach((input) => insertTemplate(input));
+    if (isSupabaseConfigured) {
+      try { store.templates.push(...(await db.insertTemplates(orgOrThrow(), missing.map(prepared)))); } catch (error) { return asApiError(error); }
+    } else missing.forEach((input) => insertTemplate(input));
     if (missing.length) emit();
     return { added: missing.length, templates: listTemplates(), message: missing.length ? `Added ${missing.length} example templates.` : "All example templates are already in your library." };
   },
@@ -208,6 +280,14 @@ export const ruleApi = {
     const errors = ruleFieldErrors(input);
     if (Object.keys(errors).length) throw new ApiError("Complete the required rule settings.", 422, { fields: errors });
     if (input.status === "active") { const message = activationError(input); if (message) throw new ApiError(message, 422, {}); }
+    if (isSupabaseConfigured) {
+      try {
+        const rule = await db.insertRule(orgOrThrow(), { ...input, executionMode: "configured" });
+        store.rules.push(rule);
+        emit();
+        return { rule };
+      } catch (error) { return asApiError(error); }
+    }
     const rule: AutomationRule = { ...input, executionMode: "configured", id: nextId("rule"), createdAt: now(), updatedAt: now(), createdBy: ACTOR, updatedBy: ACTOR };
     store.rules.push(rule);
     emit();
@@ -217,6 +297,14 @@ export const ruleApi = {
     const index = store.rules.findIndex((item) => item.id === id);
     if (index < 0) throw ruleNotFound();
     if (input.status === "active") { const message = activationError(input); if (message) throw new ApiError(message, 422, {}); }
+    if (isSupabaseConfigured) {
+      try {
+        const saved = await db.updateRule(orgOrThrow(), id, { ...input, executionMode: "configured" });
+        store.rules[index] = { ...saved, createdBy: store.rules[index].createdBy };
+        emit();
+        return { rule: store.rules[index] };
+      } catch (error) { return asApiError(error); }
+    }
     store.rules[index] = { ...store.rules[index], ...input, executionMode: "configured", updatedAt: now(), updatedBy: ACTOR };
     emit();
     return { rule: store.rules[index] };
@@ -225,6 +313,7 @@ export const ruleApi = {
     const index = store.rules.findIndex((item) => item.id === id);
     if (index < 0) throw ruleNotFound();
     if (active) { const message = activationError(store.rules[index]); if (message) throw new ApiError(message, 422, {}); }
+    if (isSupabaseConfigured) { try { await db.setRuleStatus(id, active ? "active" : "inactive"); } catch (error) { return asApiError(error); } }
     store.rules[index] = { ...store.rules[index], status: active ? "active" : "inactive", updatedAt: now(), updatedBy: ACTOR };
     emit();
     return { rule: store.rules[index], notice: active ? "Rule activated for event selection. No background worker or delivery provider is connected, so it will not send messages yet." : undefined };
@@ -233,6 +322,14 @@ export const ruleApi = {
     const original = store.rules.find((item) => item.id === id);
     if (!original) throw ruleNotFound();
     const { id: _id, createdAt: _c, updatedAt: _u, createdBy: _cb, updatedBy: _ub, ...input } = original;
+    if (isSupabaseConfigured) {
+      try {
+        const copy = await db.insertRule(orgOrThrow(), { ...input, name: `Copy of ${original.name}`, status: "inactive", executionMode: "configured" });
+        store.rules.push(copy);
+        emit();
+        return { rule: copy };
+      } catch (error) { return asApiError(error); }
+    }
     const rule: AutomationRule = { ...input, name: `Copy of ${original.name}`, status: "inactive", executionMode: "configured", id: nextId("rule"), createdAt: now(), updatedAt: now(), createdBy: ACTOR, updatedBy: ACTOR };
     store.rules.push(rule);
     emit();
@@ -240,6 +337,7 @@ export const ruleApi = {
   },
   async deleteAutomationRule(id: string) {
     if (!store.rules.some((item) => item.id === id)) throw ruleNotFound();
+    if (isSupabaseConfigured) { try { await db.removeRule(id); } catch (error) { return asApiError(error); } }
     store.rules = store.rules.filter((item) => item.id !== id);
     emit();
     return { ok: true };

@@ -112,7 +112,7 @@ export function UnitProfileDrawer({
           <div className="profile-identity">
             <h2>Unit {unit.unitNumber}</h2>
             <div>
-              <span>{unit.id}</span>
+              <span>{unit.code ?? unit.id}</span>
               <span className={`status-badge ${archivedOr(unit)}`}><span className="status-dot" />{unit.archived ? "Archived" : unit.unitStatus}</span>
               {ctx.derivedStatus !== "None" && <span className="status-badge status-draft"><span className="status-dot" />Lease {ctx.derivedStatus}</span>}
             </div>

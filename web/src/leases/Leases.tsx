@@ -4,7 +4,10 @@ import Icon from "./components/Icon";
 import { createPortal } from "react-dom";
 import { Button, DataField, EmptyState, IconButton, SectionTitle, TextLink } from "../tenants/components/ui";
 import { FilterCheckbox, FilterField, FilterPopover, SearchField, SortControl } from "../shell/directory";
-import { useLeaseData } from "./store";
+import { onLeaseSyncError, reloadLeaseData, useLeaseData, useLeaseDataStatus } from "./store";
+import { isSupabaseConfigured } from "../lib/supabase";
+import { documentUrl } from "../lib/documents";
+import { useAuth } from "../auth/contexts/AuthContext";
 import { isLeaseExpiringSoon } from "./summary";
 import LeaseDetails, { type DetailTab, type LeaseDetailActions } from "./components/LeaseDetails";
 import LeaseWizard, { type LeaseWizardPayload } from "./components/LeaseWizard";
@@ -203,6 +206,10 @@ function ExpandedLease({ lease, data, onView }: { lease: Lease; data: LeaseData;
 
 export default function Leases({ params }: { params?: Record<string, string> } = {}) {
   const [data, setData] = useLeaseData();
+  const dataStatus = useLeaseDataStatus();
+  const { user } = useAuth();
+  // activity and uploads are attributed to the signed-in user (the demo keeps its sample name)
+  const actor = isSupabaseConfigured && user ? user.fullName : "Maya Chen";
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All statuses");
   const [propertyFilter, setPropertyFilter] = useState("All properties");
@@ -241,8 +248,15 @@ export default function Leases({ params }: { params?: Record<string, string> } =
     window.setTimeout(() => setToast(null), 4200);
   };
 
+  // a change that could not be saved to the database is reported here (the page then shows what the database really holds)
+  useEffect(() => onLeaseSyncError((message) => notify(message, "error")), []);
+  // units, tenants or properties may have changed on other pages since the last load
+  useEffect(() => {
+    void reloadLeaseData(true);
+  }, []);
+
   const addActivity = (previous: LeaseData, leaseId: string, action: string, details: string): LeaseActivity[] => [
-    { id: makeId("activity"), leaseId, date: dateOffset(0), user: "Maya Chen", action, details },
+    { id: makeId("activity"), leaseId, date: dateOffset(0), user: actor, action, details },
     ...previous.activities,
   ];
 
@@ -384,7 +398,7 @@ export default function Leases({ params }: { params?: Record<string, string> } =
       noticePeriodDays: 60,
       createdAt: today,
       updatedAt: today,
-      createdBy: "Maya Chen",
+      createdBy: actor,
       notes: payload.notes,
       occupancyStatus: (asDraft || payload.status === "Pending Review" || payload.status === "Pending Signature") ? "Not yet occupied" : "Occupied",
       financialTerms: {
@@ -423,7 +437,7 @@ export default function Leases({ params }: { params?: Record<string, string> } =
       return {
         id, leaseId, title: item.title, category: item.category, originalFileName: item.file.name,
         fileType: item.file.type || "application/octet-stream", fileSize: item.file.size, uploadedAt: today,
-        uploadedBy: "Maya Chen", documentDate: item.documentDate, versionNumber: 1, versionGroupId: makeId("document-version"),
+        uploadedBy: actor, documentDate: item.documentDate, versionNumber: 1, versionGroupId: makeId("document-version"),
         signatureStatus: "Not required", status: "Draft", storageReference: `simulated://leases/${leaseNumber}/${id}/${item.file.name}`,
         notes: "Simulated in-browser file reference; not uploaded to a server.", uploadProgress: 100, file: item.file,
       };
@@ -436,8 +450,8 @@ export default function Leases({ params }: { params?: Record<string, string> } =
       parties: [...newParties, ...current.parties],
       documents: [...newDocuments, ...current.documents],
       activities: [
-        { id: makeId("activity"), leaseId, date: today, user: "Maya Chen", action: asDraft ? "Lease draft created" : "Lease created", details: `${leaseNumber} ${asDraft ? "saved as a draft" : "created in client-side prototype state"}.` },
-        ...newDocuments.map((document) => ({ id: makeId("activity"), leaseId, date: today, user: "Maya Chen", action: "Document uploaded", details: `${document.title} staged in simulated storage.` })),
+        { id: makeId("activity"), leaseId, date: today, user: actor, action: asDraft ? "Lease draft created" : "Lease created", details: `${leaseNumber} ${asDraft ? "saved as a draft" : "created in client-side prototype state"}.` },
+        ...newDocuments.map((document) => ({ id: makeId("activity"), leaseId, date: today, user: actor, action: "Document uploaded", details: `${document.title} staged in simulated storage.` })),
         ...current.activities,
       ],
     }));
@@ -445,7 +459,14 @@ export default function Leases({ params }: { params?: Record<string, string> } =
     setCurrentPage(1);
     setExpandedIds((current) => new Set(current).add(leaseId));
     setTabsByLease((current) => ({ ...current, [leaseId]: "Overview" }));
-    notify(asDraft ? `${leaseNumber} saved as a client-side draft.` : `${leaseNumber} created in this prototype session.`);
+    if (isSupabaseConfigured) {
+      notify(
+        payload.files.length
+          ? `${asDraft ? "Draft saved" : "Lease created"}. The ${payload.files.length} attached file${payload.files.length === 1 ? " was" : "s were"} not stored: file storage is not connected yet.`
+          : asDraft ? "Draft saved." : "Lease created.",
+        payload.files.length ? "error" : "success",
+      );
+    } else notify(asDraft ? `${leaseNumber} saved as a draft.` : `${leaseNumber} created.`);
   };
 
   const saveLeaseEdits = (leaseId: string, values: LeaseEditValues) => {
@@ -470,7 +491,7 @@ export default function Leases({ params }: { params?: Record<string, string> } =
       noticePeriodDays: values.noticePeriodDays || undefined, notes: values.notes, occupancyStatus: values.occupancyStatus,
     }), statusChanged ? "Status changed" : "Lease updated", statusChanged ? `${lease.status} to ${values.status}.` : "Lease overview fields were updated.");
     setEditLeaseId(null);
-    notify("Lease details updated in this browser session.");
+    notify("Lease details updated.");
   };
 
   const saveFinancialTerms = (leaseId: string, terms: Lease["financialTerms"]) => {
@@ -622,10 +643,10 @@ export default function Leases({ params }: { params?: Record<string, string> } =
       return {
         id, leaseId, title: file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " "), category: "Other",
         originalFileName: file.name, fileType: file.type || "application/octet-stream", fileSize: file.size,
-        uploadedAt: dateOffset(0), uploadedBy: "Maya Chen", documentDate: dateOffset(0), versionNumber: 1,
+        uploadedAt: dateOffset(0), uploadedBy: actor, documentDate: dateOffset(0), versionNumber: 1,
         versionGroupId: makeId("document-version"), signatureStatus: "Not required", status: "Draft",
         storageReference: `simulated://leases/${lease.leaseNumber}/${id}/${file.name}`,
-        notes: "Simulated in-browser file reference; not uploaded to a server.", uploadProgress: 0, file,
+        notes: "Simulated in-browser file reference; not uploaded to a server.", uploadProgress: isSupabaseConfigured ? 100 : 0, file,
       };
     });
     setData((current) => ({
@@ -634,7 +655,7 @@ export default function Leases({ params }: { params?: Record<string, string> } =
       leases: touchLease(current, leaseId),
       activities: uploads.reduce((entries, document) => addActivity({ ...current, activities: entries }, leaseId, "Document uploaded", `${document.title} staged in simulated storage.`), current.activities),
     }));
-    uploads.forEach((document) => {
+    (isSupabaseConfigured ? [] : uploads).forEach((document) => {
       let progress = 0;
       const timer = window.setInterval(() => {
         progress = Math.min(100, progress + 25);
@@ -645,7 +666,7 @@ export default function Leases({ params }: { params?: Record<string, string> } =
         if (progress >= 100) window.clearInterval(timer);
       }, 180);
     });
-    notify(`${uploads.length} file${uploads.length === 1 ? "" : "s"} staged in simulated storage. Nothing was uploaded to a server.`, "info");
+    notify(`${uploads.length} file${uploads.length === 1 ? "" : "s"} ${isSupabaseConfigured ? "uploading." : "staged in simulated storage. Nothing was uploaded to a server."}`, "info");
   };
 
   const editDocument = (documentId: string, values: DocumentMetadataValues) => {
@@ -658,7 +679,7 @@ export default function Leases({ params }: { params?: Record<string, string> } =
       activities: addActivity(current, document.leaseId, "Document metadata updated", `${values.title} metadata was updated.`),
     }));
     setEditDocumentId(null);
-    notify("Document metadata updated in this browser session.");
+    notify("Document details updated.");
   };
 
   const recordSignature = (documentId: string, signedDate: string, signedBy: string) => {
@@ -697,14 +718,14 @@ export default function Leases({ params }: { params?: Record<string, string> } =
       return;
     }
     setConfirmState({
-      title: "Delete document from this prototype?",
-      message: `${document.title} will be removed from the current browser session. This does not delete a server file because no file-storage service is connected.`,
+      title: isSupabaseConfigured ? "Remove this document?" : "Delete document from this prototype?",
+      message: isSupabaseConfigured ? `${document.title} will be removed from the lease. The stored file is kept for the retention period.` : `${document.title} will be removed from the current browser session. This does not delete a server file because no file-storage service is connected.`,
       confirmLabel: "Delete document",
       destructive: true,
       onConfirm: () => {
         setData((current) => ({ ...current, documents: current.documents.filter((item) => item.id !== documentId), leases: touchLease(current, document.leaseId), activities: addActivity(current, document.leaseId, "Document deleted", `${document.title} removed from prototype state.`) }));
         setConfirmState(null);
-        notify("Document removed from this browser session.");
+        notify(isSupabaseConfigured ? "Document removed." : "Document removed from this browser session.");
       },
     });
   };
@@ -728,7 +749,7 @@ export default function Leases({ params }: { params?: Record<string, string> } =
       fileType: file.type || "application/octet-stream",
       fileSize: file.size,
       uploadedAt: dateOffset(0),
-      uploadedBy: "Maya Chen",
+      uploadedBy: actor,
       documentDate: old.documentDate,
       versionNumber: old.versionNumber + 1,
       previousVersionId: old.id,
@@ -763,6 +784,11 @@ export default function Leases({ params }: { params?: Record<string, string> } =
       link.click();
       URL.revokeObjectURL(url);
       notify("Download started from this browser session.", "info");
+      return;
+    }
+    if (!document.storageReference.startsWith("simulated://") && document.storageReference.includes("/")) {
+      const [bucket, ...rest] = document.storageReference.split("/");
+      documentUrl(bucket, rest.join("/"), document.originalFileName).then((signed) => { window.location.assign(signed); }).catch((error) => notify(error instanceof Error ? error.message : "The file could not be downloaded.", "error"));
       return;
     }
     const content = `Simulated document record\nTitle: ${document.title}\nOriginal file name: ${document.originalFileName}\nStorage reference: ${document.storageReference}\nNo document binary is stored in this prototype.`;
@@ -837,6 +863,23 @@ export default function Leases({ params }: { params?: Record<string, string> } =
     setCurrentPage(1);
   };
   const safePage = Math.min(currentPage, totalPages);
+
+   if (isSupabaseConfigured && (!dataStatus.ready || dataStatus.error)) {
+    return (
+      <div className="tn ls">
+        <div className="app-shell">
+          <div className="main-shell">
+            <main className="main-content">
+              <EmptyState
+                title={dataStatus.error ? "We couldn't load your leases" : "Loading leases…"}
+                description={dataStatus.error ?? "Fetching your lease register."}
+              />
+            </main>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return <div className="tn ls">
     <div className="app-shell">

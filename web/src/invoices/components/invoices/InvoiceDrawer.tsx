@@ -33,7 +33,6 @@ import { InvoiceLineItems } from "./InvoiceLineItems";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
 import { InvoiceSummary } from "./InvoiceSummary";
 import { PaymentHistory } from "./PaymentHistory";
-import { properties } from "@inv/data/mockInvoices";
 import { formatCAD, formatDate } from "@inv/lib/format";
 import { useInvoices } from "@inv/store/InvoiceStore";
 import { invoiceBalance, invoicePaid, invoiceTotal, statusLabels, typeLabels } from "@inv/types/invoice";
@@ -57,7 +56,8 @@ const initials = (name: string) => name.split(/\s+/).filter((w) => /^[A-Za-z0-9]
 export function InvoiceDrawer({ id }: { id: string }) {
   const navigate = useNavigate();
   const toast = useToast();
-  const { getInvoice, updateInvoice, recordPayment, voidInvoice, approveInvoice, addNote, invoices } = useInvoices();
+  const { getInvoice, updateInvoice, recordPayment, voidInvoice, approveInvoice, addNote, invoices, refs } = useInvoices();
+  const properties = refs.properties;
   const invoice = getInvoice(id);
   const [tab, setTab] = useState<Tab>("overview");
   const [editOpen, setEditOpen] = useState(false);
@@ -87,6 +87,9 @@ export function InvoiceDrawer({ id }: { id: string }) {
   const submitEdit = (values: InvoiceFormValues) => {
     if (!invoice) return;
     updateInvoice(invoice.id, {
+      tenantId: values.tenantId,
+      unitId: values.unitId,
+      leaseId: values.leaseId,
       propertyName: values.propertyName,
       propertyId: values.propertyId,
       unit: values.unit,

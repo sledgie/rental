@@ -298,7 +298,7 @@ export default function Dashboard({ notify }: { notify?: (message: string) => vo
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `rentnest-portfolio_${range.start}_${range.end}.csv`;
+    link.download = `tryloft-portfolio_${range.start}_${range.end}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1316,7 +1316,7 @@ export default function Dashboard({ notify }: { notify?: (message: string) => vo
 
             <footer className="mt-6 flex flex-col items-center justify-between gap-2 border-t border-line pt-4 text-[10.5px] text-muted sm:flex-row">
               <p>
-                © 2026 RentNest · Sample data generated for Jun 30, 2026 · Amounts in USD
+                © 2026 L.O.F.T. · Sample data generated for Jun 30, 2026 · Amounts in USD
               </p>
               <div className="flex items-center gap-3">
                 <button

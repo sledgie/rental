@@ -153,8 +153,11 @@ export interface Attachment {
   size: string;
   uploadedBy: string;
   uploadedAt: string;
-  url?: string; // session-only object URL for mock uploads
+  url?: string; // session-only object URL for files that are not stored
   mock?: boolean;
+  /** where the file is stored (Supabase Storage); the link to open it is created on demand */
+  bucket?: string;
+  path?: string;
 }
 
 export interface Estimate {

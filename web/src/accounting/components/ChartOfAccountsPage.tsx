@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../../lib/supabase";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChart } from "../store/chart-store";
 import { MAX_DEPTH, TYPE_META } from "../coa/taxonomy";
@@ -103,7 +104,7 @@ function IntegrityStrip() {
 /* --------------------------------------------------------------------- page */
 
 export function ChartOfAccountsPage() {
-  const { state, api, dispatch } = useChart();
+  const { state, api, dispatch, status } = useChart();
   const [formReq, setFormReq] = useState<FormRequest | null>(null);
   const [moveReq, setMoveReq] = useState<MoveRequest | null>(null);
   const [confirmReq, setConfirmReq] = useState<ConfirmRequest | null>(null);
@@ -339,6 +340,23 @@ export function ChartOfAccountsPage() {
       onConfirm: api.resetDemo,
     });
 
+  if (isSupabaseConfigured && (!status.ready || status.error)) {
+    return (
+      <div className="tn">
+        <div className="app-shell">
+          <div className="main-shell">
+            <main className="main-content">
+              <div className="empty-state">
+                <h3>{status.error ? "We couldn't load your chart of accounts" : "Loading chart of accounts…"}</h3>
+                <p>{status.error ?? "Fetching your accounts."}</p>
+              </div>
+            </main>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const topLevelCount = state.accounts.filter((a) => a.parentId === null).length;
   const groupCount = state.accounts.filter((a) => a.role === "Group").length;
 
@@ -359,10 +377,12 @@ export function ChartOfAccountsPage() {
                 </p>
               </div>
               <div className="page-heading-actions">
-                <TnButton onClick={requestReset} title="Discard in-session changes and reload the sample chart">
-                  <RotateCcw size={15} />
-                  Reset demo data
-                </TnButton>
+                {!isSupabaseConfigured && (
+                  <TnButton onClick={requestReset} title="Discard in-session changes and reload the sample chart">
+                    <RotateCcw size={15} />
+                    Reset demo data
+                  </TnButton>
+                )}
                 <TnButton variant="primary" onClick={() => setFormReq({ mode: "create", position: { kind: "root" } })}>
                   <Plus size={17} />
                   New account

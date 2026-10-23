@@ -5,9 +5,13 @@ import {
   useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { seedInvoices } from "@inv/data/mockInvoices";
+import { properties as demoProperties, seedInvoices, tenants as demoTenants } from "@inv/data/mockInvoices";
+import { isSupabaseConfigured } from "../../lib/supabase";
+import { getActiveOrgId, subscribeActiveOrg } from "../../lib/activeOrg";
+import * as repo from "../repo";
 import {
   invoiceBalance,
   invoicePaid,
@@ -22,6 +26,7 @@ import {
 const STORAGE_KEY = "prop-ledger.invoices.v1";
 
 const load = (): Invoice[] => {
+  if (isSupabaseConfigured) return []; // the database is the source of truth
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return seedInvoices;
@@ -49,10 +54,31 @@ export const deriveStatus = (
   return "partially_paid";
 };
 
+const demoRefs: repo.Refs = {
+  tenants: demoTenants.map((name) => ({ id: name, name, email: "", phone: "" })),
+  properties: demoProperties,
+  units: [],
+  leases: [],
+};
+
+// A save that failed is reported through this channel (the provider sits above the toast container).
+const errorListeners = new Set<(message: string) => void>();
+export const onInvoiceSyncError = (cb: (message: string) => void) => {
+  errorListeners.add(cb);
+  return () => errorListeners.delete(cb);
+};
+
 interface InvoiceStoreValue {
   invoices: Invoice[];
+  /** people, properties, units and leases the forms pick from */
+  refs: repo.Refs;
+  /** false while the first load from Supabase is running */
+  ready: boolean;
+  loadError: string | null;
+  reload: () => Promise<void>;
   getInvoice: (id: string) => Invoice | undefined;
-  createInvoice: (draft: Omit<Invoice, "activity" | "notes" | "attachments">) => Invoice;
+  /** With Supabase this resolves once the database accepted the invoice, with the invoice as numbered by the database. */
+  createInvoice: (draft: Omit<Invoice, "activity" | "notes" | "attachments">) => Invoice | Promise<Invoice>;
   updateInvoice: (id: string, patch: Partial<Invoice>) => Invoice | undefined;
   recordPayment: (
     id: string,
@@ -66,13 +92,71 @@ interface InvoiceStoreValue {
 
 const InvoiceStoreContext = createContext<InvoiceStoreValue | null>(null);
 
+/** Fields of an invoice patch that the database stores. */
+const toInput = (patch: Partial<Invoice>): Partial<repo.InvoiceInput> => {
+  const input: Partial<repo.InvoiceInput> = {};
+  if ("tenantId" in patch) input.tenantId = patch.tenantId;
+  if ("leaseId" in patch) input.leaseId = patch.leaseId;
+  if ("propertyId" in patch) input.propertyId = patch.propertyId;
+  if ("unitId" in patch) input.unitId = patch.unitId;
+  if ("type" in patch) input.type = patch.type;
+  if ("issueDate" in patch) input.issueDate = patch.issueDate;
+  if ("dueDate" in patch) input.dueDate = patch.dueDate;
+  if ("billingPeriodStart" in patch) input.billingPeriodStart = patch.billingPeriodStart;
+  if ("billingPeriodEnd" in patch) input.billingPeriodEnd = patch.billingPeriodEnd;
+  if ("discount" in patch) input.discount = patch.discount;
+  if ("memo" in patch) input.memo = patch.memo;
+  if ("lineItems" in patch) input.lineItems = patch.lineItems;
+  return input;
+};
+
 const nid = (prefix: string) =>
   `${prefix}-${Math.random().toString(36).slice(2, 8)}`;
 
 export function InvoiceStoreProvider({ children }: { children: ReactNode }) {
   const [invoices, setInvoices] = useState<Invoice[]>(load);
+  const [refs, setRefs] = useState<repo.Refs>(isSupabaseConfigured ? repo.emptyRefs() : demoRefs);
+  const [ready, setReady] = useState(!isSupabaseConfigured);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const orgId = useSyncExternalStore(subscribeActiveOrg, getActiveOrgId);
+
+  const reload = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    const org = getActiveOrgId();
+    if (!org) return;
+    try {
+      const loaded = await repo.loadAll(org);
+      if (getActiveOrgId() !== org) return; // the user switched organization meanwhile
+      setInvoices(loaded.invoices);
+      setRefs(loaded.refs);
+      setLoadError(null);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Unable to load invoices.");
+    } finally {
+      if (getActiveOrgId() === org) setReady(true);
+    }
+  }, []);
 
   useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    setReady(false);
+    setInvoices([]);
+    if (orgId) void reload();
+  }, [orgId, reload]);
+
+  /** Runs a database write for a change already shown on screen; on failure it says why and shows what the database holds. */
+  const sync = useCallback(
+    (work: () => Promise<unknown>) => {
+      if (!isSupabaseConfigured) return;
+      work()
+        .catch((error) => errorListeners.forEach((cb) => cb(error instanceof Error ? error.message : "The change could not be saved.")))
+        .finally(() => void reload());
+    },
+    [reload]
+  );
+
+  useEffect(() => {
+    if (isSupabaseConfigured) return; // invoices live in the database
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(invoices));
     } catch {
@@ -97,6 +181,23 @@ export function InvoiceStoreProvider({ children }: { children: ReactNode }) {
   ];
 
   const createInvoice: InvoiceStoreValue["createInvoice"] = useCallback((draft) => {
+    if (isSupabaseConfigured) {
+      return repo
+        .createInvoice({
+          tenantId: draft.tenantId, leaseId: draft.leaseId, propertyId: draft.propertyId, unitId: draft.unitId, type: draft.type, status: draft.status,
+          issueDate: draft.issueDate, dueDate: draft.dueDate, billingPeriodStart: draft.billingPeriodStart, billingPeriodEnd: draft.billingPeriodEnd,
+          discount: draft.discount, memo: draft.memo, lineItems: draft.lineItems,
+        })
+        .then(async (number) => {
+          const org = getActiveOrgId();
+          const loaded = org ? await repo.loadAll(org) : null;
+          if (loaded) {
+            setInvoices(loaded.invoices);
+            setRefs(loaded.refs);
+          }
+          return loaded?.invoices.find((i) => i.id === number) ?? ({ ...draft, id: number, activity: [], notes: [], attachments: [] } as Invoice);
+        });
+    }
     const next: Invoice = {
       ...draft,
       attachments: [
@@ -126,6 +227,7 @@ export function InvoiceStoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateInvoice: InvoiceStoreValue["updateInvoice"] = useCallback((id, patch) => {
+    sync(() => repo.updateInvoice(id, toInput(patch)));
     let updated: Invoice | undefined;
     setInvoices((prev) =>
       prev.map((inv) => {
@@ -143,6 +245,7 @@ export function InvoiceStoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const recordPayment: InvoiceStoreValue["recordPayment"] = useCallback((id, input) => {
+    sync(() => repo.recordPayment(id, input));
     let updated: Invoice | undefined;
     setInvoices((prev) =>
       prev.map((inv) => {
@@ -195,6 +298,7 @@ export function InvoiceStoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const voidInvoice: InvoiceStoreValue["voidInvoice"] = useCallback((id, reason) => {
+    sync(() => repo.voidInvoice(id, reason));
     setInvoices((prev) =>
       prev.map((inv) =>
         inv.id === id
@@ -214,6 +318,7 @@ export function InvoiceStoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const approveInvoice: InvoiceStoreValue["approveInvoice"] = useCallback((id) => {
+    sync(() => repo.approveInvoice(id));
     setInvoices((prev) =>
       prev.map((inv) =>
         inv.id === id && (inv.status === "draft" || inv.status === "pending_approval")
@@ -238,6 +343,7 @@ export function InvoiceStoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addNote: InvoiceStoreValue["addNote"] = useCallback((id, body) => {
+    sync(() => repo.addNote(id, body));
     setInvoices((prev) =>
       prev.map((inv) =>
         inv.id === id
@@ -260,6 +366,10 @@ export function InvoiceStoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resetDemoData = useCallback(() => {
+    if (isSupabaseConfigured) {
+      void reload(); // nothing to reset: the data lives in the database
+      return;
+    }
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {
@@ -271,6 +381,10 @@ export function InvoiceStoreProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       invoices,
+      refs,
+      ready,
+      loadError,
+      reload,
       getInvoice,
       createInvoice,
       updateInvoice,
@@ -282,6 +396,10 @@ export function InvoiceStoreProvider({ children }: { children: ReactNode }) {
     }),
     [
       invoices,
+      refs,
+      ready,
+      loadError,
+      reload,
       getInvoice,
       createInvoice,
       updateInvoice,

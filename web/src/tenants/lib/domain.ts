@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../../lib/supabase";
 import type {
   Account,
   Database,
@@ -12,8 +13,9 @@ import type {
 
 export const DEFAULT_WARNING_DAYS = 60;
 export const today = () => new Date().toISOString().slice(0, 10);
+// With Supabase the ids become the rows' primary keys, so they must be real UUIDs.
 export const uid = (prefix: string) =>
-  `${prefix}-${crypto.randomUUID().slice(0, 12)}`;
+  isSupabaseConfigured ? crypto.randomUUID() : `${prefix}-${crypto.randomUUID().slice(0, 12)}`;
 export const fullName = (tenant: Pick<Tenant, "firstName" | "lastName">) =>
   `${tenant.firstName} ${tenant.lastName}`;
 export const money = (amount: number) =>

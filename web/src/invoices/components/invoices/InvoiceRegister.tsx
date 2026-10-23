@@ -30,7 +30,9 @@ import {
 import { Button, DataField, EmptyState, IconButton, SectionTitle, TextLink } from "../../../tenants/components/ui";
 import { useNavigate } from "@inv/router";
 import { dueLabel, formatCAD, formatDate } from "@inv/lib/format";
-import { DEMO_TODAY, properties } from "@inv/data/mockInvoices";
+import { DEMO_TODAY } from "@inv/data/mockInvoices";
+import { useInvoices } from "@inv/store/InvoiceStore";
+import { isSupabaseConfigured } from "../../../lib/supabase";
 import {
   invoiceBalance,
   invoiceTotal,
@@ -106,6 +108,8 @@ export interface InvoiceRegisterProps {
 }
 
 export function InvoiceRegister(p: InvoiceRegisterProps) {
+  const { refs } = useInvoices();
+  const properties = refs.properties;
   const navigate = useNavigate();
   const [filterOpen, setFilterOpen] = useState(false);
   const [menu, setMenu] = useState<string | null>(null);
@@ -551,13 +555,18 @@ export function InvoiceRegister(p: InvoiceRegisterProps) {
             <div className="directory-footnote">
               <span>
                 <ShieldCheck size={13} />
-                Demonstration data &mdash; {p.allInvoices.length} invoices across {properties.length} properties. Changes persist in this browser only.
+                {isSupabaseConfigured ? `${p.allInvoices.length} invoices across ${properties.length} properties.` : `Demonstration data \u2014 ${p.allInvoices.length} invoices across ${properties.length} properties. Changes persist in this browser only.`}
               </span>
               <span>
-                <button className="text-link" onClick={p.onResetDemo}>
-                  <FilePlus2 size={11} /> Reset demo data
-                </button>
-                <span className="footnote-separator">&middot;</span>All amounts in CAD
+                {!isSupabaseConfigured && (
+                  <>
+                    <button className="text-link" onClick={p.onResetDemo}>
+                      <FilePlus2 size={11} /> Reset demo data
+                    </button>
+                    <span className="footnote-separator">&middot;</span>
+                  </>
+                )}
+                All amounts in CAD
               </span>
             </div>
           </main>

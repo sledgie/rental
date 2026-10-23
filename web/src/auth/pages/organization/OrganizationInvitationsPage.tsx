@@ -26,7 +26,7 @@ import { useOrganization } from "../../contexts/OrganizationContext";
 import { useToast } from "../../contexts/ToastContext";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import { daysUntil, formatDate } from "../../lib/format";
-import { listInvitationsForOrganization, type InvitationWithContext } from "../../services/mockInvitationService";
+import { invitationService, type InvitationWithContext } from "../../services";
 import { SettingsHeader } from "./SettingsChrome";
 import { InviteMemberModal } from "./InviteMemberModal";
 import { cn } from "../../utils/cn";
@@ -52,7 +52,7 @@ export default function OrganizationInvitationsPage() {
     if (!organizationId) return;
     let cancelled = false;
     setError(null);
-    listInvitationsForOrganization(organizationId)
+    invitationService.listInvitationsForOrganization(organizationId)
       .then((rows) => {
         if (!cancelled) setInvitations(rows);
       })

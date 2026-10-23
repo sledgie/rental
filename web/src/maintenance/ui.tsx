@@ -4,6 +4,7 @@ import { AlertTriangle, ChevronDown, X } from 'lucide-react';
 import { cn } from './utils/cn';
 import type { Priority, RequestStatus } from './types';
 import { initials } from './utils';
+import { Callout, Drawer as UnitsDrawer } from '../units/components/ui/Modal';
 
 // ── Buttons ──────────────────────────────────────────────────────────────────
 
@@ -129,6 +130,67 @@ export function Modal({
     </div>,
     document.body,
   );
+}
+
+// ── Form drawer ──────────────────────────────────────────────────────────────
+// Add / edit forms open in the same right-hand drawer as "Add unit": header, lettered sections, and a footer with a note on the
+// left and the actions on the right.
+
+export function FormDrawer({
+  open, onClose, title, subtitle, note, children, footer,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  subtitle?: string;
+  /** small text at the left of the footer, e.g. "Will be created as WO-1001" */
+  note?: React.ReactNode;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+}) {
+  return (
+    <UnitsDrawer
+      open={open}
+      onClose={onClose}
+      title={title}
+      subtitle={subtitle}
+      footer={
+        <div className="flex flex-wrap items-center gap-2 px-4 py-3">
+          {note && <span className="text-[11px] text-u-muted">{note}</span>}
+          <div className="ml-auto flex flex-wrap items-center gap-2">{footer}</div>
+        </div>
+      }
+    >
+      <div className="space-y-5 p-4">{children}</div>
+    </UnitsDrawer>
+  );
+}
+
+export function DrawerSection({
+  step, title, note, children,
+}: {
+  step: string; title: string; note?: string; children: React.ReactNode;
+}) {
+  return (
+    <section>
+      <div className="mb-2.5 flex items-center gap-2 border-b border-u-line2 pb-1.5">
+        <span className="u-num flex h-5 w-5 items-center justify-center rounded border border-u-accent/35 bg-u-accent/12 text-[10.5px] font-600 text-u-accent">
+          {step}
+        </span>
+        <h3 className="font-display text-[12px] font-600 uppercase tracking-[0.11em] text-u-ink2">{title}</h3>
+        {note && <span className="ml-auto text-[10.5px] text-u-muted">{note}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+export function FormError({ message }: { message?: string }) {
+  return message ? (
+    <Callout tone="rose" icon="alert" title="Check the form">
+      {message}
+    </Callout>
+  ) : null;
 }
 
 export function ConfirmDialog({

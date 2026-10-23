@@ -11,12 +11,17 @@ import {
 import type { MembershipStatus, Organization, OrganizationInput, Role } from "../lib/types";
 import { isManagerRole, isOwner } from "../lib/format";
 import { useAuth } from "./AuthContext";
-import * as organizationService from "../services/mockOrganizationService";
-import * as membershipService from "../services/mockMembershipService";
-import * as invitationService from "../services/mockInvitationService";
+import { setActiveOrgId as publishActiveOrg } from "../../lib/activeOrg";
+import {
+  invitationService,
+  membershipService,
+  organizationService,
+  type InvitationWithContext,
+  type UserWorkspace,
+} from "../services";
 
-type Workspace = membershipService.UserWorkspace;
-type UserInvitation = invitationService.InvitationWithContext;
+type Workspace = UserWorkspace;
+type UserInvitation = InvitationWithContext;
 
 interface OrganizationContextValue {
   loading: boolean;
@@ -65,6 +70,11 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
   activeOrgRef.current = activeOrgId;
 
+  // data modules outside React (property store, ...) follow the selected organization
+  useEffect(() => {
+    publishActiveOrg(activeOrgId);
+  }, [activeOrgId]);
+
   const loadInvitations = useCallback(async (email: string) => {
     const invitations = await invitationService.listInvitationsForEmail(email);
     setAllMyInvitations(invitations);
@@ -99,7 +109,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
         setSuspendedWorkspaces(suspended);
         setAllMyInvitations(invitations);
 
-        const storedId = membershipService.getActiveOrganizationId(currentUserId);
+        const storedId = await membershipService.getActiveOrganizationId(currentUserId);
         let chosen = active.find((workspace) => workspace.organization.id === storedId) ?? null;
         if (!chosen && active.length === 1) {
           chosen = active[0];

@@ -623,8 +623,8 @@ export function TenantProfile({
             <div className="inline-info">
               <Info size={16} />
               <p>
-                These are sample lease documents for this prototype. They can be
-                previewed and downloaded from their lease.
+                Lease documents are filed against each lease. Open the lease to preview or
+                download them.
               </p>
             </div>
           </>

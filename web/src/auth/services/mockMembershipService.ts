@@ -14,7 +14,7 @@ export interface UserWorkspace {
   membership: Membership;
 }
 
-export function getActiveOrganizationId(userId: string): string | null {
+export async function getActiveOrganizationId(userId: string): Promise<string | null> {
   const db = getDatabase();
   const stored = db.activeOrganizationByUser[userId] ?? null;
   if (!stored) return null;

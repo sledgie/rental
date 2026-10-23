@@ -5,6 +5,8 @@ import { Input, Select } from "../ui/Input";
 import { DOCUMENT_CATEGORIES } from "../../data/mockProperties";
 import type { PropertyDocument } from "../../types/property";
 import { cn } from "../../utils/cn";
+import { isSupabaseConfigured } from "../../../../lib/supabase";
+import { openDocument } from "../../../../lib/documents";
 import type { SectionProps } from "./PropertyFormSection";
 
 function formatSize(bytes: number): string {
@@ -27,6 +29,7 @@ export function DocumentUpload({ form, set }: SectionProps) {
       fileSize: f.size,
       category,
       uploadDate: now,
+      file: f,
     }));
     set("documents", [...form.documents, ...docs]);
   };
@@ -84,7 +87,7 @@ export function DocumentUpload({ form, set }: SectionProps) {
           Drag & drop files here, or <span className="text-mint-400">browse</span>
         </p>
         <p className="text-xs text-moss-500">
-          PDF, images, and office documents · Simulated upload for this prototype
+          {isSupabaseConfigured ? "PDF, images, and office documents · up to 25 MB, stored securely when you save" : "PDF, images, and office documents · Simulated upload for this prototype"}
         </p>
         <input
           ref={inputRef}
@@ -107,7 +110,12 @@ export function DocumentUpload({ form, set }: SectionProps) {
                   <FileText size={16} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-moss-100">{doc.fileName}</p>
+                  <p className="truncate text-sm font-medium text-moss-100">
+                    {doc.fileName}
+                    {doc.bucket && doc.path && (
+                      <button type="button" className="ml-2 text-xs font-normal text-mint-400 hover:underline" onClick={() => void openDocument(doc.bucket!, doc.path!)}>Open</button>
+                    )}
+                  </p>
                   <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-moss-500">
                     <span>{formatSize(doc.fileSize)}</span>
                     <span className="inline-flex items-center gap-1">

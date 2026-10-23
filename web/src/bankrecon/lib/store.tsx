@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useEffect, useMemo, useReducer, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useReducer, useCallback, useRef, useState, useSyncExternalStore } from "react";
+import { isSupabaseConfigured, supabase } from "../../lib/supabase";
+import { getActiveOrgId, subscribeActiveOrg } from "../../lib/activeOrg";
+import * as repo from "../repo";
 import { StoreState, Reconciliation, BankAccount, BookTransaction, BankTransaction, Match, Adjustment, ImportBatch, ImportMapping, AuditEntry, Settings, ReconStatus, ColumnMapping } from "./types";
 import { buildSeed } from "./seed";
 import { computeRecon } from "./calc";
@@ -145,6 +148,11 @@ export interface StartReconResult {
 }
 
 interface StoreContextValue {
+  /** false while the first load from Supabase is running */
+  status: { ready: boolean; error: string | null };
+  /** set when a change could not be saved to the database (the page then shows what the database holds) */
+  syncError: string | null;
+  dismissSyncError: () => void;
   state: StoreState;
   user: StoreState["users"][number];
   can: (permission: string) => boolean;
@@ -191,9 +199,72 @@ function loadInitialState(): StoreState {
 }
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, loadInitialState);
+  const [state, rawDispatch] = useReducer(reducer, undefined, () => (isSupabaseConfigured ? repo.emptyState() : loadInitialState()));
+  const stateRef = useRef(state);
+  const [status, setStatus] = useState({ ready: !isSupabaseConfigured, error: null as string | null });
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const orgId = useSyncExternalStore(subscribeActiveOrg, getActiveOrgId);
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  const generation = useRef(0); // bumped by every load: saves queued before it are stale and must not run
+
+  /** Reads everything for the active organization (the database is the source of truth). */
+  const load = useCallback(async () => {
+    const org = getActiveOrgId();
+    if (!org) return;
+    generation.current += 1;
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const loaded = await repo.loadState(org, auth.user?.id ?? "");
+      if (getActiveOrgId() !== org) return; // the user switched organization meanwhile
+      stateRef.current = loaded;
+      rawDispatch({ type: "HYDRATE", state: loaded });
+      setStatus({ ready: true, error: null });
+    } catch (error) {
+      if (getActiveOrgId() === org) setStatus({ ready: true, error: error instanceof Error ? error.message : "Unable to load bank data." });
+    }
+  }, []);
 
   useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    setStatus({ ready: false, error: null });
+    if (orgId) void load();
+  }, [orgId, load]);
+
+  /** Every change goes through here; with Supabase the difference it makes is also written to the database. */
+  const dispatch = useCallback(
+    (action: Action) => {
+      const prev = stateRef.current;
+      const next = reducer(prev, action);
+      stateRef.current = next;
+      rawDispatch(action);
+      if (!isSupabaseConfigured || next === prev || action.type === "HYDRATE") return;
+      const gen = generation.current;
+      queue.current = queue.current.then(async () => {
+        if (gen !== generation.current) return;
+        try {
+          const numbers = await repo.persist(prev, next, prev.currentUserId);
+          if (numbers.accountCodes.size || numbers.references.size) {
+            // show the numbers the database assigned instead of the provisional ones
+            const current = stateRef.current;
+            const patched = {
+              ...current,
+              accounts: current.accounts.map((a) => (numbers.accountCodes.has(a.id) ? { ...a, code: numbers.accountCodes.get(a.id)! } : a)),
+              reconciliations: current.reconciliations.map((r) => (numbers.references.has(r.id) ? { ...r, reference: numbers.references.get(r.id)! } : r)),
+            };
+            stateRef.current = patched;
+            rawDispatch({ type: "HYDRATE", state: patched });
+          }
+        } catch (error) {
+          setSyncError(error instanceof Error ? error.message : "The change could not be saved.");
+          await load(); // show what the database really contains
+        }
+      });
+    },
+    [load],
+  );
+
+  useEffect(() => {
+    if (isSupabaseConfigured) return; // the data lives in the database
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
@@ -201,7 +272,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state]);
 
-  const user = useMemo(() => state.users.find((u) => u.id === state.currentUserId) ?? state.users[0], [state.users, state.currentUserId]);
+  const user = useMemo(
+    () => state.users.find((u) => u.id === state.currentUserId) ?? state.users[0] ?? { id: "", name: "You", role: "", permissions: [] },
+    [state.users, state.currentUserId],
+  );
 
   const addAudit = useCallback((entry: Omit<AuditEntry, "id" | "eventId">) => dispatch({ type: "ADD_AUDIT", entry }), []);
 
@@ -574,6 +648,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const setUser = useCallback((userId: string) => dispatch({ type: "SET_USER", userId }), []);
   const resetDemo = useCallback(() => {
+    if (isSupabaseConfigured) {
+      void load();
+      return;
+    }
     try {
       window.localStorage.removeItem(STORAGE_KEY);
     } catch {
@@ -583,6 +661,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value: StoreContextValue = {
+    status,
+    syncError,
+    dismissSyncError: () => setSyncError(null),
     state,
     user,
     can,

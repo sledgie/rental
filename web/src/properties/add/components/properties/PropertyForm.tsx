@@ -64,7 +64,8 @@ const SECTION_META: Record<SectionId, { description: string; optional?: boolean 
 
 interface PropertyFormProps {
   existing?: PropertyRecord;
-  onSave: (record: PropertyRecord) => void;
+  /** may return a promise (database save); resolve with the saved property code, reject with a readable Error */
+  onSave: (record: PropertyRecord) => void | string | Promise<void | string>;
   onClose: () => void;
 }
 
@@ -134,7 +135,7 @@ export function PropertyForm({ existing, onSave, onClose }: PropertyFormProps) {
     isDraft,
   });
 
-  const handleSave = (asDraft: boolean) => {
+  const handleSave = async (asDraft: boolean) => {
     const errs = validateProperty(form, asDraft);
     const cleaned = Object.fromEntries(Object.entries(errs).filter(([, v]) => v));
     setErrors(cleaned);
@@ -152,12 +153,17 @@ export function PropertyForm({ existing, onSave, onClose }: PropertyFormProps) {
 
     const record = buildRecord(asDraft);
     savedRef.current = true;
-    onSave(record);
-    toast(
-      "success",
-      existing ? "Property updated" : asDraft ? "Draft saved" : "Property created",
-      `${record.name} was saved with ID ${record.id}.`
-    );
+    try {
+      const code = await onSave(record);
+      toast(
+        "success",
+        existing ? "Property updated" : asDraft ? "Draft saved" : "Property created",
+        `${record.name} was saved with ID ${code || record.id}.`
+      );
+    } catch (error) {
+      savedRef.current = false;
+      toast("warning", "Property not saved", error instanceof Error ? error.message : "Something went wrong. Please try again.");
+    }
   };
 
   const handleCancel = () => {

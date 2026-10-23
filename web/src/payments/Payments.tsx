@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../lib/supabase";
 // Payments directory in the same format as the Properties, Leases and Units pages: tabs, search, sortable master rows, an inline
 // detail panel (chevron) and a side drawer for the full payment (View). Ledger, wizard, receipt and audit trail come from the payments module.
 import { Fragment, useEffect, useMemo, useState } from "react";
@@ -191,6 +192,7 @@ export default function Payments({ params }: { params?: Record<string, string> }
                 <p>Record rent payments, allocate them across invoices, track partial payments and issue receipts.</p>
               </div>
               <div className="page-heading-actions">
+                {!isSupabaseConfigured && (
                 <label className="sort-control" style={{ minWidth: 250 }} title="Recorded on payments, reversals, refunds and audit events">
                   <span className="sr-only">Acting as</span>
                   <select aria-label="Acting staff user" value={currentUserId} onChange={(e) => setCurrentUserId(e.target.value)}>
@@ -198,8 +200,9 @@ export default function Payments({ params }: { params?: Record<string, string> }
                   </select>
                   <ChevronDown size={13} />
                 </label>
-                <Button onClick={runAcceptanceTest} title="Posts the $1,000.00 two-invoice scenario and verifies the result"><SquareCheck size={15} />Run acceptance test</Button>
-                <Button onClick={handleReset}><RotateCcw size={15} />Reset demo data</Button>
+                )}
+                {!isSupabaseConfigured && <Button onClick={runAcceptanceTest} title="Posts the $1,000.00 two-invoice scenario and verifies the result"><SquareCheck size={15} />Run acceptance test</Button>}
+                {!isSupabaseConfigured && <Button onClick={handleReset}><RotateCcw size={15} />Reset demo data</Button>}
                 <Button onClick={exportCsv}><Download size={15} />Export</Button>
                 <Button variant="primary" onClick={() => setFormOpen(true)}><Plus size={17} />New payment</Button>
               </div>
@@ -212,7 +215,7 @@ export default function Payments({ params }: { params?: Record<string, string> }
                     {t.label}<span>{payments.filter((p) => inTab(p, t.key)).length}</span>
                   </button>
                 ))}
-                <div className="directory-tabs-end"><span className="live-dot" />Demo data</div>
+                {!isSupabaseConfigured && <div className="directory-tabs-end"><span className="live-dot" />Demo data</div>}
               </div>
               <div className="directory-toolbar">
                 <SearchField label="Search payments" placeholder="Search payment ID, receipt number, tenant or reference..." value={query} onChange={(v) => { setQuery(v); setPage(1); }} />
@@ -406,7 +409,7 @@ export default function Payments({ params }: { params?: Record<string, string> }
             </div>
             <div className="directory-footnote">
               <span><ShieldCheck size={13} />Balances are derived from invoices, allocations and credits, never stored.</span>
-              <span>All amounts in CAD<span className="footnote-separator">&middot;</span>Demo data, nothing persists after a refresh</span>
+              <span>All amounts in CAD{!isSupabaseConfigured && <><span className="footnote-separator">&middot;</span>Demo data, nothing persists after a refresh</>}</span>
             </div>
           </main>
         </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowDown,
@@ -235,6 +235,7 @@ function Definition({ icon: Icon, label, value, hint }: { icon: typeof HardHat; 
 
 function AddExpenseModal({ open, onClose, project }: { open: boolean; onClose: () => void; project: Project }) {
   const { addExpense } = useStore();
+  const receiptFile = useRef<File | null>(null);
   const [form, setForm] = useState({
     date: TODAY,
     category: "Materials" as ExpenseCategory,
@@ -288,8 +289,9 @@ function AddExpenseModal({ open, onClose, project }: { open: boolean; onClose: (
       attachmentName: form.attachmentName || undefined,
       approval: form.approval,
       notes: form.notes,
-    });
+    }, receiptFile.current ?? undefined);
     if (result.ok) {
+      receiptFile.current = null;
       onClose();
       setForm({ ...form, description: "", vendor: "", unitPrice: "", discount: "", receiptNumber: "", notes: "", attachmentName: "", taskId: "" });
     } else setErrors({ form: result.error ?? "Unable to record expense." });
@@ -335,7 +337,7 @@ function AddExpenseModal({ open, onClose, project }: { open: boolean; onClose: (
           <Field label="Supporting attachment">
             <label className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-dashed border-u-ink/15 bg-u-bg/60 px-3 text-[11px] text-u-muted hover:border-u-accent/40 hover:text-u-ink">
               <Paperclip className="h-3.5 w-3.5" /> {form.attachmentName || "Attach receipt (PDF, JPG, PNG)"}
-              <input type="file" accept=".pdf,.png,.jpg,.jpeg" className="hidden" onChange={(e) => setForm((c) => ({ ...c, attachmentName: e.target.files?.[0]?.name ?? "" }))} />
+              <input type="file" accept=".pdf,.png,.jpg,.jpeg" className="hidden" onChange={(e) => { receiptFile.current = e.target.files?.[0] ?? null; setForm((c) => ({ ...c, attachmentName: e.target.files?.[0]?.name ?? "" })); }} />
             </label>
           </Field>
         </div>
@@ -350,7 +352,7 @@ function AddExpenseModal({ open, onClose, project }: { open: boolean; onClose: (
 const paymentMethods: PaymentMethod[] = ["EFT", "Cheque", "Credit Card", "Cash", "Wire Transfer"];
 
 export function InvoicesTab({ project }: { project: Project }) {
-  const { setInvoiceApproval, notify } = useStore();
+  const { setInvoiceApproval, openAttachment, notify } = useStore();
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentInvoice, setPaymentInvoice] = useState<string | undefined>();
@@ -480,7 +482,7 @@ export function InvoicesTab({ project }: { project: Project }) {
                           </div>
                           {invoice.notes && <div className="rounded-lg border border-u-ink/[0.06] bg-u-ink/[0.02] p-2.5 text-[10px] leading-relaxed text-u-muted">{invoice.notes}</div>}
                           <div className="flex flex-wrap gap-1.5">
-                            {invoice.attachmentName && <Button size="xs" variant="subtle" icon={Download} onClick={() => notify("Document preview", "info", `${invoice.attachmentName} is stored in the secured project repository.`)}>Attachment</Button>}
+                            {invoice.attachmentName && <Button size="xs" variant="subtle" icon={Download} onClick={() => openAttachment(project.id, invoice.id)}>Attachment</Button>}
                             {invoice.approval === "Pending Approval" && <Button size="xs" variant="primary" icon={Check} onClick={() => setInvoiceApproval(project.id, invoice.id, "Approved")}>Approve invoice</Button>}
                             {invoice.approval === "Approved" && balance > 0 && <Button size="xs" variant="secondary" icon={CreditCard} onClick={() => startPayment(invoice.id)}>Record payment</Button>}
                           </div>
@@ -524,7 +526,7 @@ export function InvoicesTab({ project }: { project: Project }) {
                   <p className="font-mono text-[12px] text-u-ok">{money(payment.amountCents, { cents: true })}</p>
                   <p className="text-[9px] text-u-muted">Recorded by {payment.recordedBy}</p>
                 </div>
-                {payment.proofName && <Button size="xs" variant="ghost" icon={Download} onClick={() => notify("Proof of payment", "info", payment.proofName)} className="hidden sm:inline-flex">Proof</Button>}
+                {payment.proofName && <Button size="xs" variant="ghost" icon={Download} onClick={() => openAttachment(project.id, payment.id)} className="hidden sm:inline-flex">Proof</Button>}
               </div>
             ))}
           </div>
@@ -539,6 +541,7 @@ export function InvoicesTab({ project }: { project: Project }) {
 
 function AddInvoiceModal({ open, onClose, project }: { open: boolean; onClose: () => void; project: Project }) {
   const { contractors, addInvoice, findDuplicateInvoice } = useStore();
+  const invoiceFile = useRef<File | null>(null);
   const [vendorId, setVendorId] = useState(project.team[0]?.contractorId ?? "");
   const [customVendor, setCustomVendor] = useState("");
   const [number, setNumber] = useState("");
@@ -597,8 +600,9 @@ function AddInvoiceModal({ open, onClose, project }: { open: boolean; onClose: (
       attachmentName: attachmentName || undefined,
       taskId: taskId || undefined,
       poId: poId || undefined,
-    });
+    }, invoiceFile.current ?? undefined);
     if (result.ok) {
+      invoiceFile.current = null;
       onClose();
       setNumber(""); setLines([{ description: "", quantity: 1, uom: "lot", unitPriceCents: 0, taxRate: 13 }]); setAttachmentName(""); setNotes(""); setAcknowledgedDuplicate(false); setDiscount("");
     } else setErrors({ form: result.error ?? "Unable to record invoice." });
@@ -678,7 +682,7 @@ function AddInvoiceModal({ open, onClose, project }: { open: boolean; onClose: (
           <Field label="Invoice attachment" hint="PDF, JPG or PNG · max 10 MB">
             <label className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-dashed border-u-ink/15 bg-u-bg/60 px-3 text-[11px] text-u-muted hover:border-u-accent/40 hover:text-u-ink">
               <Paperclip className="h-3.5 w-3.5" /> {attachmentName || "Attach invoice document"}
-              <input type="file" accept=".pdf,.png,.jpg,.jpeg" className="hidden" onChange={(e) => setAttachmentName(e.target.files?.[0]?.name ?? "")} />
+              <input type="file" accept=".pdf,.png,.jpg,.jpeg" className="hidden" onChange={(e) => { invoiceFile.current = e.target.files?.[0] ?? null; setAttachmentName(e.target.files?.[0]?.name ?? ""); }} />
             </label>
           </Field>
           <Field label="Notes"><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Approval or reconciliation notes" /></Field>
@@ -691,6 +695,7 @@ function AddInvoiceModal({ open, onClose, project }: { open: boolean; onClose: (
 
 function RecordPaymentModal({ open, onClose, project, defaultInvoiceId }: { open: boolean; onClose: () => void; project: Project; defaultInvoiceId?: string }) {
   const { recordPayment, notify } = useStore();
+  const proofFile = useRef<File | null>(null);
   const availableInvoices = project.invoices.filter((invoice) => invoice.approval === "Approved" && invoiceBalance(invoice, project.payments) > 0);
   const [date, setDate] = useState(TODAY);
   const [method, setMethod] = useState<PaymentMethod>("EFT");
@@ -749,8 +754,9 @@ function RecordPaymentModal({ open, onClose, project, defaultInvoiceId }: { open
       allocations: effectiveAllocations.map((allocation) => ({ invoiceId: allocation.invoiceId, amountCents: parseMoneyToCents(allocation.amount) })),
       notes,
       proofName: proofName || undefined,
-    });
+    }, proofFile.current ?? undefined);
     if (result.ok) {
+      proofFile.current = null;
       onClose();
       setAllocations([]); setReference(""); setNotes(""); setProofName("");
       notify("Payment recorded", "success", "Invoice balances and outstanding payables were recalculated.");
@@ -825,7 +831,7 @@ function RecordPaymentModal({ open, onClose, project, defaultInvoiceId }: { open
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Proof of payment" hint="Confirmation PDF or image"><label className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-dashed border-u-ink/15 bg-u-bg/60 px-3 text-[11px] text-u-muted hover:border-u-accent/40 hover:text-u-ink"><Paperclip className="h-3.5 w-3.5" /> {proofName || "Attach proof of payment"}<input type="file" className="hidden" accept=".pdf,.png,.jpg,.jpeg" onChange={(e) => setProofName(e.target.files?.[0]?.name ?? "")} /></label></Field>
+            <Field label="Proof of payment" hint="Confirmation PDF or image"><label className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-dashed border-u-ink/15 bg-u-bg/60 px-3 text-[11px] text-u-muted hover:border-u-accent/40 hover:text-u-ink"><Paperclip className="h-3.5 w-3.5" /> {proofName || "Attach proof of payment"}<input type="file" className="hidden" accept=".pdf,.png,.jpg,.jpeg" onChange={(e) => { proofFile.current = e.target.files?.[0] ?? null; setProofName(e.target.files?.[0]?.name ?? ""); }} /></label></Field>
             <Field label="Payment notes"><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Progress draw #2 partial payment" /></Field>
           </div>
         </div>

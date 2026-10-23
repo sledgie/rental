@@ -162,6 +162,9 @@ export interface SupportingDocument {
   type: DocumentType;
   mockFileName: string;
   addedAt: string;
+  /** where the file is stored (Supabase Storage); opened through a short-lived link */
+  bucket?: string;
+  path?: string;
 }
 
 export interface Bill {

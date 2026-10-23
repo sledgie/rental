@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../../../lib/supabase";
 import { useStore, communicationsOf, partiesOf } from "../../state/store";
 import { formatDate, relativeDays } from "../../lib/format";
 import { Badge, MockTag } from "../../components/ui/Badge";
@@ -130,8 +131,7 @@ export function CommunicationsSection({
       )}
 
       <Note>
-        No emails or text messages are actually sent from the prototype. A real integration would post to a messaging
-        provider and write back the delivery status.
+        {isSupabaseConfigured ? "Messages are recorded here for the application. No emails or text messages are sent from this screen." : "No emails or text messages are actually sent from the prototype. A real integration would post to a messaging provider and write back the delivery status."}
       </Note>
     </div>
   );

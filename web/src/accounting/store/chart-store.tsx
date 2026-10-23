@@ -1,11 +1,19 @@
 import {
   createContext,
+  useCallback,
   useContext,
+  useEffect,
   useMemo,
   useReducer,
+  useRef,
+  useState,
+  useSyncExternalStore,
   type Dispatch,
   type ReactNode,
 } from "react";
+import { isSupabaseConfigured } from "../../lib/supabase";
+import { getActiveOrgId, subscribeActiveOrg } from "../../lib/activeOrg";
+import * as repo from "../repo";
 import { buildSeedChart } from "../coa/seed";
 import {
   ancestorChain,
@@ -41,14 +49,17 @@ export const DEFAULT_FILTERS: Filters = {
 
 const newId = (): string =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? `acct_${crypto.randomUUID().slice(0, 8)}`
+    ? isSupabaseConfigured
+      ? crypto.randomUUID() // the id becomes the row's primary key
+      : `acct_${crypto.randomUUID().slice(0, 8)}`
     : `acct_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 
 /** Codes whose branches start open, so the first paint shows real hierarchy. */
 const INITIALLY_OPEN = ["1102", "4110"];
 
 function initialState(): ChartState {
-  const accounts = buildSeedChart();
+  // with Supabase the chart is loaded for the active organization; nothing from the sample chart is shown
+  const accounts = isSupabaseConfigured ? [] : buildSeedChart();
   const expanded: Record<string, boolean> = {};
   for (const node of buildTree(accounts)) expanded[node.account.id] = true;
   for (const code of INITIALLY_OPEN) {
@@ -124,6 +135,8 @@ export interface ChartApi {
 }
 
 export interface ChartContextValue {
+  /** false while the chart is loading from Supabase */
+  status: { ready: boolean; error: string | null };
   state: ChartState;
   dispatch: Dispatch<Action>;
   api: ChartApi;
@@ -161,7 +174,61 @@ const draftToAccount = (draft: AccountDraft, parentId: string | null): Account =
 };
 
 export function ChartProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, initialState);
+  const [state, rawDispatch] = useReducer(reducer, undefined, initialState);
+  const stateRef = useRef(state);
+  const [status, setStatus] = useState({ ready: !isSupabaseConfigured, error: null as string | null });
+  const orgId = useSyncExternalStore(subscribeActiveOrg, getActiveOrgId);
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  const generation = useRef(0); // bumped by every load: saves queued before it are stale and must not run
+
+  /** Reads the chart for the active organization (the database is the source of truth). */
+  const load = useCallback(async () => {
+    const org = getActiveOrgId();
+    if (!org) return;
+    generation.current += 1;
+    try {
+      const accounts = await repo.loadAccounts(org);
+      if (getActiveOrgId() !== org) return; // the user switched organization meanwhile
+      stateRef.current = { ...stateRef.current, accounts };
+      rawDispatch({ type: "accounts/set", accounts });
+      const parents = new Set(accounts.map((a) => a.parentId).filter(Boolean) as string[]);
+      rawDispatch({ type: "expanded/set", ids: [...parents], open: true });
+      if (!stateRef.current.selectedId || !accounts.some((a) => a.id === stateRef.current.selectedId)) {
+        rawDispatch({ type: "select", id: accounts[0]?.id ?? null });
+      }
+      setStatus({ ready: true, error: null });
+    } catch (error) {
+      if (getActiveOrgId() === org) setStatus({ ready: true, error: error instanceof Error ? error.message : "Unable to load the chart of accounts." });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    setStatus({ ready: false, error: null });
+    if (orgId) void load();
+  }, [orgId, load]);
+
+  /** Every change goes through here; with Supabase a new list of accounts is also written to the database. */
+  const dispatch = useCallback<Dispatch<Action>>(
+    (action) => {
+      if (isSupabaseConfigured && action.type === "accounts/set") {
+        const prev = stateRef.current.accounts;
+        const gen = generation.current;
+        queue.current = queue.current.then(async () => {
+          if (gen !== generation.current) return;
+          try {
+            await repo.persist(prev, action.accounts);
+          } catch (error) {
+            rawDispatch({ type: "toast/add", toast: { id: newId(), kind: "error", title: "The change was not saved", message: error instanceof Error ? error.message : "Please try again." } });
+            await load(); // show what the database really holds
+          }
+        });
+      }
+      stateRef.current = reducer(stateRef.current, action);
+      rawDispatch(action);
+    },
+    [load],
+  );
 
   const api = useMemo<ChartApi>(() => {
     const notify = (toast: Omit<Toast, "id">) =>
@@ -340,6 +407,10 @@ export function ChartProvider({ children }: { children: ReactNode }) {
       },
 
       resetDemo: () => {
+        if (isSupabaseConfigured) {
+          void load();
+          return;
+        }
         dispatch({ type: "reset" });
         notify({
           kind: "info",
@@ -351,7 +422,7 @@ export function ChartProvider({ children }: { children: ReactNode }) {
       notify,
       dismissToast: (id) => dispatch({ type: "toast/remove", id }),
     };
-  }, [state.accounts]);
+  }, [state.accounts, dispatch, load]);
 
   const result = useMemo(
     () => filterAccounts(state.accounts, state.filters),
@@ -363,8 +434,8 @@ export function ChartProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<ChartContextValue>(
-    () => ({ state, dispatch, api, result, rows }),
-    [state, api, result, rows],
+    () => ({ status, state, dispatch, api, result, rows }),
+    [status, state, dispatch, api, result, rows],
   );
 
   return <ChartContext.Provider value={value}>{children}</ChartContext.Provider>;

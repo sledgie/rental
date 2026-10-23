@@ -32,7 +32,10 @@ import type {
   Tenant,
   TenantInput,
 } from "./types";
-import { getWarningDays, setWarningDays, useTenantDb, useWarningDays } from "./store";
+import {
+  getWarningDays, onTenantSyncError, payAccount, reloadTenantDb, setWarningDays, useTenantDb, useTenantDbStatus, useWarningDays,
+} from "./store";
+import { isSupabaseConfigured } from "../lib/supabase";
 import {
   appendActivity,
   associatePerson,
@@ -50,7 +53,7 @@ import {
   uid,
   type DirectoryFilters,
 } from "./lib/domain";
-import { Button, IconButton, Overlay, Toast } from "./components/ui";
+import { Button, EmptyState, IconButton, Overlay, Toast } from "./components/ui";
 import { DirectoryControls, TenantTable } from "./components/TenantTable";
 import type { DetailActions } from "./components/TenantDetails";
 import {
@@ -88,6 +91,7 @@ const initialFilters: DirectoryFilters = {
 };
 export default function Tenants({ params }: { params?: Record<string, string> }) {
   const [db, setDb] = useTenantDb();
+  const dbStatus = useTenantDbStatus();
   const warningDaysPref = useWarningDays();
   const [filters, setFilters] = useState<DirectoryFilters>(() => ({ ...initialFilters, warningDays: getWarningDays() }));
   const [expandedId, setExpandedId] = useState<string | null>(() =>
@@ -119,6 +123,13 @@ export default function Tenants({ params }: { params?: Record<string, string> })
     [],
   );
   const dismissToast = useCallback(() => setToast(null), []);
+
+  // a change that could not be saved to the database is reported here (the page then shows what the database really holds)
+  useEffect(() => onTenantSyncError((message) => notify(message, "error")), [notify]);
+  // units, leases or properties may have changed on other pages since the last load
+  useEffect(() => {
+    void reloadTenantDb(true);
+  }, []);
   const tenantById = (id: string) => db.tenants.find((t) => t.id === id)!;
   const changeFilters = (next: DirectoryFilters) => {
     setFilters(next);
@@ -359,6 +370,15 @@ export default function Tenants({ params }: { params?: Record<string, string> })
     date: string,
     description: string,
   ) => {
+    if (isSupabaseConfigured) {
+      payAccount(accountId, amount, date, description)
+        .then(() => {
+          setDialog(null);
+          notify(`${money(Math.round(amount * 100) / 100)} payment recorded. Account balances updated.`);
+        })
+        .catch((error) => notify(error instanceof Error ? error.message : "The payment could not be recorded.", "error"));
+      return;
+    }
     const account = db.accounts.find((a) => a.id === accountId)!;
     const rounded = Math.round(amount * 100) / 100;
     const next: Database = {
@@ -406,6 +426,23 @@ export default function Tenants({ params }: { params?: Record<string, string> })
     dialog && "tenantId" in dialog && dialog.tenantId
       ? tenantById(dialog.tenantId)
       : undefined;
+
+  if (isSupabaseConfigured && (!dbStatus.ready || dbStatus.error)) {
+    return (
+      <div className="tn">
+        <div className="app-shell">
+          <div className="main-shell">
+            <main className="main-content">
+              <EmptyState
+                title={dbStatus.error ? "We couldn't load your tenants" : "Loading tenants…"}
+                description={dbStatus.error ?? "Fetching your tenant directory."}
+              />
+            </main>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="tn">

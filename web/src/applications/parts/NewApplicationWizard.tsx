@@ -52,7 +52,7 @@ interface Draft {
   screeningConsent: boolean;
   notes: string;
   reviewer: string;
-  docs: { id: string; title: string; category: DocumentCategory; fileName: string; fileSize: number; notes?: string }[];
+  docs: { id: string; title: string; category: DocumentCategory; fileName: string; fileSize: number; notes?: string; file?: File }[];
 }
 
 const emptyDraft = (): Draft => ({
@@ -226,6 +226,7 @@ export function NewApplicationWizard({
         fileSize: doc.fileSize,
         uploadedAt: isoDay(),
         notes: doc.notes,
+        file: doc.file,
       })),
       application: {
         id: applicationId,
@@ -773,6 +774,7 @@ export function NewApplicationWizard({
                         category: "Supporting Document" as DocumentCategory,
                         fileName: f.name,
                         fileSize: f.size,
+                        file: f,
                       })),
                     ),
                   );

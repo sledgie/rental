@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../../../lib/supabase";
 import { useState } from "react";
 import {
   useStore,
@@ -357,7 +358,7 @@ export function DialogHost({
       return (
         <SpecDialog
           title="Request information from applicant"
-          description="Logs the request and pauses the application as Awaiting Information. No message is actually sent in the prototype."
+          description={isSupabaseConfigured ? "Logs the request and pauses the application as Awaiting Information. No message is sent from here." : "Logs the request and pauses the application as Awaiting Information. No message is actually sent in the prototype."}
           onClose={onClose}
           onSubmit={(v) => {
             dispatch({ type: "SET_STATUS", id: applicationId, to: "Awaiting Information", notes: `Requested: ${v.items}`, changedBy: by });
@@ -867,7 +868,7 @@ export function DialogHost({
               </table>
             </div>
             <p className="text-[11.5px] text-u-muted">
-              Storage references are not populated in the prototype, so historical files cannot be streamed back.
+              {isSupabaseConfigured ? "Each version is kept; open the current file from the document row." : "Storage references are not populated in the prototype, so historical files cannot be streamed back."}
             </p>
           </div>
         </Modal>
@@ -1120,15 +1121,15 @@ function UploadDialog({ applicationId, onClose }: { applicationId: string; onClo
         fileSize: f.file.size,
         uploadedAt: isoDay(),
         notes: f.notes,
+        file: f.file,
         id: uid("doc"),
       })),
     });
-    toast({
-      variant: "warn",
-      title: `${files.length} document${files.length === 1 ? "" : "s"} recorded`,
-      description: "Metadata only — document storage is not connected in this prototype.",
-      simulated: true,
-    });
+    toast(
+      isSupabaseConfigured
+        ? { variant: "success", title: `${files.length} document${files.length === 1 ? "" : "s"} uploading`, description: "Files are stored privately with the application." }
+        : { variant: "warn", title: `${files.length} document${files.length === 1 ? "" : "s"} recorded`, description: "Metadata only — document storage is not connected in this prototype.", simulated: true },
+    );
     onClose();
   };
 
@@ -1251,7 +1252,7 @@ function UploadDialog({ applicationId, onClose }: { applicationId: string; onClo
 
         <div className="flex items-center gap-2 rounded-lg border border-u-warn/30 bg-u-warn/[0.07] px-3 py-2 text-[11.5px] text-u-warn">
           <MockTag label="Storage not connected" />
-          <span>Only the file name, size, and type are captured. No bytes are uploaded.</span>
+          <span>{isSupabaseConfigured ? "Files are stored privately and only visible to people with document access." : "Only the file name, size, and type are captured. No bytes are uploaded."}</span>
         </div>
       </div>
     </Modal>
@@ -1298,6 +1299,7 @@ function ReplaceDialog({
                   fileSize: file!.size,
                   fileType: file!.name.split(".").pop()?.toUpperCase() ?? "PDF",
                   notes,
+                  file: file!,
                 },
               });
               void applicationId;
@@ -1318,7 +1320,7 @@ function ReplaceDialog({
         <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-u-line2 bg-u-s2/40 px-4 py-6 text-center hover:border-u-accent/60">
           <span className="text-[13px] text-u-ink">{file ? file.name : "Choose a replacement file"}</span>
           <span className="text-[11.5px] text-u-muted">
-            {file ? `${fileSize(file.size)} ready` : "Only the file metadata is captured in the prototype"}
+            {file ? `${fileSize(file.size)} ready` : isSupabaseConfigured ? "Choose the new file" : "Only the file metadata is captured in the prototype"}
           </span>
           <input type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         </label>

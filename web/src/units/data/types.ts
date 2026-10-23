@@ -39,6 +39,8 @@ export interface Inspection {
 
 export interface Unit {
   id: ID;
+  /** Human-readable ID (U-0001) assigned by the database; the demo data uses `id` for this. */
+  code?: string;
   propertyId: ID;
   unitNumber: string;
   unitType: "Apartment" | "Studio" | "Loft" | "Townhouse" | "Duplex Unit" | "Commercial";
@@ -129,6 +131,7 @@ export interface LeaseParty {
 
 export type TxType =
   | "Rent Charge"
+  | "Other Charge"
   | "Rent Payment"
   | "Late Fee"
   | "Utility Charge"
@@ -158,7 +161,7 @@ export interface Transaction {
   paymentStatus?: PaymentStatus;
   /** Amount applied against this charge so far. */
   amountPaid?: number;
-  method?: "Pre-authorized Debit" | "E-Transfer" | "Cheque" | "Credit Card" | "Journal";
+  method?: "Pre-authorized Debit" | "E-Transfer" | "Cheque" | "Credit Card" | "Cash" | "Bank Transfer" | "Journal";
   reference?: string;
 }
 

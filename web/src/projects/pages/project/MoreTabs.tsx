@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Ban,
@@ -71,7 +71,7 @@ export function CommercialTab({ project }: { project: Project }) {
       </div>
 
       <Card className="overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-u-ink/[0.06] px-4 py-3"><SectionHeader icon={FileSignature} title="Contractor quotes" subtitle="Issued quotes with tax breakdown and acceptance status" /><Badge tone="slate">Read-only in demo</Badge></div>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-u-ink/[0.06] px-4 py-3"><SectionHeader icon={FileSignature} title="Contractor quotes" subtitle="Issued quotes with tax breakdown and acceptance status" /><Badge tone="slate">Read-only</Badge></div>
         {project.quotes.length === 0 ? (
           <div className="p-4"><EmptyState icon={FileSignature} title="No quotes on file" description="Request quotes from contractors in the directory to establish a priced scope." /></div>
         ) : (
@@ -125,7 +125,7 @@ export function CommercialTab({ project }: { project: Project }) {
 /* ------------------------------ Change orders ----------------------------- */
 
 export function ChangeOrdersTab({ project }: { project: Project }) {
-  const { addChangeOrder, decideChangeOrder } = useStore();
+  const { addChangeOrder, decideChangeOrder, openAttachment } = useStore();
   const [open, setOpen] = useState(false);
   const [rejecting, setRejecting] = useState<ChangeOrder | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -158,7 +158,7 @@ export function ChangeOrdersTab({ project }: { project: Project }) {
                     <p className="flex flex-wrap items-center gap-1.5"><span className="font-mono text-[11.5px] font-semibold text-u-ink">{co.number}</span><StatusBadge status={co.approval} /><span className="text-[9.5px] text-u-muted">Requested {dateLong(co.dateRequested)} by {co.requestedBy}</span></p>
                     <p className="mt-1 text-[11.5px] text-u-ink">{co.description}</p>
                     <p className="mt-0.5 text-[10px] text-u-muted"><span className="text-u-muted">Reason:</span> {co.reason}</p>
-                    {co.supportingDocument && <p className="mt-1 flex items-center gap-1 text-[9.5px] text-u-muted"><Paperclip className="h-2.5 w-2.5" /> {co.supportingDocument}</p>}
+                    {co.supportingDocument && <p className="mt-1 flex items-center gap-1 text-[9.5px] text-u-muted"><Paperclip className="h-2.5 w-2.5" /> {co.supportingDocument}<button type="button" onClick={() => openAttachment(project.id, co.id)} className="ml-1 text-u-accent hover:underline">Open</button></p>}
                     {co.approval === "Rejected" && co.rejectionReason && <p className="mt-1 rounded border border-u-danger/20 bg-u-danger/[0.06] px-2 py-1 text-[9.5px] text-u-danger/80">Rejected: {co.rejectionReason}</p>}
                   </div>
                   <div className="text-right">
@@ -189,8 +189,10 @@ export function ChangeOrdersTab({ project }: { project: Project }) {
   );
 }
 
-function NewChangeOrderModal({ open, onClose, project, onAdd }: { open: boolean; onClose: () => void; project: Project; onAdd: (projectId: string, co: Omit<ChangeOrder, "id" | "projectId">) => { ok: boolean; error?: string } }) {
-  const [form, setForm] = useState({ description: "", reason: "", requestedBy: "Avery Chen", dateRequested: TODAY, costDelta: "", scheduleImpact: "0", supportingDocument: "" });
+function NewChangeOrderModal({ open, onClose, project, onAdd }: { open: boolean; onClose: () => void; project: Project; onAdd: (projectId: string, co: Omit<ChangeOrder, "id" | "projectId">, file?: File) => { ok: boolean; error?: string } }) {
+  const { user } = useStore();
+  const supportFile = useRef<File | null>(null);
+  const [form, setForm] = useState({ description: "", reason: "", requestedBy: user.name, dateRequested: TODAY, costDelta: "", scheduleImpact: "0", supportingDocument: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const submit = () => {
     const nextErrors: Record<string, string> = {};
@@ -211,8 +213,8 @@ function NewChangeOrderModal({ open, onClose, project, onAdd }: { open: boolean;
       scheduleImpactDays: Number.parseInt(form.scheduleImpact, 10) || 0,
       supportingDocument: form.supportingDocument,
       approval: "Pending Approval",
-    });
-    if (result.ok) { onClose(); setForm({ ...form, description: "", reason: "", costDelta: "", scheduleImpact: "0", supportingDocument: "" }); }
+    }, supportFile.current ?? undefined);
+    if (result.ok) { supportFile.current = null; onClose(); setForm({ ...form, description: "", reason: "", costDelta: "", scheduleImpact: "0", supportingDocument: "" }); }
     else setErrors({ form: result.error ?? "Unable to create change order." });
   };
   return (
@@ -230,7 +232,7 @@ function NewChangeOrderModal({ open, onClose, project, onAdd }: { open: boolean;
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Schedule impact (days)" hint="Negative for early completion"><Input type="number" value={form.scheduleImpact} onChange={(e) => setForm((c) => ({ ...c, scheduleImpact: e.target.value }))} /></Field>
           <Field label="Supporting quote / document" required error={errors.supportingDocument}>
-            <label className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-dashed border-u-ink/15 bg-u-bg/60 px-3 text-[11px] text-u-muted hover:border-u-accent/40 hover:text-u-ink"><Paperclip className="h-3.5 w-3.5" /> {form.supportingDocument || "Attach supporting document"}<input type="file" className="hidden" onChange={(e) => setForm((c) => ({ ...c, supportingDocument: e.target.files?.[0]?.name ?? "" }))} /></label>
+            <label className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-dashed border-u-ink/15 bg-u-bg/60 px-3 text-[11px] text-u-muted hover:border-u-accent/40 hover:text-u-ink"><Paperclip className="h-3.5 w-3.5" /> {form.supportingDocument || "Attach supporting document"}<input type="file" className="hidden" onChange={(e) => { supportFile.current = e.target.files?.[0] ?? null; setForm((c) => ({ ...c, supportingDocument: e.target.files?.[0]?.name ?? "" })); }} /></label>
           </Field>
         </div>
         <InfoNote>The change order is submitted as Pending Approval. Finance permission is required to approve, and the full decision history is retained.</InfoNote>
@@ -448,6 +450,7 @@ export function InspectionsTab({ project }: { project: Project }) {
 
 function InspectionModal({ open, onClose, project }: { open: boolean; onClose: () => void; project: Project }) {
   const { addInspection } = useStore();
+  const reportFile = useRef<File | null>(null);
   const [form, setForm] = useState({ type: "Rough-in inspection", date: TODAY, inspector: "", result: "Pass" as Inspection["result"], findings: "", correctiveActions: "", reinspectionDate: "", notes: "", taskId: "", photo: "" });
   const [checks, setChecks] = useState([
     { label: "Work conforms to approved scope", passed: true },
@@ -474,8 +477,8 @@ function InspectionModal({ open, onClose, project }: { open: boolean; onClose: (
       correctiveActions: form.correctiveActions,
       reinspectionDate: form.reinspectionDate || undefined,
       notes: form.notes,
-    });
-    if (result.ok) onClose();
+    }, reportFile.current ?? undefined);
+    if (result.ok) { reportFile.current = null; onClose(); }
   };
   return (
     <Modal open={open} onClose={onClose} title="Record inspection" description="Inspection results are linked to the project and optionally a task. Failures should generate corrective deficiencies." icon={ShieldCheck}
@@ -504,7 +507,7 @@ function InspectionModal({ open, onClose, project }: { open: boolean; onClose: (
           <Field label="Corrective actions"><Textarea rows={2} value={form.correctiveActions} onChange={(e) => setForm((c) => ({ ...c, correctiveActions: e.target.value }))} placeholder="Actions required before reinspection" /></Field>
           <div className="space-y-3">
             <Field label="Reinspection date"><Input type="date" value={form.reinspectionDate} onChange={(e) => setForm((c) => ({ ...c, reinspectionDate: e.target.value }))} /></Field>
-            <Field label="Photos / report"><label className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-dashed border-u-ink/15 bg-u-bg/60 px-3 text-[11px] text-u-muted hover:border-u-accent/40 hover:text-u-ink"><Paperclip className="h-3.5 w-3.5" /> {form.photo || "Attach inspection report or photo"}<input type="file" className="hidden" onChange={(e) => setForm((c) => ({ ...c, photo: e.target.files?.[0]?.name ?? "" }))} /></label></Field>
+            <Field label="Photos / report"><label className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-dashed border-u-ink/15 bg-u-bg/60 px-3 text-[11px] text-u-muted hover:border-u-accent/40 hover:text-u-ink"><Paperclip className="h-3.5 w-3.5" /> {form.photo || "Attach inspection report or photo"}<input type="file" className="hidden" onChange={(e) => { reportFile.current = e.target.files?.[0] ?? null; setForm((c) => ({ ...c, photo: e.target.files?.[0]?.name ?? "" })); }} /></label></Field>
           </div>
         </div>
         <InfoNote tone="warning">A failed or conditional result will block project completion until a reinspection passes and deficiencies are verified.</InfoNote>
@@ -518,7 +521,7 @@ function InspectionModal({ open, onClose, project }: { open: boolean; onClose: (
 const docCategories: DocumentCategory[] = ["Photo", "Quote", "Contract", "Purchase Order", "Invoice", "Receipt", "Permit", "Inspection Report", "Change Order", "Warranty", "Product Manual", "Proof of Payment", "Other"];
 
 export function DocumentsTab({ project }: { project: Project }) {
-  const { addDocument, notify } = useStore();
+  const { addDocument, openDocument, notify } = useStore();
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<"All" | DocumentCategory>("All");
   const [stage, setStage] = useState<"All" | "Before" | "During" | "After">("All");
@@ -544,7 +547,7 @@ export function DocumentsTab({ project }: { project: Project }) {
                 <img src={photo.url} alt={photo.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" />
                 <div className="absolute inset-0 bg-gradient-to-t from-u-bg/85 via-transparent to-transparent" />
                 <Badge tone={photo.stage === "Before" ? "amber" : photo.stage === "After" ? "aqua" : "sky"} className="absolute left-1.5 top-1.5">{photo.stage ?? "Photo"}</Badge>
-                <button onClick={() => notify("Photo preview", "info", `${photo.name} — secured project media preview.`)} className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md bg-u-bg/70 text-u-ink opacity-0 transition group-hover:opacity-100"><Eye className="h-3 w-3" /></button>
+                <button onClick={() => openDocument(photo)} className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md bg-u-bg/70 text-u-ink opacity-0 transition group-hover:opacity-100"><Eye className="h-3 w-3" /></button>
                 <div className="absolute inset-x-0 bottom-0 p-2"><p className="truncate text-[10px] font-medium text-u-ink">{photo.name}</p><p className="text-[8.5px] text-u-muted">{dateShort(photo.uploadDate)} · {photo.uploader}</p></div>
               </div>
             </div>
@@ -583,8 +586,8 @@ export function DocumentsTab({ project }: { project: Project }) {
                     <p className="flex flex-wrap items-center gap-x-1.5 text-[9px] text-u-muted"><span className="font-mono">{docItem.id}</span> · {docItem.category} · {docItem.fileType} · {docItem.size} · {docItem.uploader} · {dateShort(docItem.uploadDate)}{docItem.taskId ? ` · ${project.tasks.find((t) => t.id === docItem.taskId)?.name ?? docItem.taskId}` : ""}{docItem.financialRecord ? ` · ${docItem.financialRecord}` : ""}</p>
                   </div>
                   <Badge tone="slate" className="hidden sm:inline-flex">{docItem.visibility}</Badge>
-                  <button onClick={() => notify("Document preview", "info", `${docItem.name} is served through a private, expiring URL in the secure repository.`)} aria-label="Preview document" className="flex h-7 w-7 items-center justify-center rounded border border-u-ink/[0.07] text-u-muted hover:text-u-ink"><Eye className="h-3 w-3" /></button>
-                  <button onClick={() => notify("Download started", "success", `${docItem.name} — mock download from secure storage.`)} aria-label="Download document" className="flex h-7 w-7 items-center justify-center rounded border border-u-ink/[0.07] text-u-muted hover:text-u-ink"><Download className="h-3 w-3" /></button>
+                  <button onClick={() => openDocument(docItem)} aria-label="Preview document" className="flex h-7 w-7 items-center justify-center rounded border border-u-ink/[0.07] text-u-muted hover:text-u-ink"><Eye className="h-3 w-3" /></button>
+                  <button onClick={() => openDocument(docItem)} aria-label="Download document" className="flex h-7 w-7 items-center justify-center rounded border border-u-ink/[0.07] text-u-muted hover:text-u-ink"><Download className="h-3 w-3" /></button>
                 </div>
               );
             })}
@@ -598,7 +601,7 @@ export function DocumentsTab({ project }: { project: Project }) {
   );
 }
 
-function UploadDocumentModal({ open, onClose, project, onUpload }: { open: boolean; onClose: () => void; project: Project; onUpload: (projectId: string, document: Omit<import("../../lib/types").ProjectDocument, "id" | "uploadDate" | "uploader">) => { ok: boolean; error?: string } }) {
+function UploadDocumentModal({ open, onClose, project, onUpload }: { open: boolean; onClose: () => void; project: Project; onUpload: (projectId: string, document: Omit<import("../../lib/types").ProjectDocument, "id" | "uploadDate" | "uploader">, file?: File) => { ok: boolean; error?: string } }) {
   const [name, setName] = useState("");
   const [category, setCategory] = useState<DocumentCategory>("Photo");
   const [stage, setStage] = useState<"Before" | "During" | "After">("During");
@@ -606,6 +609,8 @@ function UploadDocumentModal({ open, onClose, project, onUpload }: { open: boole
   const [expiryDate, setExpiryDate] = useState("");
   const [visibility, setVisibility] = useState<"Internal" | "Team" | "Restricted">("Team");
   const [fileType, setFileType] = useState("PDF");
+  const [file, setFile] = useState<File | null>(null);
+  const [fileSizeLabel, setFileSizeLabel] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const submit = () => {
     if (!name.trim()) { setErrors({ name: "Select a file or provide a document name." }); return; }
@@ -614,23 +619,24 @@ function UploadDocumentModal({ open, onClose, project, onUpload }: { open: boole
       name,
       category,
       fileType,
-      size: "742 KB",
+      size: fileSizeLabel || "742 KB",
       taskId: taskId || undefined,
       expiryDate: expiryDate || undefined,
       stage: category === "Photo" ? stage : undefined,
       visibility,
-    });
-    if (result.ok) { onClose(); setName(""); setErrors({}); }
+    }, file ?? undefined);
+    if (result.ok) { onClose(); setName(""); setFile(null); setFileSizeLabel(""); setErrors({}); }
+    else setErrors({ name: result.error ?? "The document could not be added." });
   };
   return (
-    <Modal open={open} onClose={onClose} title="Upload to project repository" description="Mock storage: file metadata is recorded against the project and audit trail." icon={Upload}
+    <Modal open={open} onClose={onClose} title="Upload to project repository" description="File details are recorded against the project and audit trail." icon={Upload}
       footer={<><Button variant="ghost" size="md" onClick={onClose}>Cancel</Button><Button variant="primary" size="md" icon={Check} onClick={submit}>Upload document</Button></>}>
       <div className="space-y-3">
         <label className={cn("pj-dot-grid flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed px-4 py-6 text-center transition hover:border-u-accent/40 hover:bg-u-ink/[0.02]", errors.name ? "border-u-danger/40" : "border-u-ink/15")}>
           <Upload className="h-5 w-5 text-u-muted" />
           <p className="mt-1.5 text-[11.5px] font-medium text-u-ink">{name || "Click to select a file"}</p>
           <p className="mt-0.5 text-[9.5px] text-u-muted">PDF, JPG, PNG, DOCX, XLSX · max 25 MB</p>
-          <input type="file" className="hidden" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" onChange={(e) => { const file = e.target.files?.[0]; if (file) { setName(file.name); setFileType(file.name.split(".").pop()?.toUpperCase() ?? "PDF"); const categoryGuess = /invoice/i.test(file.name) ? "Invoice" : /quote/i.test(file.name) ? "Quote" : /permit/i.test(file.name) ? "Permit" : /\.(jpg|jpeg|png)$/i.test(file.name) ? "Photo" : "Other"; setCategory(categoryGuess as DocumentCategory); setErrors({}); } }} />
+          <input type="file" className="hidden" accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx" onChange={(e) => { const file = e.target.files?.[0]; if (file) { setFile(file); setFileSizeLabel(file.size < 1048576 ? `${Math.max(1, Math.round(file.size / 1024))} KB` : `${(file.size / 1048576).toFixed(1)} MB`); setName(file.name); setFileType(file.name.split(".").pop()?.toUpperCase() ?? "PDF"); const categoryGuess = /invoice/i.test(file.name) ? "Invoice" : /quote/i.test(file.name) ? "Quote" : /permit/i.test(file.name) ? "Permit" : /\.(jpg|jpeg|png)$/i.test(file.name) ? "Photo" : "Other"; setCategory(categoryGuess as DocumentCategory); setErrors({}); } }} />
         </label>
         {errors.name && <p className="text-[10px] text-u-danger">{errors.name}</p>}
         <div className="grid gap-3 sm:grid-cols-2">

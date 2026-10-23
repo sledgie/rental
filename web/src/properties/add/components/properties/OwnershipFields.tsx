@@ -6,20 +6,23 @@ import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 import { useToast } from "../ui/Toast";
 import { useAppStore } from "../../store/AppStore";
-import { MANAGEMENT_COMPANIES, STAFF } from "../../data/mockProperties";
 import type { Owner, OwnershipType } from "../../types/property";
 import type { SectionProps } from "./PropertyFormSection";
 
 export function OwnershipFields({ form, set, errors }: SectionProps) {
-  const { owners, addOwner } = useAppStore();
+  const { owners, addOwner, staff, managementCompanies, addManagementCompany } = useAppStore();
   const { toast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
   const [newOwner, setNewOwner] = useState({ name: "", type: "individual" as Owner["type"], email: "", phone: "" });
   const [ownerErr, setOwnerErr] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [companyOpen, setCompanyOpen] = useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const [companyErr, setCompanyErr] = useState<string | null>(null);
 
   const isJoint = form.ownershipType === "joint";
 
-  const createOwner = () => {
+  const createOwner = async () => {
     if (!newOwner.name.trim()) {
       setOwnerErr("Owner name is required.");
       return;
@@ -35,12 +38,40 @@ export function OwnershipFields({ form, set, errors }: SectionProps) {
       email: newOwner.email.trim(),
       phone: newOwner.phone.trim() || undefined,
     };
-    addOwner(owner);
-    set("ownerId", owner.id);
-    setModalOpen(false);
-    setNewOwner({ name: "", type: "individual", email: "", phone: "" });
-    setOwnerErr(null);
-    toast("success", "Owner created", `${owner.name} was added and linked to this property.`);
+    setSaving(true);
+    try {
+      // with Supabase the saved owner comes back with its real id
+      const saved = await addOwner(owner);
+      set("ownerId", saved.id);
+      setModalOpen(false);
+      setNewOwner({ name: "", type: "individual", email: "", phone: "" });
+      setOwnerErr(null);
+      toast("success", "Owner created", `${saved.name} was added and linked to this property.`);
+    } catch (error) {
+      setOwnerErr(error instanceof Error ? error.message : "Unable to create the owner.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const createCompany = async () => {
+    if (!companyName.trim()) {
+      setCompanyErr("Company name is required.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const saved = await addManagementCompany(companyName.trim());
+      set("managementCompanyId", saved.id);
+      setCompanyOpen(false);
+      setCompanyName("");
+      setCompanyErr(null);
+      toast("success", "Management company created", `${saved.name} was added and linked to this property.`);
+    } catch (error) {
+      setCompanyErr(error instanceof Error ? error.message : "Unable to create the management company.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const addShare = () => {
@@ -165,23 +196,28 @@ export function OwnershipFields({ form, set, errors }: SectionProps) {
             onChange={(e) => set("propertyManagerId", e.target.value)}
           >
             <option value="">Unassigned</option>
-            {STAFF.map((s) => (
+            {staff.map((s) => (
               <option key={s.id} value={s.id}>{s.name} — {s.role}</option>
             ))}
           </Select>
         </Field>
 
         <Field label="Management Company" htmlFor="managementCompanyId">
-          <Select
-            id="managementCompanyId"
-            value={form.managementCompanyId}
-            onChange={(e) => set("managementCompanyId", e.target.value)}
-          >
-            <option value="">None / self-managed</option>
-            {MANAGEMENT_COMPANIES.map((m) => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
-          </Select>
+          <div className="flex gap-2">
+            <Select
+              id="managementCompanyId"
+              value={form.managementCompanyId}
+              onChange={(e) => set("managementCompanyId", e.target.value)}
+            >
+              <option value="">None / self-managed</option>
+              {managementCompanies.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </Select>
+            <Button type="button" variant="outline" className="shrink-0" onClick={() => setCompanyOpen(true)}>
+              <Plus size={15} /> New
+            </Button>
+          </div>
         </Field>
 
         <Field label="Management Start Date" htmlFor="managementStartDate">
@@ -256,7 +292,7 @@ export function OwnershipFields({ form, set, errors }: SectionProps) {
         footer={
           <>
             <Button variant="ghost" onClick={() => setModalOpen(false)}>Cancel</Button>
-            <Button variant="primary" onClick={createOwner}>Create Owner</Button>
+            <Button variant="primary" onClick={createOwner} disabled={saving}>{saving ? "Creating…" : "Create Owner"}</Button>
           </>
         }
       >
@@ -298,6 +334,34 @@ export function OwnershipFields({ form, set, errors }: SectionProps) {
               value={newOwner.phone}
               onChange={(e) => setNewOwner({ ...newOwner, phone: e.target.value })}
               placeholder="+1 (416) 555-0100"
+            />
+          </Field>
+        </div>
+      </Modal>
+
+      {/* New management company modal */}
+      <Modal
+        open={companyOpen}
+        onClose={() => setCompanyOpen(false)}
+        title="Create Management Company"
+        description="The company is stored once and can be linked to any property."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setCompanyOpen(false)}>Cancel</Button>
+            <Button variant="primary" onClick={createCompany} disabled={saving}>{saving ? "Creating…" : "Create Company"}</Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {companyErr && (
+            <p className="rounded-lg border border-brick-600/40 bg-brick-500/10 px-3 py-2 text-xs text-brick-400">{companyErr}</p>
+          )}
+          <Field label="Company Name" htmlFor="newCompanyName" required>
+            <Input
+              id="newCompanyName"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              placeholder="e.g. Maplewood Management Ltd."
             />
           </Field>
         </div>

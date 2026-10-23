@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../../lib/supabase";
 import { useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
 import {
   documentCategories,
@@ -227,7 +228,7 @@ export default function LeaseDetails({ lease, data, tab, onTabChange, actions }:
     if (tab === "Documents") return (
       <div className="detail-tab-content documents-tab">
         <div className="detail-section-heading document-heading"><div><span className="eyebrow">LEASE FILES</span><h3>Documents <span className="section-count">{leaseDocuments.length}</span></h3><p>Multiple documents and preserved versions are linked to this lease.</p></div><button className="button button-small button-primary" onClick={() => fileInput.current?.click()}><Icon name="upload" size={14} /> Upload documents</button></div>
-        <div className="storage-callout compact-callout"><Icon name="alert" size={15} /><span><strong>Simulated storage.</strong> Files and metadata remain in this browser session; storage, authorization, and retention controls are not connected.</span></div>
+        {isSupabaseConfigured ? <div className="storage-callout compact-callout"><Icon name="file" size={15} /><span><strong>Secure storage.</strong> Files are stored privately and are only visible to people with access to lease documents.</span></div> : <div className="storage-callout compact-callout"><Icon name="alert" size={15} /><span><strong>Simulated storage.</strong> Files and metadata remain in this browser session; storage, authorization, and retention controls are not connected.</span></div>}
         <div className="dropzone document-dropzone" onDragOver={(event) => event.preventDefault()} onDrop={dropFiles} onClick={() => fileInput.current?.click()} role="button" tabIndex={0} aria-label="Upload multiple lease documents" onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") fileInput.current?.click(); }}>
           <div className="upload-symbol"><Icon name="upload" size={18} /></div><div><strong>Drop multiple files to upload</strong><span>Or browse your device. Document categories and metadata can be edited after upload.</span></div><button type="button" className="button button-small button-secondary" onClick={(event) => { event.stopPropagation(); fileInput.current?.click(); }}>Browse files</button>
         </div>

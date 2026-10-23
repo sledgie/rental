@@ -15,7 +15,7 @@ import { useOrganization } from "../../contexts/OrganizationContext";
 import { useToast } from "../../contexts/ToastContext";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import { formatDateTime, relativeTime } from "../../lib/format";
-import { listOrganizationActivity, type ActivityRow } from "../../services/mockActivityService";
+import { activityService, type ActivityRow } from "../../services";
 import type { ActivityType } from "../../lib/types";
 import { SettingsHeader } from "./SettingsChrome";
 import { cn } from "../../utils/cn";
@@ -46,7 +46,7 @@ export default function ActivityLogsPage() {
     if (!organizationId) return;
     let cancelled = false;
     setError(null);
-    listOrganizationActivity(organizationId)
+    activityService.listOrganizationActivity(organizationId)
       .then((rows) => {
         if (!cancelled) setEntries(rows);
       })

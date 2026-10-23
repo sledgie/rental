@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "../shim/router";
 import { ArrowUpRight, Building2, ShieldCheck, Sparkles, TrendingUp } from "lucide-react";
 import { Logo } from "../components/Logo";
+import { usingSupabase } from "../services";
 
 const sparkPoints = [38, 44, 41, 52, 49, 60, 57, 68, 72, 66, 78, 86];
 
@@ -113,7 +114,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
             <Logo theme="dark" />
             <span className="inline-flex items-center gap-1.5 rounded-full border border-u-card/10 bg-u-card/5 px-2.5 py-1 text-[10px] font-medium text-u-s3">
               <span className="size-1.5 rounded-full bg-u-ok" />
-              Prototype workspace
+              {usingSupabase ? "Landlord Operations & Financial Tracking" : "Prototype workspace"}
             </span>
           </div>
 
@@ -143,7 +144,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
           <div className="relative flex flex-wrap items-center justify-between gap-3 border-t border-u-card/8 pt-5">
             <p className="flex items-center gap-1.5 text-[10.5px] text-u-muted">
               <ShieldCheck className="size-3.5 text-u-muted" />
-              Development environment · mock data only
+              {usingSupabase ? "Secured by Supabase Auth" : "Development environment · mock data only"}
             </p>
             <Link
               to="/login"
@@ -160,16 +161,16 @@ export function AuthLayout({ children }: { children: ReactNode }) {
           <Logo theme="dark" size="sm" />
           <span className="inline-flex items-center gap-1.5 rounded-full border border-u-card/10 bg-u-card/5 px-2.5 py-1 text-[10px] font-medium text-u-s3">
             <span className="size-1.5 rounded-full bg-u-ok" />
-            Mock data
+            {usingSupabase ? "L.O.F.T." : "Mock data"}
           </span>
         </div>
         <div className="flex flex-1 items-center justify-center px-5 py-8 sm:px-8 lg:px-12">
           <div className="w-full max-w-[408px]">{children}</div>
         </div>
         <footer className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-6 pb-6 text-[10.5px] text-u-muted">
-          <span>© 2026 Rentflow</span>
+          <span>© 2026 L.O.F.T.</span>
           <span className="text-u-s3">·</span>
-          <span>Mock environment — no real data or email delivery</span>
+          <span>{usingSupabase ? "Landlord Operations & Financial Tracking" : "Mock environment — no real data or email delivery"}</span>
         </footer>
       </main>
     </div>

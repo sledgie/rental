@@ -4,6 +4,7 @@ import type { Database, Unit, UnitCondition, UnitStatus } from "../data/types";
 import { isUnitNumberTaken, nextUnitId } from "../data/selectors";
 import { isoDate, money } from "../lib/format";
 import { TODAY } from "../data/mockData";
+import { isSupabaseConfigured } from "../../lib/supabase";
 import { useStore } from "../store/appStore";
 import { Icon } from "../components/ui/Icon";
 import { Button, Field, Pill, Select, TextArea, TextInput } from "../components/ui/primitives";
@@ -137,7 +138,7 @@ export function UnitFormDrawer({
   };
 
   const generatedId = useMemo(
-    () => (mode === "create" ? nextUnitId(db, draft.propertyId) : draft.unitId),
+    () => (isSupabaseConfigured && mode === "create" ? "Assigned on save" : mode === "create" ? nextUnitId(db, draft.propertyId) : draft.unitId),
     [mode, db, draft.propertyId, draft.unitId],
   );
 
@@ -187,7 +188,7 @@ export function UnitFormDrawer({
     return Object.keys(e).filter((k) => e[k]).length === 0;
   }
 
-  function save() {
+  async function save() {
     if (!validate()) {
       pushToast({
         tone: "rose",
@@ -197,7 +198,7 @@ export function UnitFormDrawer({
       return;
     }
     setSaving(true);
-    window.setTimeout(() => {
+    try {
       const payload = {
         propertyId: draft.propertyId,
         unitNumber: draft.unitNumber.trim(),
@@ -223,14 +224,14 @@ export function UnitFormDrawer({
       };
 
       if (mode === "create") {
-        const created = addUnit({ ...payload, archived: false } as Omit<Unit, "id" | "createdAt" | "updatedAt" | "archived">);
+        const created = await addUnit({ ...payload, archived: false } as Omit<Unit, "id" | "createdAt" | "updatedAt" | "archived">);
         pushToast({
           tone: "jade",
           title: `Unit ${created.unitNumber} created`,
-          message: `${created.id} added to ${db.properties.find((p) => p.id === created.propertyId)?.propertyName}. No lease or tenant was created — contractual rent stays at “—” until a lease is issued.`,
+          message: `${created.code ?? created.id} added to ${db.properties.find((p) => p.id === created.propertyId)?.propertyName}. No lease or tenant was created — contractual rent stays at “—” until a lease is issued.`,
         });
       } else if (unit) {
-        updateUnit(unit.id, payload);
+        await updateUnit(unit.id, payload);
         if (propertyChanging) {
           log(unit.id, "record", `Unit reassigned from ${unit.propertyId} to ${draft.propertyId}`);
         }
@@ -244,7 +245,10 @@ export function UnitFormDrawer({
       }
       setSaving(false);
       onClose();
-    }, 380);
+    } catch (error) {
+      setSaving(false);
+      pushToast({ tone: "rose", title: "The unit was not saved", message: error instanceof Error ? error.message : "Something went wrong. Please try again." });
+    }
   }
 
   return (

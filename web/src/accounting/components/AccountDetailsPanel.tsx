@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../../lib/supabase";
 import { useMemo } from "react";
 import { useChart } from "../store/chart-store";
 import {
@@ -403,8 +404,8 @@ export function AccountDetailsPanel({ onAction, variant = "panel", onBack, query
             </span>
           </div>
           <p className="mt-2 leading-relaxed">
-            YTD activity (mock): <span className="font-mono text-u-ink2 tabular">{money(account.ytdAmount)}</span>. Session
-            data only — nothing is persisted to a database.
+            {isSupabaseConfigured ? "Posted activity" : "YTD activity (mock)"}: <span className="font-mono text-u-ink2 tabular">{money(account.ytdAmount)}</span>.
+            {isSupabaseConfigured ? "" : " Session data only \u2014 nothing is persisted to a database."}
           </p>
         </div>
       </div>

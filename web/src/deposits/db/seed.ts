@@ -1,4 +1,6 @@
 import { db } from "./";
+import { isSupabaseConfigured } from "../../lib/supabase";
+import { ensureLoaded } from "./supabaseSync";
 import * as schema from "./schema";
 import { eq } from "./ops";
 import { addDaysISO, addMonthsISO, endOfMonthISO, startOfMonthISO, todayISO } from "../lib/dates";
@@ -13,6 +15,8 @@ type LineDraft = typeof schema.journalLines.$inferInsert;
 type PaymentDraft = typeof schema.payments.$inferInsert;
 
 export async function ensureSeeded(): Promise<void> {
+  // with Supabase there is no demo data: the module is filled from the active organization instead
+  if (isSupabaseConfigured) return ensureLoaded();
   const meta = await db.select().from(schema.appMeta);
   if (meta.some((m) => m.key === "seed_version" && m.value === SEED_VERSION)) return;
   await seedDatabase();

@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../../lib/supabase";
 // Formatting and small utility helpers
 
 export function r2(n: number): number {
@@ -168,5 +169,7 @@ export function downloadCSV(filename: string, rows: (string | number)[][]) {
 }
 
 export function uid(prefix: string): string {
+  // with Supabase the ids become database primary keys, so they must be real UUIDs
+  if (isSupabaseConfigured) return crypto.randomUUID();
   return `${prefix}-${Math.random().toString(36).slice(2, 8)}${Date.now().toString(36).slice(-4)}`;
 }

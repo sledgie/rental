@@ -1,6 +1,8 @@
 import { db } from "../../db";
 import * as schema from "../../db/schema";
 import { eq } from "../../db/ops";
+import { isSupabaseConfigured } from "../../../lib/supabase";
+import { postJournalToDb } from "../../db/supabaseSync";
 
 export type JournalLineInput = {
   accountCode: string;
@@ -63,6 +65,8 @@ export function nextSequentialReference(prefix: string, existing: string[]): str
 }
 
 export function newId(prefix: string): string {
+  // with Supabase the ids become database primary keys, so they must be real UUIDs
+  if (isSupabaseConfigured) return crypto.randomUUID();
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
 }
 
@@ -96,6 +100,26 @@ export async function postJournal(input: PostJournalInput): Promise<string> {
     .where(eq(schema.journalEntries.sourceId, input.sourceId));
   const duplicate = existing.find((e) => e.sourceType === input.sourceType);
   if (duplicate) return duplicate.id;
+
+  if (isSupabaseConfigured) {
+    // the database posts the entry (balanced, in an open period, on active posting accounts) and keeps it immutable
+    const [deposit] = await db.select().from(schema.deposits).where(eq(schema.deposits.id, input.depositId));
+    const dbEntryId = await postJournalToDb({
+      entryDate: input.entryDate,
+      description: input.description,
+      lines: input.lines.map((l) => ({ ...l, memo: l.memo?.replace(/\s*\(simulated\)/i, "") })),
+      tenantId: deposit?.tenantId ?? null,
+      leaseId: deposit?.leaseId ?? null,
+      propertyId: deposit?.propertyId ?? null,
+      unitId: deposit?.unitId ?? null,
+    });
+    // keep a copy in the module's own store so reversals and reports can read its lines (this never reaches the database again)
+    await db.insert(schema.journalEntries).values({ id: dbEntryId, reference: dbEntryId, entryDate: input.entryDate, description: input.description, sourceType: input.sourceType, sourceId: input.sourceId, status: "posted", simulated: false, createdBy: input.userId });
+    await db.insert(schema.journalLines).values(
+      input.lines.map((l, i) => ({ id: `${dbEntryId}-${i + 1}`, entryId: dbEntryId, accountCode: l.accountCode, debitCents: l.debitCents ?? 0, creditCents: l.creditCents ?? 0, memo: l.memo ?? null, depositId: input.depositId })),
+    );
+    return dbEntryId;
+  }
 
   const allEntries = await db.select({ reference: schema.journalEntries.reference }).from(schema.journalEntries);
   const reference = nextSequentialReference("JE", allEntries.map((e) => e.reference));

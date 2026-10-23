@@ -1,3 +1,4 @@
+import { usingSupabase } from "../services";
 import type { ReactNode } from "react";
 import { Link, useNavigate } from "../shim/router";
 import { LogOut, ShieldCheck } from "lucide-react";
@@ -15,7 +16,7 @@ export function SetupLayout({ children, maxWidth = "max-w-5xl" }: { children: Re
 
   async function handleSignOut() {
     await signOut();
-    toast({ title: "Signed out", description: "Your mock session has been cleared.", variant: "info" });
+    toast({ title: "Signed out", description: usingSupabase ? "You have been signed out." : "Your mock session has been cleared.", variant: "info" });
     navigate("/login", { replace: true });
   }
 
@@ -27,13 +28,13 @@ export function SetupLayout({ children, maxWidth = "max-w-5xl" }: { children: Re
       />
       <header className="relative z-10 border-b border-u-line/80 bg-u-card/80 backdrop-blur">
         <div className={`mx-auto flex h-16 w-full ${maxWidth} items-center justify-between gap-4 px-5 sm:px-6`}>
-          <Link to="/onboarding" className="focus-ring rounded-lg" aria-label="Rentflow onboarding">
+          <Link to="/onboarding" className="focus-ring rounded-lg" aria-label="L.O.F.T. onboarding">
             <Logo />
           </Link>
           <div className="flex items-center gap-3">
             <span className="hidden items-center gap-1.5 rounded-full border border-u-line bg-u-s2 px-2.5 py-1 text-[10px] font-medium text-u-muted sm:inline-flex">
               <ShieldCheck className="size-3 text-u-muted" />
-              Mock workspace setup
+              {usingSupabase ? "Workspace setup" : "Mock workspace setup"}
             </span>
             {pendingInvitations.length > 0 ? (
               <Link
@@ -67,10 +68,10 @@ export function SetupLayout({ children, maxWidth = "max-w-5xl" }: { children: Re
 
       <footer className="relative z-10 border-t border-u-line/70 bg-u-card/40">
         <div className={`mx-auto flex ${maxWidth} flex-wrap items-center justify-between gap-2 px-5 py-4 text-[10.5px] text-u-muted sm:px-6`}>
-          <span>© 2026 Rentflow · Organization setup</span>
+          <span>© 2026 L.O.F.T. · Organization setup</span>
           <span className="flex items-center gap-1.5">
             <span className="size-1.5 rounded-full bg-u-warn" />
-            Mock data persists only in this browser
+            {usingSupabase ? "Your data is stored securely" : "Mock data persists only in this browser"}
           </span>
         </div>
       </footer>

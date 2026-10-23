@@ -1,3 +1,5 @@
+import { isSupabaseConfigured } from "../../lib/supabase";
+import { documentUrl } from "../../lib/documents";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   dateOffset,
@@ -345,7 +347,7 @@ export function DocumentMetadataModal({ document, onSave, onClose }: { document:
   };
   return <ModalFrame title="Edit document metadata" kicker={document.originalFileName} onClose={onClose} size="modal-small" footer={<><button className="button button-ghost" onClick={onClose}>Cancel</button><button className="button button-primary" onClick={save}><Icon name="check" size={15} /> Save metadata</button></>}>
     {error && <div className="form-error"><Icon name="alert" size={15} />{error}</div>}
-    <div className="storage-callout compact-callout"><Icon name="file" size={15} /><span>Document metadata is stored in the current browser session. Binary file storage is simulated.</span></div>
+    <div className="storage-callout compact-callout"><Icon name="file" size={15} /><span>{isSupabaseConfigured ? "Changes to these details are saved to the lease record." : "Document metadata is stored in the current browser session. Binary file storage is simulated."}</span></div>
     <div className="form-grid">
       <div className="field"><label htmlFor="doc-title">Document title</label><input id="doc-title" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} /></div>
       <div className="field"><label htmlFor="doc-category">Category</label><select id="doc-category" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value as DocumentMetadataValues["category"] })}>{documentCategories.map((category) => <option key={category}>{category}</option>)}</select></div>
@@ -406,13 +408,23 @@ export function DocumentHistoryModal({ document, allDocuments, onPreview, onClos
 export function DocumentPreviewModal({ document, onClose }: { document: LeaseDocument; onClose: () => void }) {
   const [url, setUrl] = useState("");
   useEffect(() => {
-    if (!document.file) { setUrl(""); return; }
+    if (!document.file) {
+      setUrl("");
+      if (!document.storageReference.startsWith("simulated://") && document.storageReference.includes("/")) {
+        const [bucket, ...rest] = document.storageReference.split("/");
+        let cancelled = false;
+        documentUrl(bucket, rest.join("/")).then((signed) => { if (!cancelled) setUrl(signed); }).catch(() => undefined);
+        return () => { cancelled = true; };
+      }
+      return;
+    }
     const objectUrl = URL.createObjectURL(document.file);
     setUrl(objectUrl);
     return () => URL.revokeObjectURL(objectUrl);
   }, [document]);
-  const supported = document.file && (document.file.type === "application/pdf" || document.file.type.startsWith("image/"));
-  return <ModalFrame title={document.title} kicker={`PREVIEW | VERSION ${document.versionNumber}`} onClose={onClose} size="modal-preview" footer={<><span className="preview-storage-note">Simulated file | {document.originalFileName}</span><button className="button button-secondary" onClick={onClose}>Close preview</button></>}>
-    {supported && url ? document.file?.type.startsWith("image/") ? <div className="document-preview-image"><img src={url} alt={document.title} /></div> : <iframe className="document-preview-frame" title={`Preview ${document.title}`} src={url} /> : <div className="preview-unavailable"><span className="preview-file-symbol"><Icon name="file" size={26} /></span><h3>Preview unavailable</h3><p>{document.file ? "This file type is not supported for in-browser preview." : "This sample document has simulated metadata but no stored binary file."}</p><div className="preview-file-meta"><span>File name</span><strong>{document.originalFileName}</strong><span>Type / size</span><strong>{document.fileType || "Unknown"} | {document.fileSize ? `${Math.ceil(document.fileSize / 1024)} KB` : "No binary stored"}</strong><span>Storage reference</span><strong>{document.storageReference}</strong></div></div>}
+  const mimeType = document.file?.type ?? document.fileType;
+  const supported = (document.file || !document.storageReference.startsWith("simulated://")) && (mimeType === "application/pdf" || mimeType.startsWith("image/"));
+  return <ModalFrame title={document.title} kicker={`PREVIEW | VERSION ${document.versionNumber}`} onClose={onClose} size="modal-preview" footer={<><span className="preview-storage-note">{isSupabaseConfigured ? "Stored file" : "Simulated file"} | {document.originalFileName}</span><button className="button button-secondary" onClick={onClose}>Close preview</button></>}>
+    {supported && url ? mimeType.startsWith("image/") ? <div className="document-preview-image"><img src={url} alt={document.title} /></div> : <iframe className="document-preview-frame" title={`Preview ${document.title}`} src={url} /> : <div className="preview-unavailable"><span className="preview-file-symbol"><Icon name="file" size={26} /></span><h3>Preview unavailable</h3><p>{document.file ? "This file type is not supported for in-browser preview." : "This sample document has simulated metadata but no stored binary file."}</p><div className="preview-file-meta"><span>File name</span><strong>{document.originalFileName}</strong><span>Type / size</span><strong>{document.fileType || "Unknown"} | {document.fileSize ? `${Math.ceil(document.fileSize / 1024)} KB` : "No binary stored"}</strong><span>Storage reference</span><strong>{document.storageReference}</strong></div></div>}
   </ModalFrame>;
 }

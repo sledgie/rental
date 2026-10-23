@@ -1,36 +1,40 @@
-import { Landmark } from 'lucide-react';
-import { Button as TnButton } from '../tenants/components/ui';
-import { StoreProvider } from '../bankrecon/lib/store';
+// Banks page: same directory layout as Properties and Tenants (Tenants stylesheet, .tn).
+import { StoreProvider, useStore } from '../bankrecon/lib/store';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { EmptyState } from '../tenants/components/ui';
 import BankAccounts from './BankAccounts';
-import '../bankrecon/bankrecon.css';
 
-export default function Banks() {
+function Content({ notify }: { notify?: (message: string) => void }) {
+  const { status, syncError, dismissSyncError } = useStore();
+  if (isSupabaseConfigured && (!status.ready || status.error)) {
+    return (
+      <EmptyState
+        title={status.error ? "We couldn't load your bank accounts" : 'Loading bank accounts…'}
+        description={status.error ?? 'Fetching your accounts.'}
+      />
+    );
+  }
+  return (
+    <>
+      {syncError && (
+        <div className="form-error" role="alert" style={{ marginBottom: 12 }}>
+          <span>The change was not saved: {syncError}</span>
+          <button type="button" className="text-link" style={{ marginLeft: 'auto' }} onClick={dismissSyncError}>Dismiss</button>
+        </div>
+      )}
+      <BankAccounts notify={notify} />
+    </>
+  );
+}
+
+export default function Banks({ notify }: { notify?: (message: string) => void }) {
   return (
     <StoreProvider>
-      <div className="tn br">
+      <div className="tn">
         <div className="app-shell">
           <div className="main-shell">
             <main className="main-content">
-              <div className="page-heading">
-                <div>
-                  <div className="page-title-line">
-                    <h1>Banks</h1>
-                    <span className="muted">Simulated bank data</span>
-                  </div>
-                  <p>Bank accounts used for payments, deposits and reconciliation. Account numbers are masked and no online banking credentials are stored.</p>
-                </div>
-                <div className="page-heading-actions no-print">
-                  <TnButton onClick={() => { window.location.hash = '#/bank-reconciliation'; }}><Landmark size={15} />Bank Reconciliation</TnButton>
-                </div>
-              </div>
-              <section className="directory-panel" aria-label="Banks">
-                <div className="u-root br-body" style={{ borderTop: 0 }}>
-                  <BankAccounts />
-                </div>
-              </section>
-              <div className="directory-footnote no-print">
-                <span>Demonstration data is stored in this browser only and is shared with Bank Reconciliation.</span>
-              </div>
+              <Content notify={notify} />
             </main>
           </div>
         </div>

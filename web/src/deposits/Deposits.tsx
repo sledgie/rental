@@ -4,6 +4,9 @@ import { Button as TnButton, Overlay } from '../tenants/components/ui';
 import { AsyncView } from './shim/react';
 import { RouteContext, buildHash, routeFromParams, useVersion, type DepositsRoute } from './shim/store';
 import { ensureSeeded } from './db/seed';
+import { useDepositSyncError } from './db/supabaseSync';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { useOrganization } from '../auth/contexts/OrganizationContext';
 import { getCurrentUser, getStaffList } from './lib/session';
 import { setUserAction } from './lib/deposits/actions';
 import { ROLES } from './lib/deposits/domain';
@@ -83,6 +86,8 @@ function RoleSwitch() {
 
 export default function Deposits({ params }: { params?: Record<string, string> }) {
   const route: DepositsRoute = routeFromParams(params);
+  const [syncError, dismissSyncError] = useDepositSyncError();
+  const { activeOrganization } = useOrganization();
   const queryKey = JSON.stringify(route.query);
   const closeDrawer = () => { window.location.hash = buildHash(route.view, route.query); };
   const goView = (view: string) => { window.location.hash = buildHash(view, {}); };
@@ -97,7 +102,7 @@ export default function Deposits({ params }: { params?: Record<string, string> }
                 <div>
                   <div className="page-title-line">
                     <h1>Deposits</h1>
-                    <span className="muted">Simulated ledger</span>
+                    {!isSupabaseConfigured && <span className="muted">Simulated ledger</span>}
                   </div>
                   <p>Collect, hold, apply, refund and reconcile tenant deposits, including interest and jurisdiction rules.</p>
                 </div>
@@ -107,6 +112,13 @@ export default function Deposits({ params }: { params?: Record<string, string> }
                   </TnButton>
                 </div>
               </div>
+
+              {syncError && (
+                <div className="form-error" role="alert" style={{ marginBottom: 12 }}>
+                  <span>The change was not saved: {syncError}</span>
+                  <button type="button" className="text-link" style={{ marginLeft: 'auto' }} onClick={dismissSyncError}>Dismiss</button>
+                </div>
+              )}
 
               <section className="directory-panel" aria-label="Deposits">
                 <div className="directory-tabs no-print" aria-label="Deposit views">
@@ -120,8 +132,8 @@ export default function Deposits({ params }: { params?: Record<string, string> }
                   })}
                 </div>
                 <div className="directory-toolbar no-print">
-                  <span className="dp-period"><Landmark size={13} style={{ verticalAlign: -2, marginRight: 5 }} />Meridian Property Group · trust account ledger</span>
-                  <div className="toolbar-actions"><RoleSwitch /></div>
+                  <span className="dp-period"><Landmark size={13} style={{ verticalAlign: -2, marginRight: 5 }} />{isSupabaseConfigured ? `${activeOrganization?.name ?? ''} · deposit ledger` : 'Meridian Property Group · trust account ledger'}</span>
+                  <div className="toolbar-actions">{!isSupabaseConfigured && <RoleSwitch />}</div>
                 </div>
                 <div className="u-root dp dp-body">
                   <AsyncView
@@ -136,7 +148,7 @@ export default function Deposits({ params }: { params?: Record<string, string> }
               </section>
 
               <div className="directory-footnote no-print">
-                <span>Demonstration data held in memory for this session. Financial workflows simulate money movement and ledger posting; nothing is saved.</span>
+                <span>{isSupabaseConfigured ? 'Deposit movements post to your accounting ledger. No money is moved by this module: record what happened at the bank.' : 'Demonstration data held in memory for this session. Financial workflows simulate money movement and ledger posting; nothing is saved.'}</span>
               </div>
             </main>
           </div>

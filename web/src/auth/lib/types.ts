@@ -1,5 +1,5 @@
 /**
- * Shared domain types for the Rentflow prototype.
+ * Shared domain types for tryloft (Landlord Operations & Financial Tracking).
  * The UI depends on these types, not on the mock storage implementation.
  */
 

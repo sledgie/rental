@@ -126,7 +126,7 @@ main.tv-main-wrap.flush{padding:0;display:block}
 .tv-prow b{font-weight:600;text-align:right;overflow-wrap:anywhere}
 @media(max-width:800px){.tv-quick{position:absolute;z-index:9;top:0;bottom:0;box-shadow:8px 0 24px rgba(11,31,68,.12)}main.tv-main-wrap{padding:16px}}
 
-/* Sidebar (RentNest): dark navy, electric blue accents. Items come from shell/navConfig.js. */
+/* Sidebar (tryloft): dark navy, electric blue accents. Items come from shell/navConfig.js. */
 .ns{--ns-bg:var(--card);--ns-surface:var(--surface-2);--ns-hover:var(--surface-3);--ns-active:var(--accent-soft);--ns-accent:var(--accent);--ns-icon:var(--accent);--ns-text:var(--ink);--ns-muted:var(--muted);--ns-border:var(--line);
   position:sticky;top:0;height:100vh;width:264px;flex:none;display:flex;flex-direction:column;background:var(--ns-bg);color:var(--ns-text);border-right:1px solid var(--ns-border);z-index:20;transition:width .2s ease}
 .ns.rail{width:68px}

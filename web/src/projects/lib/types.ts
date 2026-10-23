@@ -346,6 +346,9 @@ export interface ProjectDocument {
   financialRecord?: string;
   expiryDate?: ISODate;
   url?: string;
+  /** where the file is stored (Supabase Storage) */
+  bucket?: string;
+  path?: string;
   stage?: "Before" | "During" | "After";
   visibility: "Internal" | "Team" | "Restricted";
 }
@@ -368,6 +371,13 @@ export interface ActivityEntry {
     | "change"
     | "created"
     | "assignment";
+}
+
+/** a file stored for one record of a project (expense receipt, invoice, proof of payment, change-order document, inspection report) */
+export interface StoredAttachment {
+  bucket: string;
+  path: string;
+  name: string;
 }
 
 export interface Project {
@@ -419,6 +429,8 @@ export interface Project {
   inspections: Inspection[];
   deficiencies: Deficiency[];
   documents: ProjectDocument[];
+  /** stored files by the id of the record they belong to */
+  attachmentFiles?: Record<string, StoredAttachment>;
   activity: ActivityEntry[];
 }
 

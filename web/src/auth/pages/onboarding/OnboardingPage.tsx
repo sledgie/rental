@@ -60,7 +60,7 @@ export default function OnboardingPage() {
           </div>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-u-ok/30 bg-u-ok-soft px-2.5 py-1 text-[10px] font-medium text-u-ok">
             <MailCheck className="size-3" />
-            Email verified (simulated)
+            Email verified
           </span>
         </div>
 

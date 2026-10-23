@@ -98,7 +98,7 @@ export function FinancialSection({ row, db }: { row: UnitRow; db: Database }) {
       icon="wallet"
       step="D"
       title="Financial Summary"
-      meta={`Unit account ACC-${row.unit.id} · CAD`}
+      meta={`Unit account ACC-${row.unit.code ?? row.unit.id} · CAD`}
       actions={
         <Button size="xs" variant="primary" icon="list" onClick={() => setLedgerOpen(true)}>
           View financial ledger
@@ -255,7 +255,7 @@ export function FinancialSection({ row, db }: { row: UnitRow; db: Database }) {
         title={`Financial ledger — unit ${row.unit.unitNumber}`}
         subtitle={
           <span className="u-num">
-            ACC-{row.unit.id} · {ledgerRows.length} transaction{ledgerRows.length === 1 ? "" : "s"} · CAD
+            ACC-{row.unit.code ?? row.unit.id} · {ledgerRows.length} transaction{ledgerRows.length === 1 ? "" : "s"} · CAD
           </span>
         }
         icon="list"

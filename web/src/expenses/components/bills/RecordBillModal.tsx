@@ -1,6 +1,8 @@
+import { isSupabaseConfigured } from "../../../lib/supabase";
 import { Button } from "../ui/Button";
 import { Field, Input, Select, Textarea } from "../ui/Field";
 import { Modal } from "../ui/Modal";
+import { ProviderSelect } from "./ProviderSelect";
 import { useApp } from "../../context/AppContext";
 import { properties, providers, tenants, unitsForProperty } from "../../data/catalog";
 import type {
@@ -14,7 +16,7 @@ import type {
 } from "../../types";
 import { allocationsExceedBill } from "../../utils/bills";
 import { addDays, todayISO, toISODate, uid } from "../../utils/format";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 
 const categories: BillCategory[] = [
   "hydro",
@@ -67,8 +69,8 @@ function emptyDraft(): Draft {
   return {
     name: "",
     category: "hydro",
-    providerId: providers[0].id,
-    propertyId: properties[0].id,
+    providerId: providers[0]?.id ?? "",
+    propertyId: properties[0]?.id ?? "",
     unitIds: [],
     invoiceNumber: "",
     accountNumber: "",
@@ -143,6 +145,7 @@ export function RecordBillModal({
   editBill?: Bill | null;
 }) {
   const { addBill, updateBill, updateSchedule, pushToast } = useApp();
+  const attachmentFile = useRef<File | null>(null);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -276,7 +279,9 @@ export function RecordBillModal({
         allocations,
         reminderDays: [7, 3, 0],
         documents: documents.map((d) => ({ ...d, billId: "" })),
+        files: attachmentFile.current ? [attachmentFile.current] : [],
       });
+      attachmentFile.current = null;
       pushToast("Actual bill recorded. Provider balance and tenant recovery are tracked separately.");
       if (schedule) {
         updateSchedule(schedule.id, {
@@ -327,13 +332,7 @@ export function RecordBillModal({
           </Select>
         </Field>
         <Field label="Service provider">
-          <Select value={draft.providerId} onChange={(e) => set("providerId", e.target.value)}>
-            {providers.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </Select>
+          <ProviderSelect value={draft.providerId} onChange={(id) => set("providerId", id)} />
         </Field>
         <Field label="Property">
           <Select
@@ -495,15 +494,15 @@ export function RecordBillModal({
         </Field>
         <Field
           label="Invoice attachment"
-          hint="Prototype upload — files are not persisted to storage."
+          hint={isSupabaseConfigured ? "PDF or image, up to 25 MB. Stored securely with the bill." : "Prototype upload — files are not persisted to storage."}
           className="sm:col-span-2"
         >
           <Input
             type="file"
-            onChange={(e) => set("attachmentName", e.target.files?.[0]?.name ?? "")}
+            onChange={(e) => { attachmentFile.current = e.target.files?.[0] ?? null; set("attachmentName", e.target.files?.[0]?.name ?? ""); }}
           />
           {draft.attachmentName && (
-            <p className="mt-1 text-[11px] text-u-accent">Queued locally: {draft.attachmentName}</p>
+            <p className="mt-1 text-[11px] text-u-accent">{isSupabaseConfigured ? "Will be uploaded when you save" : "Queued locally"}: {draft.attachmentName}</p>
           )}
         </Field>
       </div>

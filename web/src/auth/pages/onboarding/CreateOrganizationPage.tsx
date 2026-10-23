@@ -8,8 +8,6 @@ import {
   Crown,
   Globe2,
   Info,
-  Landmark,
-  LockKeyhole,
   Sparkles,
 } from "lucide-react";
 import { SetupLayout } from "../../layouts/SetupLayout";
@@ -252,16 +250,8 @@ export default function CreateOrganizationPage() {
               Currency and time zone can be changed any time from Organization settings. Country selection
               pre-fills the most common regional options.
             </p>
-            <div className="mt-3 flex items-center gap-2 rounded-lg border border-u-line bg-u-s2/60 px-2.5 py-2 text-[10.5px] text-u-muted">
-              <Landmark className="size-3.5 text-u-muted" />
-              Mock setup · no billing or external services
-            </div>
           </Card>
 
-          <div className="flex items-center justify-center gap-1.5 text-[10px] text-u-muted">
-            <LockKeyhole className="size-3" />
-            Dev-only localStorage persistence
-          </div>
           <div className="flex items-center justify-center gap-1.5 text-[10px] text-u-muted">
             <Sparkles className="size-3" />
             Activity logging starts on creation

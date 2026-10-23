@@ -114,6 +114,7 @@ export interface TxMeta {
 export const txMeta: Record<TxType, TxMeta> = {
   "Rent Charge": { label: "Rent charge", tone: "azure", direction: "debit" },
   "Rent Payment": { label: "Rent payment", tone: "jade", direction: "payment" },
+  "Other Charge": { label: "Other charge", tone: "neutral", direction: "debit" },
   "Late Fee": { label: "Late fee", tone: "amber", direction: "debit" },
   "Utility Charge": { label: "Utility", tone: "cyan", direction: "debit" },
   "Parking Fee": { label: "Parking", tone: "cyan", direction: "debit" },

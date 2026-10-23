@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../lib/supabase";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Activity, AlertCircle, Check, CheckCircle2, Clock3, Code2, Copy, FlaskConical, Pencil, Play, Plus, Power, SearchX, ShieldCheck, Trash2, Workflow, X, XCircle } from "lucide-react";
 import { Button as TnButton, Overlay } from "../tenants/components/ui";
@@ -14,7 +15,7 @@ type SimulationResult = { ruleId: string; ruleName: string; eligible: boolean; e
 function toInput(rule: AutomationRule): AutomationRuleInput { const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, createdBy: _createdBy, updatedBy: _updatedBy, ...input } = rule; return input; }
 function entityLabel(eventType: string) { const prefix = eventType.split(".")[0]; return ({ invoice: "Invoice", payment: "Payment", balance: "Ledger account", tenancy: "Tenancy", lease: "Lease", signature: "Signature request", maintenance: "Maintenance request / work order", project: "Project", document: "Document", user: "User account", account: "User account", scheduled: "Property portfolio" } as Record<string, string>)[prefix] ?? "Event record"; }
 function sampleEvent(rule: AutomationRule): CommunicationEvent {
-  const data: Record<string, unknown> = { property_id: rule.propertyScope.propertyIds[0] ?? "prop-sutherland", tenant_channel_opt_in: true };
+  const data: Record<string, unknown> = { property_id: rule.propertyScope.propertyIds[0] ?? "", tenant_channel_opt_in: true };
   for (const condition of rule.conditions) {
     if (["greater_than", "greater_or_equal"].includes(condition.operator)) data[condition.field] = Number(condition.value) + (condition.operator === "greater_than" ? 1 : 0);
     else if (["less_than", "less_or_equal"].includes(condition.operator)) data[condition.field] = Number(condition.value) - (condition.operator === "less_than" ? 1 : 0);
@@ -24,7 +25,7 @@ function sampleEvent(rule: AutomationRule): CommunicationEvent {
     else if (condition.operator === "contains") data[condition.field] = `prefix ${condition.value} suffix`;
     else data[condition.field] = condition.value === "true" ? true : condition.value === "false" ? false : condition.value;
   }
-  return { eventType: rule.eventType, occurredAt: new Date().toISOString(), propertyId: rule.propertyScope.propertyIds[0] ?? "prop-sutherland", entityType: rule.eventType.split(".")[0], entityId: rule.eventType.startsWith("invoice") ? "INV-2026-1048" : rule.eventType.startsWith("maintenance") ? "WO-881" : rule.eventType.startsWith("project") ? "PRJ-2026-014" : "RECORD-1048", data };
+  return { eventType: rule.eventType, occurredAt: new Date().toISOString(), propertyId: rule.propertyScope.propertyIds[0] ?? "", entityType: rule.eventType.split(".")[0], entityId: rule.eventType.startsWith("invoice") ? "INV-2026-1048" : rule.eventType.startsWith("maintenance") ? "WO-881" : rule.eventType.startsWith("project") ? "PRJ-2026-014" : "RECORD-1048", data };
 }
 
 export default function WorkflowAutomation() {
@@ -116,7 +117,7 @@ export default function WorkflowAutomation() {
     catch (caught) { setSimulationError(caught instanceof ApiError ? caught.message : "Simulation failed."); setSimulation(null); }
     finally { setSimulating(false); }
   }
-  const contract = JSON.stringify({ eventType: "invoice.due_soon", occurredAt: "2026-09-01T13:00:00.000Z", propertyId: "prop-sutherland", entityType: "invoice", entityId: "INV-2026-1048", data: { outstanding_balance: 2150, days_until_due: 3, invoice_status: "open", tenant_email: "maya.chen@example.com" } }, null, 2);
+  const contract = JSON.stringify({ eventType: "invoice.due_soon", occurredAt: "2026-09-01T13:00:00.000Z", propertyId: "", entityType: "invoice", entityId: "INV-2026-1048", data: { outstanding_balance: 2150, days_until_due: 3, invoice_status: "open", tenant_email: "maya.chen@example.com" } }, null, 2);
 
   const activeCount = rules.filter((rule) => rule.status === "active").length;
   const popoverCount = eventGroup ? 1 : 0;
@@ -166,7 +167,7 @@ export default function WorkflowAutomation() {
       </>}
         </div>
       </section>
-      <div className="directory-footnote no-print"><span>Demonstration data held in memory for this session. Rules are configured and can be simulated; no worker or provider is connected, so nothing is sent.</span></div>
+      <div className="directory-footnote no-print"><span>{isSupabaseConfigured ? "Rules are saved to your organization. They can be simulated; no worker or delivery provider is connected yet, so nothing is sent automatically." : "Demonstration data held in memory for this session. Rules are configured and can be simulated; no worker or provider is connected, so nothing is sent."}</span></div>
     </main></div></div>
 
     {editorOpen && (

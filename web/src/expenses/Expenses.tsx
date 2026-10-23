@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../lib/supabase";
 // Expenses & Bills in the same format as the Properties, Leases, Units, Payments and Applications pages: tabs, search, the shared Tenants-style
 // filters, sortable master rows, an inline summary (chevron) and a side drawer for the full bill (View). Recurring schedules are a tab.
 // Ledger, schedules, allocation and the record/payment/recovery dialogs come from the expense module.
@@ -69,7 +70,13 @@ const PAYMENT_CLASS: Record<ProviderPaymentStatus, string> = { unpaid: "status-p
 const SCHEDULE_CLASS = { active: "status-active", paused: "status-expiring", inactive: "status-former" } as const;
 
 export default function Expenses({ params }: { params?: Record<string, string> } = {}) {
-  const { bills, schedules, payments, recoveries, reminderSettings, deleteBill, setScheduleStatus, pushToast } = useApp();
+  const { bills, schedules, payments, recoveries, reminderSettings, deleteBill, setScheduleStatus, pushToast, ready, loadError, reload } = useApp();
+
+  // tenants, leases or properties may have changed on other pages since the last load
+  useEffect(() => {
+    void reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [tab, setTab] = useState<Tab>("all");
   const [filters, setFilters] = useState<BillFilters>(emptyFilters);
   const [sortKey, setSortKey] = useState<SortKey>("dueDate");
@@ -196,6 +203,23 @@ export default function Expenses({ params }: { params?: Record<string, string> }
     return <span className={`status-badge ${PAYMENT_CLASS[s]}`}><span className="status-dot" />{PAYMENT_LABEL[s]}</span>;
   };
 
+  if (isSupabaseConfigured && (!ready || loadError)) {
+    return (
+      <div className="tn">
+        <div className="app-shell">
+          <div className="main-shell">
+            <main className="main-content">
+              <EmptyState
+                title={loadError ? "We couldn't load your bills" : "Loading bills\u2026"}
+                description={loadError ?? "Fetching your bills and schedules."}
+              />
+            </main>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="tn">
       <div className="app-shell">
@@ -221,7 +245,7 @@ export default function Expenses({ params }: { params?: Record<string, string> }
                     {t.label}<span>{tabCount(t.key)}</span>
                   </button>
                 ))}
-                <div className="directory-tabs-end"><span className="live-dot" />Demo data</div>
+                {!isSupabaseConfigured && <div className="directory-tabs-end"><span className="live-dot" />Demo data</div>}
               </div>
 
               {tab !== "schedules" && (
@@ -561,7 +585,7 @@ export default function Expenses({ params }: { params?: Record<string, string> }
             </section>
             <div className="directory-footnote">
               <span><ShieldCheck size={13} />Account in the landlord&rsquo;s name: the provider invoice and each tenant&rsquo;s reimbursement are separate ledgers.</span>
-              <span>All amounts in CAD<span className="footnote-separator">&middot;</span>Demo data, nothing persists after a refresh</span>
+              <span>All amounts in CAD{!isSupabaseConfigured && <><span className="footnote-separator">&middot;</span>Demo data, nothing persists after a refresh</>}</span>
             </div>
           </main>
         </div>

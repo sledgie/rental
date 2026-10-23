@@ -1,307 +1,509 @@
-import { useMemo, useState } from "react";
+// Bank accounts directory in the same format as Properties and Tenants: tabs, search, filters, sortable master rows,
+// an expandable detail panel, pagination, and a standard side form. Data comes from the Bank Reconciliation store.
+import { Fragment, useEffect, useMemo, useState } from "react";
+import {
+  AlertCircle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  CircleDollarSign,
+  Download,
+  History,
+  Landmark,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Power,
+  PowerOff,
+  ShieldCheck,
+} from "lucide-react";
 import { useStore } from "../bankrecon/lib/store";
-import { Alert, Badge, Button, Card, DataTableWrap, Drawer, EmptyState, Field, Input, Modal, Select, Textarea, Th, Td, Toolbar } from "../bankrecon/components/ui";
-import { Icon } from "../bankrecon/components/icons";
-import { ACCOUNT_TYPES, BankAccount } from "../bankrecon/lib/types";
-import { fmtDate, money, fmtDateTime } from "../bankrecon/lib/format";
+import { ACCOUNT_TYPES, type BankAccount } from "../bankrecon/lib/types";
+import { fmtDate, fmtDateTime, money } from "../bankrecon/lib/format";
+import { FilterCheckbox, FilterField, FilterPopover, SearchField, SortControl } from "../shell/directory";
+import { Button, DataField, EmptyState, IconButton, Overlay, SectionTitle } from "../tenants/components/ui";
+import { BankAccountDrawer } from "./BankAccountDrawer";
 
-const emptyForm = {
-  id: "",
-  name: "",
-  institution: "",
-  maskedAccount: "",
-  accountType: "Operating" as BankAccount["accountType"],
-  currency: "USD",
-  glAccount: "",
-  glAccountName: "",
-  openingBalance: "",
-  openingBalanceDate: fmtDate(new Date()),
-  purpose: "",
-  propertyId: "",
-  classification: "",
-  notes: "",
+type Tab = "all" | "operating" | "trust" | "reserve" | "inactive";
+type SortKey = "default" | "name" | "institution" | "balance";
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: "all", label: "All accounts" },
+  { key: "operating", label: "Operating" },
+  { key: "trust", label: "Trust" },
+  { key: "reserve", label: "Reserve & restricted" },
+  { key: "inactive", label: "Inactive" },
+];
+
+const COLORS = ["blue", "violet", "teal", "amber", "rose", "slate"] as const;
+const initials = (name: string) =>
+  name.split(/\s+/).filter((w) => /[a-z0-9]/i.test(w)).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+const colorFor = (s: string) => {
+  let h = 0;
+  for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) % 997;
+  return COLORS[h % COLORS.length];
 };
 
-export default function BankAccountsPage() {
-  const { state, addAccount, updateAccount, deactivateAccount, can } = useStore();
+const matches = (a: BankAccount, t: Tab) =>
+  t === "all" ||
+  (t === "operating" && a.active && a.accountType === "Operating") ||
+  (t === "trust" && a.active && a.accountType === "Trust") ||
+  (t === "reserve" && a.active && (a.accountType === "Reserve" || a.accountType === "Restricted")) ||
+  (t === "inactive" && !a.active);
+
+function Initials({ name, size = "md" }: { name: string; size?: "sm" | "md" }) {
+  return (
+    <span className={`avatar avatar-${size} avatar-${colorFor(name)}`} aria-hidden="true">
+      {initials(name) || "B"}
+    </span>
+  );
+}
+
+function AccountStatus({ active }: { active: boolean }) {
+  return (
+    <span className={`status-badge ${active ? "status-active" : "status-inactive"}`}>
+      <span className="status-dot" />
+      {active ? "Active" : "Inactive"}
+    </span>
+  );
+}
+
+function AuditDrawer({ account, onClose }: { account: BankAccount; onClose: () => void }) {
+  const { state } = useStore();
+  const entries = state.audit.filter((e) => e.record === account.id);
+  return (
+    <Overlay title="Audit history" subtitle={`${account.name} · ${account.code ?? account.id}`} drawer onClose={onClose}>
+      <div className="form-scroll">
+        <section className="detail-section is-compact">
+          <SectionTitle icon={<Landmark size={15} />} title="Account" />
+          <dl className="lease-facts">
+            <DataField label="Institution">{account.institution || "—"} · {account.maskedAccount || "—"}</DataField>
+            <DataField label="Type">{account.accountType}{account.classification ? ` · ${account.classification}` : ""}</DataField>
+            <DataField label="Ledger account">{account.glAccount} — {account.glAccountName}</DataField>
+            <DataField label="Opening balance">{money(account.openingBalance, account.currency)} <span className="muted">as of {fmtDate(account.openingBalanceDate)}</span></DataField>
+          </dl>
+        </section>
+        <section className="detail-section is-compact" style={{ marginTop: 18 }}>
+          <SectionTitle icon={<History size={15} />} title={`Changes (${entries.length})`} />
+          {entries.length === 0 ? (
+            <EmptyState compact title="No changes recorded" description="Configuration changes to this account will appear here." />
+          ) : (
+            <div className="people-list">
+              {entries.map((e) => (
+                <div className="person-item" key={e.id}>
+                  <div className="person-content">
+                    <div className="person-name-line"><span className="person-name">{e.action}</span></div>
+                    <div className="person-relationship"><div className="person-role">{e.user}<span className="dot-separator">&middot;</span>{fmtDateTime(e.at)}</div></div>
+                    {(e.before || e.after) && <div className="person-contact-peek"><span>{e.before || "—"} → {e.after || "—"}</span></div>}
+                    {e.notes && <div className="person-contact-peek"><span>{e.notes}</span></div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+      <div className="form-footer"><Button onClick={onClose}>Close</Button></div>
+    </Overlay>
+  );
+}
+
+function ExpandedAccount({ a, propertyName, recent, onAudit }: { a: BankAccount; propertyName: string | null; recent: number; onAudit: () => void }) {
+  return (
+    <div className="expanded-detail">
+      <div className="expanded-detail-top">
+        <span>ACCOUNT DETAILS</span>
+        <button type="button" className="text-link" onClick={onAudit}>View audit history</button>
+      </div>
+      <div className="expanded-grid">
+        <section className="detail-section is-compact">
+          <SectionTitle icon={<Landmark size={15} />} title="Account information" />
+          <dl className="lease-facts">
+            <DataField label="Institution">{a.institution || "—"}</DataField>
+            <DataField label="Account number">{a.maskedAccount || "—"}</DataField>
+            <DataField label="Type">{a.accountType}</DataField>
+            <DataField label="Classification">{a.classification || "—"}</DataField>
+            <DataField label="Currency">{a.currency}</DataField>
+          </dl>
+        </section>
+        <section className="detail-section is-compact">
+          <SectionTitle icon={<CircleDollarSign size={15} />} title="Accounting" />
+          <dl className="lease-facts">
+            <DataField label="Ledger account">{a.glAccount}<br /><span className="muted">{a.glAccountName}</span></DataField>
+            <DataField label="Opening balance">{money(a.openingBalance, a.currency)}</DataField>
+            <DataField label="As of">{fmtDate(a.openingBalanceDate)}</DataField>
+          </dl>
+        </section>
+        <section className="detail-section is-compact">
+          <SectionTitle icon={<ShieldCheck size={15} />} title="Usage" />
+          <dl className="lease-facts">
+            <DataField label="Property">{propertyName ?? "Company account"}</DataField>
+            <DataField label="Purpose">{a.purpose || "—"}</DataField>
+            <DataField label="Notes">{a.notes || "—"}</DataField>
+            <DataField label="Recorded changes">{recent}</DataField>
+          </dl>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+export default function BankAccounts({ notify }: { notify?: (message: string) => void }) {
+  const { state, updateAccount, deactivateAccount, can } = useStore();
+  const accounts = state.accounts;
+  const canEdit = can("create_edit_bank_accounts");
+
+  const [tab, setTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<BankAccount | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [auditAccount, setAuditAccount] = useState<BankAccount | null>(null);
+  const [typeFilter, setTypeFilter] = useState("");
+  const [institutionFilter, setInstitutionFilter] = useState("");
+  const [propertyFilter, setPropertyFilter] = useState("");
+  const [companyOnly, setCompanyOnly] = useState(false);
+  const [sort, setSort] = useState<SortKey>("default");
+  const [desc, setDesc] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(() =>
+    window.matchMedia("(min-width: 1161px)").matches ? accounts[0]?.id ?? null : null,
+  );
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
+  const [menu, setMenu] = useState<string | null>(null);
+  const [form, setForm] = useState<{ account: BankAccount | null } | null>(null);
+  const [audit, setAudit] = useState<BankAccount | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const filtered = useMemo(() => {
-    if (!search) return state.accounts;
-    const s = search.toLowerCase();
-    return state.accounts.filter((a) => `${a.name} ${a.maskedAccount} ${a.id} ${a.institution} ${a.glAccount}`.toLowerCase().includes(s));
-  }, [state.accounts, search]);
+  useEffect(() => {
+    if (!menu) return;
+    const close = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest("[data-row-menu]")) setMenu(null);
+    };
+    const key = (e: KeyboardEvent) => e.key === "Escape" && setMenu(null);
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", key);
+    };
+  }, [menu]);
 
-  const openCreate = () => {
-    setEditing(null);
-    setForm({ ...emptyForm, openingBalanceDate: new Date().toISOString().slice(0, 10) });
-    setFormError(null);
-    setModalOpen(true);
-  };
+  const propertyName = (id: string | null) => (id ? state.properties.find((p) => p.id === id)?.name ?? id : null);
+  const institutions = [...new Set(accounts.map((a) => a.institution).filter(Boolean))].sort();
 
-  const openEdit = (a: BankAccount) => {
-    setEditing(a);
-    setForm({
-      id: a.id,
-      name: a.name,
-      institution: a.institution,
-      maskedAccount: a.maskedAccount,
-      accountType: a.accountType,
-      currency: a.currency,
-      glAccount: a.glAccount,
-      glAccountName: a.glAccountName,
-      openingBalance: String(a.openingBalance),
-      openingBalanceDate: a.openingBalanceDate,
-      purpose: a.purpose,
-      propertyId: a.propertyId ?? "",
-      classification: a.classification,
-      notes: a.notes,
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let out = accounts.filter((a) => {
+      if (!matches(a, tab)) return false;
+      if (typeFilter && a.accountType !== typeFilter) return false;
+      if (institutionFilter && a.institution !== institutionFilter) return false;
+      if (propertyFilter && a.propertyId !== propertyFilter) return false;
+      if (companyOnly && a.propertyId) return false;
+      if (!q) return true;
+      return [a.code ?? "", a.id, a.name, a.institution, a.maskedAccount, a.glAccount, a.glAccountName, a.classification, propertyName(a.propertyId) ?? ""]
+        .join(" ")
+        .toLowerCase()
+        .includes(q);
     });
-    setFormError(null);
-    setModalOpen(true);
+    if (sort !== "default") {
+      const cmp = {
+        name: (a: BankAccount, b: BankAccount) => a.name.localeCompare(b.name),
+        institution: (a: BankAccount, b: BankAccount) => a.institution.localeCompare(b.institution),
+        balance: (a: BankAccount, b: BankAccount) => a.openingBalance - b.openingBalance,
+      }[sort];
+      out = [...out].sort(cmp);
+      if (desc) out.reverse();
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accounts, tab, search, typeFilter, institutionFilter, propertyFilter, companyOnly, sort, desc]);
+
+  const activeFilters = Number(!!typeFilter) + Number(!!institutionFilter) + Number(!!propertyFilter) + Number(companyOnly);
+  const resetFilters = () => { setTypeFilter(""); setInstitutionFilter(""); setPropertyFilter(""); setCompanyOnly(false); setPage(1); };
+  const reset = () => { setTab("all"); setSearch(""); setSort("default"); resetFilters(); };
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paginated = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const sortBy = (k: SortKey) => {
+    if (sort === k) setDesc(!desc);
+    else { setSort(k); setDesc(k === "balance"); }
+    setPage(1);
+  };
+  const sortIcon = (k: SortKey) => (sort === k ? (desc ? <ArrowDown size={12} /> : <ArrowUp size={12} />) : <ArrowUpDown size={11} />);
+  const ariaSort = (k: SortKey) => (sort === k ? (desc ? "descending" : "ascending") : undefined);
+
+  const deactivate = (a: BankAccount) => {
+    setMenu(null);
+    const res = deactivateAccount(a.id);
+    if (!res.ok) setError(res.error ?? "Unable to deactivate this account.");
+    else { setError(null); notify?.(`${a.name} was deactivated.`); }
+  };
+  const reactivate = (a: BankAccount) => {
+    setMenu(null);
+    updateAccount(a.id, { active: true });
+    notify?.(`${a.name} was reactivated.`);
   };
 
-  const submit = () => {
-    setFormError(null);
-    if (!form.id.trim()) return setFormError("Account ID (unique internal identifier) is required.");
-    if (state.accounts.some((a) => a.id === form.id && a.id !== editing?.id)) return setFormError("An account with this internal identifier already exists. Duplicate active configurations are not allowed.");
-    if (!form.name.trim()) return setFormError("Account name is required.");
-    if (!form.glAccount.trim()) return setFormError("Link a Chart of Accounts cash/bank account.");
-    const balance = Number(form.openingBalance);
-    if (!Number.isFinite(balance)) return setFormError("Opening balance must be a valid number.");
-    if (!editing && state.accounts.some((a) => a.maskedAccount === form.maskedAccount && a.maskedAccount !== "")) {
-      // masked numbers may repeat across institutions; only warn
-    }
-
-    if (editing) {
-      updateAccount(editing.id, {
-        name: form.name,
-        institution: form.institution,
-        maskedAccount: form.maskedAccount,
-        accountType: form.accountType,
-        currency: form.currency,
-        glAccount: form.glAccount,
-        glAccountName: form.glAccountName || (state.coa.find((c) => c.code === form.glAccount)?.name ?? ""),
-        openingBalance: balance,
-        openingBalanceDate: form.openingBalanceDate,
-        purpose: form.purpose,
-        propertyId: form.propertyId || null,
-        classification: form.classification,
-        notes: form.notes,
-      });
-    } else {
-      const res = addAccount({
-        id: form.id.trim(),
-        name: form.name,
-        institution: form.institution,
-        maskedAccount: form.maskedAccount,
-        accountType: form.accountType,
-        currency: form.currency,
-        glAccount: form.glAccount,
-        glAccountName: form.glAccountName || (state.coa.find((c) => c.code === form.glAccount)?.name ?? ""),
-        openingBalance: balance,
-        openingBalanceDate: form.openingBalanceDate,
-        active: true,
-        purpose: form.purpose,
-        propertyId: form.propertyId || null,
-        classification: form.classification,
-        notes: form.notes,
-      });
-      if (!res.ok) return setFormError(res.error ?? "Failed to create account.");
-    }
-    setModalOpen(false);
+  const exportCsv = () => {
+    const q = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+    const csv = [
+      ["ID", "Account", "Institution", "Account number", "Type", "Classification", "Ledger account", "Currency", "Opening balance", "As of", "Status"],
+      ...rows.map((a) => [a.code ?? a.id, a.name, a.institution, a.maskedAccount, a.accountType, a.classification, `${a.glAccount} ${a.glAccountName}`, a.currency, a.openingBalance, a.openingBalanceDate, a.active ? "Active" : "Inactive"]),
+    ].map((r) => r.map(q).join(",")).join("\n");
+    const el = document.createElement("a");
+    el.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    el.download = `bank-accounts-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(el); el.click(); el.remove(); URL.revokeObjectURL(el.href);
+    notify?.(`Exported ${rows.length} ${rows.length === 1 ? "account" : "accounts"} to CSV.`);
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <>
+      <div className="page-heading">
         <div>
-          <h2 className="text-lg font-semibold text-u-ink">Bank Accounts</h2>
-          <p className="text-sm text-u-muted">Configure bank accounts used by the rental management system. Account numbers are masked. No online banking credentials are stored.</p>
+          <div className="page-title-line"><h1>Banks</h1></div>
+          <p>Bank accounts used for payments, deposits and reconciliation.</p>
         </div>
-        <Button variant="primary" icon="plus" onClick={openCreate} disabled={!can("create_edit_bank_accounts")} title={can("create_edit_bank_accounts") ? undefined : "Requires create/edit permission."}>
-          New Bank Account
-        </Button>
+        <div className="page-heading-actions">
+          <Button onClick={() => { window.location.hash = "#/bank-reconciliation"; }}>
+            <Landmark size={15} />
+            Reconciliation
+          </Button>
+          <Button onClick={exportCsv}>
+            <Download size={15} />
+            Export
+          </Button>
+          <Button variant="primary" onClick={() => setForm({ account: null })} disabled={!canEdit} title={canEdit ? undefined : "Requires create/edit permission."}>
+            <Plus size={17} />
+            Add account
+          </Button>
+        </div>
       </div>
 
-      <Card>
-        <div className="flex items-center justify-between gap-3 border-b border-u-line px-5 py-4">
-          <h2 className="text-sm font-semibold text-u-ink">Configured Accounts</h2>
-          <Toolbar>
-            <div className="relative">
-              <Icon name="search" className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-u-muted" />
-              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search accounts…" className="w-52 pl-8" />
-            </div>
-          </Toolbar>
+      <section className="directory-panel" aria-label="Bank account directory">
+        <div className="directory-tabs" aria-label="Filter bank accounts">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              className={`directory-tab ${tab === t.key ? "selected" : ""}`}
+              aria-pressed={tab === t.key}
+              onClick={() => { setTab(t.key); setPage(1); }}
+            >
+              {t.label}
+              <span>{accounts.filter((a) => matches(a, t.key)).length}</span>
+            </button>
+          ))}
         </div>
-        {filtered.length === 0 ? (
-          <EmptyState icon="bank" title="No bank accounts found" />
-        ) : (
-          <DataTableWrap>
-            <thead className="bg-u-s2">
+        <div className="directory-toolbar">
+          <SearchField label="Search bank accounts" placeholder="Search account, institution, ledger account or property..." value={search} onChange={(v) => { setSearch(v); setPage(1); }} />
+          <div className="toolbar-actions">
+            <FilterPopover title="Filter accounts" count={activeFilters} onReset={resetFilters}>
+              <FilterCheckbox checked={companyOnly} onChange={(v) => { setCompanyOnly(v); setPage(1); }} label="Company accounts only" hint="Not tied to a single property" />
+              <FilterField id="bank-type-filter" label="Account type">
+                <select id="bank-type-filter" value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}>
+                  <option value="">All types</option>
+                  {ACCOUNT_TYPES.map((t) => <option key={t}>{t}</option>)}
+                </select>
+              </FilterField>
+              <FilterField id="bank-institution-filter" label="Institution">
+                <select id="bank-institution-filter" value={institutionFilter} onChange={(e) => { setInstitutionFilter(e.target.value); setPage(1); }}>
+                  <option value="">All institutions</option>
+                  {institutions.map((i) => <option key={i}>{i}</option>)}
+                </select>
+              </FilterField>
+              <FilterField id="bank-property-filter" label="Property">
+                <select id="bank-property-filter" value={propertyFilter} onChange={(e) => { setPropertyFilter(e.target.value); setPage(1); }}>
+                  <option value="">All properties</option>
+                  {state.properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </FilterField>
+            </FilterPopover>
+            <SortControl
+              label="Sort bank accounts"
+              value={sort}
+              defaultValue="default"
+              descending={desc}
+              options={[{ value: "name", label: "Account name" }, { value: "institution", label: "Institution" }, { value: "balance", label: "Opening balance" }]}
+              onChange={(k) => { setSort(k as SortKey); setDesc(k === "balance"); setPage(1); }}
+              onToggle={() => setDesc(!desc)}
+            />
+          </div>
+        </div>
+
+        {error && (
+          <div className="form-error" role="alert" style={{ margin: "12px 16px 0" }}>
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div className="tenant-table-wrap">
+          <table className="tenant-table">
+            <caption className="sr-only">Bank account directory. Expand an account to inspect its accounting and usage.</caption>
+            <colgroup>
+              <col className="col-expand" />
+              <col className="col-tenant" />
+              <col className="col-email" />
+              <col className="col-phone" />
+              <col className="col-balance" />
+              <col className="col-status" />
+              <col className="col-actions" />
+            </colgroup>
+            <thead>
               <tr>
-                <Th>Account</Th>
-                <Th>Type / Classification</Th>
-                <Th>GL Account</Th>
-                <Th>Opening Balance</Th>
-                <Th>Status</Th>
-                <Th>Actions</Th>
+                <th className="expand-cell"><span className="sr-only">Expand</span></th>
+                <th aria-sort={ariaSort("name")}><button onClick={() => sortBy("name")}>Account{sortIcon("name")}</button></th>
+                <th className="email-cell" aria-sort={ariaSort("institution")}><button onClick={() => sortBy("institution")}>Institution{sortIcon("institution")}</button></th>
+                <th className="phone-cell">Ledger account</th>
+                <th className="balance-cell" aria-sort={ariaSort("balance")}><button onClick={() => sortBy("balance")}>Opening balance{sortIcon("balance")}</button></th>
+                <th className="status-cell">Status</th>
+                <th className="actions-cell">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-u-line">
-              {filtered.map((a) => (
-                <tr key={a.id} className="hover:bg-u-s2/60">
-                  <Td>
-                    <div className="font-medium text-u-ink">{a.name}</div>
-                    <div className="text-[11px] text-u-muted">
-                      {a.id} · {a.institution} · {a.maskedAccount}
-                    </div>
-                    {a.propertyId && <div className="text-[11px] text-u-muted">Property: {state.properties.find((p) => p.id === a.propertyId)?.name ?? a.propertyId}</div>}
-                  </Td>
-                  <Td>
-                    <Badge kind={a.accountType === "Trust" ? "outstanding" : a.accountType === "Operating" ? "suggested" : "neutral"}>{a.accountType}</Badge>
-                    <div className="text-[11px] text-u-muted mt-1">{a.classification}</div>
-                  </Td>
-                  <Td>{a.glAccount}<div className="text-[11px] text-u-muted">{a.glAccountName}</div></Td>
-                  <Td className="tabular-nums">{money(a.openingBalance)}<div className="text-[11px] text-u-muted">as of {fmtDate(a.openingBalanceDate)}</div></Td>
-                  <Td>
-                    {a.active ? <Badge kind="matched" dot>Active</Badge> : <Badge kind="cancelled" dot>Inactive</Badge>}
-                  </Td>
-                  <Td>
-                    <div className="flex flex-wrap gap-1.5">
-                      <Button size="sm" variant="ghost" icon="settings" onClick={() => openEdit(a)} disabled={!can("create_edit_bank_accounts")}>Edit</Button>
-                      <Button size="sm" variant="ghost" icon="history" onClick={() => setAuditAccount(a)}>Audit</Button>
-                      {a.active && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-u-danger hover:bg-u-danger-soft"
-                          icon="lock"
-                          disabled={!can("create_edit_bank_accounts")}
-                          onClick={() => {
-                            const res = deactivateAccount(a.id);
-                            if (!res.ok) alert(res.error);
-                          }}
+            <tbody>
+              {paginated.map((a) => {
+                const open = expanded === a.id;
+                const changes = state.audit.filter((e) => e.record === a.id).length;
+                return (
+                  <Fragment key={a.id}>
+                    <tr className={`tenant-row ${open ? "tenant-row-expanded" : ""}`}>
+                      <td className="expand-cell">
+                        <IconButton
+                          label={`${open ? "Collapse" : "Expand"} ${a.name}`}
+                          className="expand-button"
+                          onClick={() => setExpanded(open ? null : a.id)}
+                          aria-expanded={open}
+                          aria-controls={`details-${a.id}`}
                         >
-                          Deactivate
-                        </Button>
-                      )}
-                    </div>
-                  </Td>
-                </tr>
-              ))}
+                          <ChevronRight size={15} className={open ? "chevron-expanded" : ""} />
+                        </IconButton>
+                      </td>
+                      <td className="tenant-cell">
+                        <div className="tenant-identity">
+                          <Initials name={a.name} />
+                          <div>
+                            <button className="tenant-name" onClick={() => setExpanded(open ? null : a.id)}>{a.name}</button>
+                            <span className="tenant-number">{a.code ?? a.id}<span>{a.accountType}</span></span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="email-cell">
+                        <a>{a.institution || "—"}</a>
+                        <span className="tenant-number">{a.maskedAccount || "—"}</span>
+                      </td>
+                      <td className="phone-cell">
+                        <a>{a.glAccount}</a>
+                        <span className="tenant-number">{a.glAccountName}</span>
+                      </td>
+                      <td className="balance-cell">
+                        <span className="balance-value">{money(a.openingBalance, a.currency)}</span>
+                        <span className="tenant-number">as of {fmtDate(a.openingBalanceDate)}</span>
+                      </td>
+                      <td className="status-cell"><AccountStatus active={a.active} /></td>
+                      <td className="actions-cell">
+                        <div className="row-actions">
+                          <IconButton label={`Audit history for ${a.name}`} onClick={() => setAudit(a)}>
+                            <History size={15} />
+                          </IconButton>
+                          <IconButton label={`Edit ${a.name}`} onClick={() => setForm({ account: a })} disabled={!canEdit}>
+                            <Pencil size={14} />
+                          </IconButton>
+                          <div className="row-more-anchor" data-row-menu>
+                            <IconButton label={`More actions for ${a.name}`} onClick={() => setMenu(menu === a.id ? null : a.id)} aria-expanded={menu === a.id}>
+                              <MoreHorizontal size={17} />
+                            </IconButton>
+                            {menu === a.id && (
+                              <div className="row-menu">
+                                <button onClick={() => { setForm({ account: a }); setMenu(null); }} disabled={!canEdit}>
+                                  <Pencil size={14} />
+                                  Edit account
+                                </button>
+                                <button onClick={() => { setAudit(a); setMenu(null); }}>
+                                  <History size={14} />
+                                  Audit history
+                                </button>
+                                <div className="menu-divider" />
+                                {a.active ? (
+                                  <button onClick={() => deactivate(a)} disabled={!canEdit}>
+                                    <PowerOff size={14} />
+                                    Deactivate
+                                  </button>
+                                ) : (
+                                  <button onClick={() => reactivate(a)} disabled={!canEdit}>
+                                    <Power size={14} />
+                                    Reactivate
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    {open && (
+                      <tr className="detail-row" id={`details-${a.id}`}>
+                        <td colSpan={7}>
+                          <ExpandedAccount a={a} propertyName={propertyName(a.propertyId)} recent={changes} onAudit={() => setAudit(a)} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
             </tbody>
-          </DataTableWrap>
+          </table>
+        </div>
+        {!paginated.length && (
+          <EmptyState
+            title={accounts.length ? "No bank accounts found" : "Your bank accounts start here"}
+            description={accounts.length ? "Try a different search or adjust your filters." : "Add your first bank account to start recording deposits and reconciling statements."}
+            action={<Button onClick={accounts.length ? reset : () => setForm({ account: null })}>{accounts.length ? "Clear search & filters" : "Add your first account"}</Button>}
+          />
         )}
-      </Card>
-
-      <Modal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={editing ? `Edit Bank Account — ${editing.id}` : "New Bank Account"}
-        subtitle="Account numbers are masked in the interface. Configuration changes are recorded in the audit trail."
-        size="lg"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setModalOpen(false)}>Cancel</Button>
-            <Button variant="primary" icon="check" onClick={submit}>Save Account</Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          {formError && <Alert kind="danger">{formError}</Alert>}
-          <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Bank Account ID (unique internal identifier)">
-              <Input value={form.id} onChange={(e) => setForm({ ...form, id: e.target.value })} disabled={!!editing} placeholder="BA-OP-05" />
-            </Field>
-            <Field label="Account Name">
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Sunrise PM — Operating" />
-            </Field>
-            <Field label="Financial Institution">
-              <Input value={form.institution} onChange={(e) => setForm({ ...form, institution: e.target.value })} />
-            </Field>
-            <Field label="Masked Account Number" hint="Store only a masked representation (e.g. ****4521).">
-              <Input value={form.maskedAccount} onChange={(e) => setForm({ ...form, maskedAccount: e.target.value })} placeholder="****4521" />
-            </Field>
-            <Field label="Account Type" hint="Types and legal classifications are configurable per jurisdiction.">
-              <Select value={form.accountType} onChange={(e) => setForm({ ...form, accountType: e.target.value as BankAccount["accountType"] })}>
-                {ACCOUNT_TYPES.map((t) => (
-                  <option key={t}>{t}</option>
+        <div className="table-pagination">
+          <p>
+            Showing <strong>{rows.length ? (safePage - 1) * pageSize + 1 : 0}-{Math.min(safePage * pageSize, rows.length)}</strong> of <strong>{rows.length}</strong> accounts
+          </p>
+          <div className="pagination-controls">
+            <label className="page-size">
+              <span>Rows per page</span>
+              <select aria-label="Rows per page" value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}>
+                <option value={8}>8</option>
+                <option value={16}>16</option>
+                <option value={24}>24</option>
+              </select>
+            </label>
+            <div className="pagination-buttons">
+              <IconButton className="first-page" label="First page" disabled={safePage === 1} onClick={() => setPage(1)}><ChevronsLeft size={15} /></IconButton>
+              <IconButton label="Previous page" disabled={safePage === 1} onClick={() => setPage(safePage - 1)}><ChevronLeft size={15} /></IconButton>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((n) => totalPages <= 5 || Math.abs(n - safePage) <= 1 || n === 1 || n === totalPages)
+                .map((n, i, arr) => (
+                  <Fragment key={n}>
+                    {i > 0 && n - arr[i - 1] > 1 && <span className="pagination-ellipsis">...</span>}
+                    <button className={`page-number ${safePage === n ? "selected" : ""}`} aria-label={`Page ${n}`} aria-current={safePage === n ? "page" : undefined} onClick={() => setPage(n)}>
+                      {n}
+                    </button>
+                  </Fragment>
                 ))}
-              </Select>
-            </Field>
-            <Field label="Currency">
-              <Input value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} />
-            </Field>
-            <Field label="Linked Chart of Accounts">
-              <Select value={form.glAccount} onChange={(e) => setForm({ ...form, glAccount: e.target.value, glAccountName: state.coa.find((c) => c.code === e.target.value)?.name ?? "" })}>
-                <option value="">— select cash/bank account —</option>
-                {state.coa.filter((c) => c.kind === "asset").map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.code} — {c.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Opening Balance">
-              <Input type="number" step="0.01" value={form.openingBalance} onChange={(e) => setForm({ ...form, openingBalance: e.target.value })} />
-            </Field>
-            <Field label="Opening Balance Date">
-              <Input type="date" value={form.openingBalanceDate} onChange={(e) => setForm({ ...form, openingBalanceDate: e.target.value })} />
-            </Field>
-            <Field label="Optional Property Association">
-              <Select value={form.propertyId} onChange={(e) => setForm({ ...form, propertyId: e.target.value })}>
-                <option value="">— none (corporate account) —</option>
-                {state.properties.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Classification" hint="Trust / Operating / Reserve / Restricted legal classification.">
-              <Input value={form.classification} onChange={(e) => setForm({ ...form, classification: e.target.value })} placeholder="Operating" />
-            </Field>
-            <Field label="Account Purpose">
-              <Input value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} />
-            </Field>
-            <Field className="sm:col-span-2" label="Notes">
-              <Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-            </Field>
+              <IconButton label="Next page" disabled={safePage === totalPages} onClick={() => setPage(safePage + 1)}><ChevronRight size={15} /></IconButton>
+              <IconButton className="last-page" label="Last page" disabled={safePage === totalPages} onClick={() => setPage(totalPages)}><ChevronsRight size={15} /></IconButton>
+            </div>
           </div>
         </div>
-      </Modal>
+      </section>
+      <div className="directory-footnote">
+        <span>
+          <ShieldCheck size={13} />
+          Account numbers are masked. No online banking credentials are stored.
+        </span>
+        <span>Shared with Bank Reconciliation</span>
+      </div>
 
-      <Drawer open={!!auditAccount} onClose={() => setAuditAccount(null)} title={auditAccount ? `Audit History — ${auditAccount.name}` : ""}>
-        {auditAccount && (
-          <div className="space-y-3">
-            <div className="rounded-lg border border-u-line p-3 text-xs text-u-ink2 space-y-1">
-              <p><span className="text-u-muted">ID:</span> {auditAccount.id}</p>
-              <p><span className="text-u-muted">Institution:</span> {auditAccount.institution} · {auditAccount.maskedAccount}</p>
-              <p><span className="text-u-muted">Type:</span> {auditAccount.accountType} · {auditAccount.classification}</p>
-              <p><span className="text-u-muted">GL:</span> {auditAccount.glAccount} — {auditAccount.glAccountName}</p>
-              <p><span className="text-u-muted">Opening:</span> {money(auditAccount.openingBalance)} as of {fmtDate(auditAccount.openingBalanceDate)}</p>
-            </div>
-            {state.audit.filter((e) => e.record === auditAccount.id).length === 0 && <p className="text-xs text-u-muted">No configuration changes recorded yet.</p>}
-            {state.audit.filter((e) => e.record === auditAccount.id).map((e) => (
-              <div key={e.id} className="rounded-lg border border-u-line p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-u-ink2">{e.action}</span>
-                  <span className="text-[11px] text-u-muted">{fmtDateTime(e.at)}</span>
-                </div>
-                <p className="text-[11px] text-u-muted mt-1">{e.user}</p>
-                <p className="text-[11px] text-u-muted mt-1">
-                  <span className="text-u-muted">Before:</span> {e.before || "—"} <span className="text-u-muted">→ After:</span> {e.after || "—"}
-                </p>
-                {e.notes && <p className="text-[11px] text-u-muted mt-1">{e.notes}</p>}
-              </div>
-            ))}
-          </div>
-        )}
-      </Drawer>
-    </div>
+      {form && <BankAccountDrawer key={form.account?.id ?? "new"} account={form.account} onClose={() => setForm(null)} onSaved={(m) => notify?.(m)} />}
+      {audit && <AuditDrawer account={audit} onClose={() => setAudit(null)} />}
+    </>
   );
 }

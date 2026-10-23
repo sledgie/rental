@@ -99,6 +99,8 @@ export interface Account {
 
 export interface Transaction {
   id: string;
+  /** the invoice this charge is, or that this payment / credit was applied to (set when the data comes from Supabase) */
+  invoiceId?: string;
   accountId: string;
   accountType: Account["accountType"];
   leaseId?: string;

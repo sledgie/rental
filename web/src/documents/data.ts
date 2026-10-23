@@ -43,6 +43,9 @@ export interface DocumentRecord {
     mimeType?: string;
     sizeBytes?: number;
     localPreviewUrl?: string;
+    /** where the file is stored (Supabase Storage) */
+    bucket?: string;
+    path?: string;
   };
   description?: string;
   tags: string[];

@@ -1,7 +1,9 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
   type ChangeEvent,
   type FormEvent,
   type ReactNode,
@@ -10,6 +12,9 @@ import { ChevronDown, ChevronLeft, ChevronRight, Download, Info, Plus } from "lu
 import { Button as TnButton, EmptyState, IconButton } from "../tenants/components/ui";
 import { FilterField, FilterPopover, SearchField } from "../shell/directory";
 import "./documents.css";
+import { isSupabaseConfigured } from "../lib/supabase";
+import { getActiveOrgId, subscribeActiveOrg } from "../lib/activeOrg";
+import * as repo from "./repo";
 import {
   allEntityOptions,
   categoryOptions,
@@ -674,7 +679,7 @@ function DocumentFormDialog({
                 />
               </label>
               <div className="dm-form-field form-field-wide">
-                <span>Local file</span>
+                <span>{isSupabaseConfigured ? "File" : "Local file"}</span>
                 <label className="file-drop-zone">
                   <input type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.csv,.txt" onChange={handleFileChange} />
                   <span className="file-drop-icon"><Icon name="upload" size={19} /></span>
@@ -691,13 +696,13 @@ function DocumentFormDialog({
                   <span className="file-choose-action">Browse</span>
                 </label>
                 {initialDocument && !initialDocument.file.localPreviewUrl && !values.selectedFile && (
-                  <small>The existing mock record has metadata only; no source file is stored.</small>
+                  <small>{isSupabaseConfigured ? "This record has no file yet. Choose one to attach it." : "The existing mock record has metadata only; no source file is stored."}</small>
                 )}
               </div>
             </div>
             <div className="local-operation-note">
               <Icon name="info" size={16} />
-              <span>Local mock operation only. Selected files are available in this browser session and are not uploaded to a server or permanently stored.</span>
+              <span>{isSupabaseConfigured ? "Files are stored privately and are only visible to people with access to documents." : "Local mock operation only. Selected files are available in this browser session and are not uploaded to a server or permanently stored."}</span>
             </div>
             {error && <p className="dm-form-error" role="alert">{error}</p>}
           </div>
@@ -867,7 +872,7 @@ function DetailDrawer({
           )}
 
           <section className="dm-detail-section activity-section">
-            <div className="section-heading"><div><h3>Activity history</h3><p>Mock activity for this local record, not a production audit log.</p></div></div>
+            <div className="section-heading"><div><h3>Activity history</h3><p>{isSupabaseConfigured ? "Changes to this document, from the organization audit trail." : "Mock activity for this local record, not a production audit log."}</p></div></div>
             <ol className="dm-activity-timeline">
               {timeline.map((item) => <ActivityEntry key={item.id} activity={item} />)}
             </ol>
@@ -929,7 +934,7 @@ function RecordDetailDialog({
           <div className="record-summary-panel">
             <span className="linked-record-module">{record.reference.module} record</span>
             <p>{record.description}</p>
-            <small>This is a mock record detail view. Business data remains represented by its source module.</small>
+            <small>Business data remains represented by its source module.</small>
           </div>
           <section className="record-detail-section">
             <div className="section-heading"><div><h3>Linked documents</h3><p>These are shared registry records, not duplicate attachments.</p></div><span className="record-count">{linkedDocuments.length}</span></div>
@@ -963,7 +968,7 @@ function RecordDetailDialog({
             </section>
           )}
           {record.relatedEntities.some((item) => item.entityType === "Property") && (
-            <div className="mock-navigation-note"><Icon name="info" size={16} /><span>Record navigation is previewed locally; no other module pages or backend records are connected.</span></div>
+            <div className="mock-navigation-note"><Icon name="info" size={16} /><span>{isSupabaseConfigured ? "Open the record from its own page to see its full details." : "Record navigation is previewed locally; no other module pages or backend records are connected."}</span></div>
           )}
         </div>
         <div className="dialog-footer"><button className="dm-button dm-button-secondary" type="button" onClick={onClose}>Close record</button></div>
@@ -1003,7 +1008,38 @@ function ConfirmationDialog({
 }
 
 export default function DocumentCenter({ notify }: { notify?: (message: string) => void }) {
-  const [documents, setDocuments] = useState<DocumentRecord[]>(initialDocuments);
+  const [documents, setDocuments] = useState<DocumentRecord[]>(isSupabaseConfigured ? [] : initialDocuments);
+  const [loadState, setLoadState] = useState({ ready: !isSupabaseConfigured, error: null as string | null });
+  const orgId = useSyncExternalStore(subscribeActiveOrg, getActiveOrgId);
+
+  // with Supabase the documents and the records they link to come from the organization; the shared lists below are replaced in place
+  const reloadDocuments = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    const org = getActiveOrgId();
+    if (!org) return;
+    try {
+      const loaded = await repo.loadAll(org);
+      if (getActiveOrgId() !== org) return;
+      mockBusinessRecords.splice(0, mockBusinessRecords.length, ...loaded.registry);
+      allEntityOptions.splice(0, allEntityOptions.length, ...loaded.entities);
+      setDocuments(loaded.documents);
+      setLoadState({ ready: true, error: null });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to load documents.";
+      setLoadState({ ready: true, error: message });
+      notify?.(message);
+    }
+  }, [notify]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    mockBusinessRecords.splice(0, mockBusinessRecords.length);
+    allEntityOptions.splice(0, allEntityOptions.length);
+    setDocuments([]);
+    setLoadState({ ready: false, error: null });
+    if (orgId) void reloadDocuments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId]);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
@@ -1155,13 +1191,19 @@ export default function DocumentCenter({ notify }: { notify?: (message: string) 
   function openRecord(reference: RecordReference) {
     const match = findBusinessRecord(reference);
     if (!match) {
-      setToast("This linked record is not present in the mock record catalog.");
+      setToast("This linked record is not available.");
       return;
     }
     setRecordToOpen(match);
   }
 
   function downloadDocument(document: DocumentRecord) {
+    if (isSupabaseConfigured) {
+      repo.downloadLink(document)
+        .then((url) => { window.location.assign(url); })
+        .catch((error) => setToast(error instanceof Error ? error.message : "The file could not be downloaded."));
+      return;
+    }
     if (document.file.localPreviewUrl) {
       const anchor = window.document.createElement("a");
       anchor.href = document.file.localPreviewUrl;
@@ -1198,6 +1240,13 @@ export default function DocumentCenter({ notify }: { notify?: (message: string) 
       message: `${document.name} will be hidden from the default active view. Its metadata and record links will remain intact, and no business record will be changed.`,
       confirmLabel: "Archive document",
       onConfirm: () => {
+        if (isSupabaseConfigured) {
+          repo.setArchived(document.id, true)
+            .then(() => { setToast(`${document.id} archived. Linked business records were not changed.`); return reloadDocuments(); })
+            .catch((error) => setToast(error instanceof Error ? error.message : "The document could not be archived."));
+          setConfirmation(null);
+          return;
+        }
         const now = new Date().toISOString();
         const activity: DocumentActivity = {
           id: `${document.id}-archive-${Date.now()}`,
@@ -1215,6 +1264,12 @@ export default function DocumentCenter({ notify }: { notify?: (message: string) 
   }
 
   function restoreDocument(document: DocumentRecord) {
+    if (isSupabaseConfigured) {
+      repo.setArchived(document.id, false)
+        .then(() => { setToast(`${document.id} restored to Active.`); return reloadDocuments(); })
+        .catch((error) => setToast(error instanceof Error ? error.message : "The document could not be restored."));
+      return;
+    }
     const now = new Date().toISOString();
     const activity: DocumentActivity = {
       id: `${document.id}-restore-${Date.now()}`,
@@ -1270,6 +1325,25 @@ export default function DocumentCenter({ notify }: { notify?: (message: string) 
     const links = [...(primary ? [primary] : []), ...nextRelated];
     const relatedEntities = entitiesForReferences(links);
     const tags = Array.from(new Set(values.tagsText.split(",").map((tag) => tag.trim()).filter(Boolean)));
+
+    if (isSupabaseConfigured) {
+      const payload: repo.SaveValues = {
+        name: values.name.trim(), documentType: values.documentType, category: values.category, originModule: values.originModule, creationMethod: values.creationMethod,
+        primary, related: nextRelated, description: values.description.trim(), tags, file: values.selectedFile,
+      };
+      const done = initialDocument
+        ? repo.updateDocument(initialDocument.id, payload, initialDocument).then(() => initialDocument.id)
+        : repo.createDocument(payload);
+      done
+        .then(async (number) => {
+          await reloadDocuments();
+          if (initialDocument) setEditingDocumentId(null);
+          else { setIsUploadOpen(false); setSelectedDocumentId(number); }
+          setToast(initialDocument ? `${number} updated.` : `${number} added.`);
+        })
+        .catch((error) => setToast(error instanceof Error ? error.message : "The document could not be saved."));
+      return;
+    }
 
     if (initialDocument) {
       const newFile = values.selectedFile;
@@ -1426,7 +1500,7 @@ export default function DocumentCenter({ notify }: { notify?: (message: string) 
                 ))}
                 <div className="directory-tabs-end">
                   <span className="live-dot" />
-                  Demo data
+                  {isSupabaseConfigured ? "Live" : "Demo data"}
                 </div>
               </div>
               <div className="directory-toolbar">
@@ -1584,7 +1658,7 @@ export default function DocumentCenter({ notify }: { notify?: (message: string) 
             </section>
 
             <div className="directory-footnote">
-              <span><Info size={13} />Mock registry data. Metadata changes are held in memory for this session; no backend or permanent file storage is connected.</span>
+              <span><Info size={13} />{isSupabaseConfigured ? "Documents from every module appear here. Files are stored privately; archiving never changes the linked records." : "Mock registry data. Metadata changes are held in memory for this session; no backend or permanent file storage is connected."}</span>
             </div>
           </main>
         </div>

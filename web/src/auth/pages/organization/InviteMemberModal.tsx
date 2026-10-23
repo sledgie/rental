@@ -5,7 +5,7 @@ import { useOrganization } from "../../contexts/OrganizationContext";
 import { useToast } from "../../contexts/ToastContext";
 import { ASSIGNABLE_ROLES } from "../../lib/format";
 import { isValidEmail, roleDescriptions } from "../../lib/format";
-import { getUserDirectory } from "../../services/mockUserService";
+import { userService } from "../../services";
 import type { Role } from "../../lib/types";
 
 export function InviteMemberModal({
@@ -46,7 +46,7 @@ export function InviteMemberModal({
     let cancelled = false;
     setChecking(true);
     const timer = window.setTimeout(() => {
-      getUserDirectory()
+      userService.getUserDirectory()
         .then((users) => {
           if (cancelled) return;
           const match = users.find((user) => user.email.toLowerCase() === email.trim().toLowerCase());

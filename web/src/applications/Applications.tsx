@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../lib/supabase";
 // Applications directory in the same format as the Properties, Leases, Units and Payments pages: tabs, search, sortable master rows,
 // an inline summary (chevron) and a side drawer for the full application (View). The store, screening/document/decision sections and
 // dialogs come from the applications module.
@@ -176,7 +177,7 @@ export default function Applications({ params }: { params?: Record<string, strin
                     {t.label}<span>{models.filter((r) => inTab(r, t.key)).length}</span>
                   </button>
                 ))}
-                <div className="directory-tabs-end"><span className="live-dot" />Demo data</div>
+                <div className="directory-tabs-end"><span className="live-dot" />{isSupabaseConfigured ? "Live" : "Demo data"}</div>
               </div>
               <div className="directory-toolbar">
                 <SearchField label="Search applications" placeholder="Search application ID, applicant, email, property or unit..." value={query} onChange={(v) => { setQuery(v); setPage(1); }} />
@@ -351,8 +352,8 @@ export default function Applications({ params }: { params?: Record<string, strin
               </div>
             </section>
             <div className="directory-footnote">
-              <span><ShieldCheck size={13} />Screening data is masked for staff without the screening permission. Document storage, messaging and e-signature are simulated.</span>
-              <span>Demo data<span className="footnote-separator">&middot;</span>Nothing persists after a refresh</span>
+              <span><ShieldCheck size={13} />Screening data is masked for staff without the screening permission. {isSupabaseConfigured ? "Documents are stored privately. Messages and e-signatures are not sent from here; they are recorded only." : "Document storage, messaging and e-signature are simulated."}</span>
+              <span>{isSupabaseConfigured ? "Saved to your organization" : <>Demo data<span className="footnote-separator">&middot;</span>Nothing persists after a refresh</>}</span>
             </div>
           </main>
         </div>

@@ -8,7 +8,8 @@ import {
   type ReactNode,
 } from "react";
 import type { SignUpInput, User } from "../lib/types";
-import * as authService from "../services/mockAuthService";
+import { authService } from "../services";
+import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 
 interface AuthContextValue {
   user: User | null;
@@ -18,6 +19,7 @@ interface AuthContextValue {
   signUp: (input: SignUpInput) => Promise<User>;
   signOut: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
+  resendSignupEmail: (email: string) => Promise<void>;
   verifyEmail: () => Promise<void>;
   resetDemo: () => Promise<void>;
   isAuthenticated: boolean;
@@ -40,8 +42,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => {
         if (!cancelled) setInitializing(false);
       });
+    // Supabase can end a session on its own (expired refresh token, sign-out in another tab).
+    const { data: listener } = isSupabaseConfigured
+      ? supabase.auth.onAuthStateChange((event) => {
+          if (event === "SIGNED_OUT" && !cancelled) setUser(null);
+        })
+      : { data: null };
     return () => {
       cancelled = true;
+      listener?.subscription.unsubscribe();
     };
   }, []);
 
@@ -76,6 +85,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await authService.requestPasswordReset(email);
   }, []);
 
+  const resendSignupEmail = useCallback(async (email: string) => {
+    await authService.resendSignupEmail(email);
+  }, []);
+
   const verifyEmail = useCallback(async () => {
     if (!user) return;
     await authService.verifyEmail(user.id);
@@ -96,11 +109,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUp,
       signOut,
       requestPasswordReset,
+      resendSignupEmail,
       verifyEmail,
       resetDemo,
       isAuthenticated: Boolean(user),
     }),
-    [user, initializing, authenticating, signIn, signUp, signOut, requestPasswordReset, verifyEmail, resetDemo]
+    [user, initializing, authenticating, signIn, signUp, signOut, requestPasswordReset, resendSignupEmail, verifyEmail, resetDemo]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

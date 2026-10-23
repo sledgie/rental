@@ -27,6 +27,7 @@ import {
 import { Button, DataField, EmptyState, IconButton, SectionTitle, TextLink } from "../tenants/components/ui";
 import { FilterCheckbox, FilterField, FilterPopover, SearchField, SortControl } from "../shell/directory";
 import { useStore } from "./lib/store";
+import { isSupabaseConfigured } from "../lib/supabase";
 import { dateLong, dateShort, money, projectFinancials, projectProgress } from "./lib/finance";
 import { exportProjectsCsv } from "./lib/export";
 import type { Project, ProjectStatus } from "./lib/types";
@@ -194,7 +195,7 @@ export default function Projects({ params }: { params?: Record<string, string> }
                     {t.label}<span>{tabCount(t.key)}</span>
                   </button>
                 ))}
-                <div className="directory-tabs-end"><span className="live-dot" />Demo data</div>
+                <div className="directory-tabs-end"><span className="live-dot" />{isSupabaseConfigured ? "Live" : "Demo data"}</div>
               </div>
               <div className="directory-toolbar">
                 <SearchField label="Search projects" placeholder="Search project, property, unit, manager or description..." value={search} onChange={(v) => { setSearch(v); setPage(1); }} />
@@ -392,7 +393,7 @@ export default function Projects({ params }: { params?: Record<string, string> }
             </section>
             <div className="directory-footnote">
               <span><ShieldCheck size={13} />Budget, committed and incurred figures are derived from approved records. Cancelling or archiving keeps the full audit trail.</span>
-              <span><CalendarClock size={13} />All amounts in CAD<span className="footnote-separator">&middot;</span>Demo data</span>
+              <span><CalendarClock size={13} />All amounts in CAD{!isSupabaseConfigured && <><span className="footnote-separator">&middot;</span>Demo data</>}</span>
             </div>
           </main>
         </div>

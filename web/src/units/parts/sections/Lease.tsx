@@ -628,7 +628,10 @@ export function LeaseComposer({
         ? [{ tenantId: form.tenantId, role: form.role, isSignatory: form.signatory }]
         : [],
     });
-    updateUnit(unit.id, { unitStatus: form.unitStatus });
+    // with Supabase this saves the unit's new status; tell the user if the database refused it
+    void Promise.resolve(updateUnit(unit.id, { unitStatus: form.unitStatus })).catch((error) =>
+      pushToast({ tone: "rose", title: "Unit status not saved", message: error instanceof Error ? error.message : "Please try again." }),
+    );
     pushToast({
       tone: "jade",
       title: "Lease created",

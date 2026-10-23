@@ -2,7 +2,21 @@
 // executed lazily when awaited, over a plain object store.
 import type { Cond, Table } from "./ops";
 
+export type Row = Record<string, any>;
+export type WriteKind = "insert" | "update" | "delete";
+
 const store: Record<string, Record<string, any>[]> = {};
+
+// With Supabase connected, every write is also reported here so ./supabaseSync.ts can save it. Demo mode leaves the hook unset.
+let writeHook: ((kind: WriteKind, table: string, rows: Row[]) => void) | null = null;
+export const setWriteHook = (hook: typeof writeHook) => {
+  writeHook = hook;
+};
+/** Replaces the whole store (used when the data is loaded from Supabase). */
+export function hydrateStore(next: Record<string, Row[]>) {
+  for (const key of Object.keys(store)) delete store[key];
+  Object.assign(store, next);
+}
 const rowsOf = (table: Table) => (store[table.__name] ||= []);
 const clone = <T,>(v: T): T => (v !== null && typeof v === "object" && !(v instanceof Date) ? JSON.parse(JSON.stringify(v)) : v);
 
@@ -54,6 +68,8 @@ function insert(table: Table) {
         const rows = rowsOf(table);
         const key = keyOf(table);
         const inserted: Record<string, any>[] = [];
+        const created: Record<string, any>[] = [];
+        const updated: Record<string, any>[] = [];
         for (const item of list) {
           const existing = rows.find((r) => r[key] === item[key]);
           if (existing) {
@@ -61,6 +77,7 @@ function insert(table: Table) {
             if (typeof onConflict === "object") {
               Object.assign(existing, onConflict.set);
               inserted.push({ ...existing });
+              updated.push({ ...existing });
               continue;
             }
             throw new Error(`Duplicate ${table.__name} ${String(item[key])}`);
@@ -68,6 +85,11 @@ function insert(table: Table) {
           const row = withDefaults(table, item);
           rows.push(row);
           inserted.push({ ...row });
+          created.push({ ...row });
+        }
+        if (writeHook) {
+          if (created.length) writeHook("insert", table.__name, created);
+          if (updated.length) writeHook("update", table.__name, updated);
         }
         return inserted;
       };
@@ -92,7 +114,14 @@ function update(table: Table) {
       return {
         where(cond: Cond) {
           return thenable(() => {
-            for (const r of rowsOf(table)) if (!cond || cond(r)) Object.assign(r, patch);
+            const changed: Record<string, any>[] = [];
+            for (const r of rowsOf(table)) {
+              if (!cond || cond(r)) {
+                Object.assign(r, patch);
+                changed.push({ ...r });
+              }
+            }
+            if (writeHook && changed.length) writeHook("update", table.__name, changed);
           });
         },
       };
@@ -104,7 +133,11 @@ function remove(table: Table) {
   return {
     where(cond: Cond) {
       return thenable(() => {
-        store[table.__name] = rowsOf(table).filter((r) => cond && !cond(r));
+        const before = rowsOf(table);
+        const kept = before.filter((r) => cond && !cond(r));
+        const removed = before.filter((r) => !kept.includes(r)).map((r) => ({ ...r }));
+        store[table.__name] = kept;
+        if (writeHook && removed.length) writeHook("delete", table.__name, removed);
       });
     },
   };

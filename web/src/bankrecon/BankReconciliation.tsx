@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Archive, Banknote, BarChart3, FileUp, History, LayoutDashboard, Link2, ListX, Play, RotateCcw, Settings2 } from 'lucide-react';
-import { Button as TnButton, Overlay } from '../tenants/components/ui';
+import { Button as TnButton, EmptyState, Overlay } from '../tenants/components/ui';
+import { isSupabaseConfigured } from '../lib/supabase';
 import { StoreProvider, useStore } from './lib/store';
 import { RouteContext, buildHash, routeFromParams, type ReconRoute } from './shim/route';
 import { StartReconModal } from './components/recon/StartReconModal';
@@ -36,11 +37,28 @@ const VIEWS: Record<string, () => JSX.Element> = {
 };
 
 function Page({ route }: { route: ReconRoute }) {
-  const { state, user, setUser, resetDemo } = useStore();
+  const { state, user, setUser, resetDemo, status, syncError, dismissSyncError } = useStore();
   const [startOpen, setStartOpen] = useState(false);
   const View = VIEWS[route.tab] || Dashboard;
   const goTab = (tab: string) => { window.location.hash = buildHash({ tab }); };
   const closeOverlay = () => { window.location.hash = buildHash({ tab: route.tab, query: route.query }); };
+
+  if (isSupabaseConfigured && (!status.ready || status.error)) {
+    return (
+      <div className="tn br">
+        <div className="app-shell">
+          <div className="main-shell">
+            <main className="main-content">
+              <EmptyState
+                title={status.error ? "We couldn't load bank reconciliation" : 'Loading bank reconciliation…'}
+                description={status.error ?? 'Fetching your bank accounts and statements.'}
+              />
+            </main>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="tn br">
@@ -51,7 +69,7 @@ function Page({ route }: { route: ReconRoute }) {
               <div>
                 <div className="page-title-line">
                   <h1>Bank Reconciliation</h1>
-                  <span className="muted">Simulated bank data</span>
+                  {!isSupabaseConfigured && <span className="muted">Simulated bank data</span>}
                 </div>
                 <p>Compare bank statements against accounting records, investigate differences and finalize monthly reconciliations.</p>
               </div>
@@ -59,6 +77,13 @@ function Page({ route }: { route: ReconRoute }) {
                 <TnButton variant="primary" onClick={() => setStartOpen(true)}><Play size={15} />Start reconciliation</TnButton>
               </div>
             </div>
+
+            {syncError && (
+              <div className="form-error" role="alert" style={{ marginBottom: 12 }}>
+                <span>The change was not saved: {syncError}</span>
+                <button type="button" className="br-back" style={{ marginLeft: 'auto' }} onClick={dismissSyncError}>Dismiss</button>
+              </div>
+            )}
 
             <section className="directory-panel" aria-label="Bank reconciliation">
               <div className="directory-tabs no-print" aria-label="Reconciliation views">
@@ -72,16 +97,20 @@ function Page({ route }: { route: ReconRoute }) {
                 })}
               </div>
               <div className="directory-toolbar no-print">
-                <span className="br-period"><Archive size={13} style={{ verticalAlign: -2, marginRight: 5 }} />{state.accounts.length} bank accounts · demonstration data</span>
+                <span className="br-period"><Archive size={13} style={{ verticalAlign: -2, marginRight: 5 }} />{state.accounts.length} bank accounts{isSupabaseConfigured ? '' : ' · demonstration data'}</span>
                 <div className="toolbar-actions">
                   <TnButton onClick={() => { window.location.hash = '#/banks'; }}><Banknote size={14} />Manage banks</TnButton>
-                  <label className="br-role">
-                    Viewing as
-                    <select value={user.id} onChange={(e) => setUser(e.target.value)}>
-                      {state.users.map((u) => <option key={u.id} value={u.id}>{u.name} · {u.role}</option>)}
-                    </select>
-                  </label>
-                  <TnButton onClick={() => { if (window.confirm('Reset all reconciliation demo data to its original state?')) resetDemo(); }}><RotateCcw size={14} />Reset demo</TnButton>
+                  {!isSupabaseConfigured && (
+                    <>
+                      <label className="br-role">
+                        Viewing as
+                        <select value={user.id} onChange={(e) => setUser(e.target.value)}>
+                          {state.users.map((u) => <option key={u.id} value={u.id}>{u.name} · {u.role}</option>)}
+                        </select>
+                      </label>
+                      <TnButton onClick={() => { if (window.confirm('Reset all reconciliation demo data to its original state?')) resetDemo(); }}><RotateCcw size={14} />Reset demo</TnButton>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="u-root br-body">
@@ -97,7 +126,7 @@ function Page({ route }: { route: ReconRoute }) {
             </section>
 
             <div className="directory-footnote no-print">
-              <span>Demonstration data is stored in this browser only. No bank connection exists and no funds move.</span>
+              <span>{isSupabaseConfigured ? 'No bank connection exists and no funds move: statements are imported from files.' : 'Demonstration data is stored in this browser only. No bank connection exists and no funds move.'}</span>
             </div>
           </main>
         </div>

@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../../lib/supabase";
 import type {
   Allocation,
   CreditApplication,
@@ -61,7 +62,7 @@ export function buildReceiptHtml(args: {
   <p class="muted" style="margin:4px 0;">${esc(COMPANY.address)}<br/>${esc(COMPANY.phone)} · ${esc(COMPANY.email)}</p>
   <div class="rule"></div>
   <p style="letter-spacing:.35em;font-weight:bold;margin:6px 0;">RENT RECEIPT</p>
-  <span class="badge">Sample — demo data</span>
+  ${isSupabaseConfigured ? "" : '<span class="badge">Sample — demo data</span>'}
   ${reversed ? '<span class="stamp">Reversed</span>' : ""}
   ${payment.refund ? '<span class="stamp">Refunded</span>' : ""}
 </div>
@@ -101,7 +102,7 @@ export function buildReceiptHtml(args: {
 ${reversed && payment.reversalReason ? `<p style="border:1px solid #fca5a5;background:#fef2f2;color:#991b1b;padding:6px 10px;font-size:11px;">Reversed: ${esc(payment.reversalReason)}</p>` : ""}
 <div class="rule"></div>
 <p class="center muted" style="font-size:11px;">Recorded by ${esc(recordedBy)} · Issued ${esc(formatDateTime(args.issuedAt ?? payment.createdAt))}<br/>
-Fictional sample receipt generated for demonstration purposes only. No real transaction occurred.</p>
+${isSupabaseConfigured ? "" : "Fictional sample receipt generated for demonstration purposes only. No real transaction occurred."}</p>
 </body></html>`;
 }
 
@@ -184,9 +185,11 @@ export function ReceiptPreview({
             <p className="text-[11px] text-rc-ink-500">{COMPANY.phone} · {COMPANY.email}</p>
             <div className="my-4 border-t border-dashed border-rc-ink-300" />
             <p className="font-display text-sm font-semibold tracking-[0.35em] text-rc-ink-800">RENT RECEIPT</p>
-            <p className="mt-1.5 inline-block rounded border border-amber-400 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold tracking-widest text-amber-800 uppercase">
-              Sample — demo data
-            </p>
+            {!isSupabaseConfigured && (
+              <p className="mt-1.5 inline-block rounded border border-amber-400 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold tracking-widest text-amber-800 uppercase">
+                Sample — demo data
+              </p>
+            )}
             {reversed && (
               <p className="mt-1.5 ml-1 inline-block rounded border border-red-400 bg-red-50 px-2 py-0.5 text-[10px] font-semibold tracking-widest text-red-800 uppercase">
                 Reversed
@@ -285,7 +288,7 @@ export function ReceiptPreview({
           <footer className="mt-6 border-t border-dashed border-rc-ink-300 pt-3 text-center text-[10.5px] text-rc-ink-500">
             <p>Recorded by {recordedBy} · Issued {formatDateTime(issuedAt ?? payment.createdAt)}</p>
             <p className="mt-1">
-              Reprinting reuses this receipt number — no new payment is created. Fictional sample receipt for demonstration only.
+              Reprinting reuses this receipt number — no new payment is created.{!isSupabaseConfigured && " Fictional sample receipt for demonstration only."}
             </p>
           </footer>
         </div>

@@ -32,6 +32,7 @@ export type DerivedLeaseStatus =
 
 const RECEIVABLE_TYPES = new Set([
   "Rent Charge",
+  "Other Charge",
   "Late Fee",
   "Utility Charge",
   "Parking Fee",

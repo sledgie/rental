@@ -34,7 +34,7 @@ import { useOrganization } from "../../contexts/OrganizationContext";
 import { useToast } from "../../contexts/ToastContext";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import { formatDate, ASSIGNABLE_ROLES, roleDescriptions } from "../../lib/format";
-import { listOrganizationMembers, type MembershipWithUser } from "../../services/mockMembershipService";
+import { membershipService, type MembershipWithUser } from "../../services";
 import type { Role } from "../../lib/types";
 import { SettingsHeader } from "./SettingsChrome";
 import { InviteMemberModal } from "./InviteMemberModal";
@@ -80,7 +80,7 @@ export default function MembersPage() {
     if (!organizationId) return;
     let cancelled = false;
     setLoadError(null);
-    listOrganizationMembers(organizationId)
+    membershipService.listOrganizationMembers(organizationId)
       .then((rows) => {
         if (!cancelled) setMembers(rows);
       })

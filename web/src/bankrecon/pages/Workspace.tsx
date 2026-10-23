@@ -220,7 +220,7 @@ export default function WorkspacePage({ accountId }: { accountId: string }) {
               {locked && <Badge kind="cancelled" dot><Icon name="lock" className="w-3 h-3" /> Locked</Badge>}
             </div>
             <p className="text-xs text-u-muted mt-1">
-              {account.id} · {account.institution} · {account.maskedAccount} · {account.currency} · Statement {recon.statementRef} · Period {fmtDate(recon.periodStart)} – {fmtDate(recon.periodEnd)}
+              {account.code ?? account.id} · {account.institution} · {account.maskedAccount} · {account.currency} · Statement {recon.statementRef} · Period {fmtDate(recon.periodStart)} – {fmtDate(recon.periodEnd)}
             </p>
             <p className="text-xs text-u-muted mt-1">
               Last completed: {lastCompleted ? `${lastCompleted.statementRef} ending ${money(lastCompleted.statementEndingBalance)} (${fmtDate(lastCompleted.periodEnd)})` : "—"} · Created by {recon.createdBy}

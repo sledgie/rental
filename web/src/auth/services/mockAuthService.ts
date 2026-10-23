@@ -106,6 +106,11 @@ export async function verifyEmail(userId: string): Promise<void> {
   });
 }
 
+/** The mock backend never requires email confirmation, so there is nothing to resend. */
+export async function resendSignupEmail(_email: string): Promise<void> {
+  await delay(400);
+}
+
 export async function resetDemoData(): Promise<void> {
   await delay(260);
   resetDemoDatabase();

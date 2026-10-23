@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "../../lib/supabase";
 import { useEffect, useMemo, useState, type ChangeEvent, type DragEvent } from "react";
 import {
   dateOffset,
@@ -423,7 +424,7 @@ export default function LeaseWizard({ data, unavailableUnitIds, onClose, onSave 
 
           {step === 4 && (
             <div className="wizard-section">
-              <div className="storage-callout"><Icon name="upload" size={17} /><div><strong>Simulated storage</strong><span>Files are represented in this browser session only. No documents are uploaded to a server.</span></div></div>
+              {isSupabaseConfigured ? <div className="storage-callout"><Icon name="upload" size={17} /><div><strong>Secure storage</strong><span>Files are uploaded privately when the lease is saved.</span></div></div> : <div className="storage-callout"><Icon name="upload" size={17} /><div><strong>Simulated storage</strong><span>Files are represented in this browser session only. No documents are uploaded to a server.</span></div></div>}
               <div className="dropzone wizard-dropzone" onDragOver={(event) => event.preventDefault()} onDrop={onDropFiles}>
                 <div className="upload-symbol"><Icon name="upload" size={20} /></div><div><strong>Drop files here to attach</strong><span>Multiple PDF, Word, image, or other files can be selected.</span></div>
                 <label className="button button-small button-secondary file-browse">Browse files<input type="file" multiple onChange={onFileInput} /></label>
@@ -440,9 +441,9 @@ export default function LeaseWizard({ data, unavailableUnitIds, onClose, onSave 
                 <div><span>Property / units</span><strong>{selectedProperty?.name || "No property"}{form.units.length ? ` | ${form.units.map((unit) => data.units.find((item) => item.id === unit.unitId)?.number).filter(Boolean).join(", ")}` : ""}</strong></div>
                 <div><span>Contracted monthly rent</span><strong>{formatMoney(form.monthlyRent || allocationTotal)}</strong></div>
                 <div><span>People</span><strong>{form.parties.map((party) => party.displayName).join(", ") || "No parties added"}</strong></div>
-                <div><span>Documents</span><strong>{form.files.length} attached for simulated storage</strong></div>
+                <div><span>Documents</span><strong>{form.files.length} attached{isSupabaseConfigured ? "" : " for simulated storage"}</strong></div>
               </div>
-              <div className="review-note"><Icon name="alert" size={16} /><span>Creating this lease updates only the prototype's client-side state. Signatures, notices, and file storage are not connected to external services.</span></div>
+              <div className="review-note"><Icon name="alert" size={16} /><span>{isSupabaseConfigured ? "Signatures and notices are not sent automatically; record them on the lease once they are done." : "Creating this lease updates only the prototype's client-side state. Signatures, notices, and file storage are not connected to external services."}</span></div>
             </div>
           )}
         </div>

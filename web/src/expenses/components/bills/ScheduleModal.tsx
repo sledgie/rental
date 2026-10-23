@@ -1,6 +1,7 @@
 import { Button } from "../ui/Button";
 import { Checkbox, Field, Input, Select, Textarea } from "../ui/Field";
 import { Modal } from "../ui/Modal";
+import { ProviderSelect } from "./ProviderSelect";
 import { useApp } from "../../context/AppContext";
 import { properties, providers, tenants, unitsForProperty } from "../../data/catalog";
 import type {
@@ -56,8 +57,8 @@ function empty(): Draft {
   return {
     name: "",
     category: "hydro",
-    providerId: providers[0].id,
-    propertyId: properties[0].id,
+    providerId: providers[0]?.id ?? "",
+    propertyId: properties[0]?.id ?? "",
     unitId: "",
     accountNumber: "",
     frequency: "monthly",
@@ -215,16 +216,7 @@ export function ScheduleModal({
           </Select>
         </Field>
         <Field label="Service provider">
-          <Select
-            value={draft.providerId}
-            onChange={(e) => setDraft({ ...draft, providerId: e.target.value })}
-          >
-            {providers.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </Select>
+          <ProviderSelect value={draft.providerId} onChange={(id) => setDraft({ ...draft, providerId: id })} />
         </Field>
         <Field label="Property">
           <Select

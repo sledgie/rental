@@ -4,7 +4,8 @@ import { Button } from "@inv/components/ui/Button";
 import { Fieldset, Input, Select } from "@inv/components/ui/Field";
 import { Modal } from "@inv/components/ui/Modal";
 import { useToast } from "@inv/components/ui/Toast";
-import { properties, tenants } from "@inv/data/mockInvoices";
+import { useInvoices } from "@inv/store/InvoiceStore";
+import { isSupabaseConfigured } from "../../../lib/supabase";
 import { formatCAD, todayISO } from "@inv/lib/format";
 import {
   invoiceSubtotal,
@@ -37,6 +38,10 @@ const emptyItem = (): InvoiceLineItem => ({
 
 export interface InvoiceFormValues {
   id: string;
+  /** database ids, filled in by the pickers when Supabase is connected */
+  tenantId?: string;
+  unitId?: string;
+  leaseId?: string;
   tenantName: string;
   propertyId: string;
   propertyName: string;
@@ -79,6 +84,9 @@ export function InvoiceFormModal({
   onSubmit,
 }: InvoiceFormModalProps) {
   const toast = useToast();
+  const { refs } = useInvoices();
+  const properties = refs.properties;
+  const tenants = refs.tenants.map((t) => t.name);
   const [values, setValues] = useState<InvoiceFormValues>(() => blank(nextId));
 
   useEffect(() => {
@@ -87,6 +95,9 @@ export function InvoiceFormModal({
       invoice
         ? {
             id: invoice.id,
+            tenantId: invoice.tenantId,
+            unitId: invoice.unitId,
+            leaseId: invoice.leaseId,
             tenantName: invoice.tenant.name,
             propertyId: invoice.propertyId,
             propertyName: invoice.propertyName,
@@ -142,8 +153,8 @@ export function InvoiceFormModal({
       title={mode === "create" ? "Create invoice" : `Edit ${invoice?.id ?? "invoice"}`}
       description={
         mode === "create"
-          ? "Charges are calculated in Canadian dollars. Nothing is sent to tenants from this prototype."
-          : "Changes apply to the demo record stored in this browser session."
+          ? isSupabaseConfigured ? "Charges are calculated in Canadian dollars. The invoice is saved as a draft unless you choose Unpaid." : "Charges are calculated in Canadian dollars. Nothing is sent to tenants from this prototype."
+          : isSupabaseConfigured ? "Only draft and pending invoices can be edited. Issued invoices must be voided and re-issued." : "Changes apply to the demo record stored in this browser session."
       }
       footer={
         <>
@@ -162,7 +173,7 @@ export function InvoiceFormModal({
       <div className="max-h-[62vh] space-y-4 overflow-y-auto scrollbar-thin pr-1">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Fieldset label="Invoice ID">
-            <Input value={values.id} readOnly className="opacity-70" />
+            <Input value={isSupabaseConfigured && mode === "create" ? "Assigned on save" : values.id} readOnly className="opacity-70" />
           </Fieldset>
           <Fieldset label="Invoice type">
             <Select
@@ -191,28 +202,61 @@ export function InvoiceFormModal({
             </Select>
           </Fieldset>
           <Fieldset label="Lease reference">
-            <Input
-              value={values.leaseRef}
-              onChange={(e) => patch({ leaseRef: e.target.value })}
-              placeholder="LSE-2026-0000"
-            />
+            {isSupabaseConfigured ? (
+              <Select
+                value={values.leaseId ?? ""}
+                disabled={!values.tenantId}
+                onChange={(e) => {
+                  const lease = refs.leases.find((l) => l.id === e.target.value);
+                  patch({ leaseId: e.target.value || undefined, leaseRef: lease?.number ?? "" });
+                }}
+              >
+                <option value="">{values.tenantId ? "No lease" : "Choose a tenant first"}</option>
+                {refs.leases.filter((l) => l.tenantId === values.tenantId).map((l) => (
+                  <option key={l.id} value={l.id}>{l.number}</option>
+                ))}
+              </Select>
+            ) : (
+              <Input
+                value={values.leaseRef}
+                onChange={(e) => patch({ leaseRef: e.target.value })}
+                placeholder="LSE-2026-0000"
+              />
+            )}
           </Fieldset>
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="sm:col-span-2">
             <Fieldset label="Tenant">
-              <Select
-                value={values.tenantName}
-                onChange={(e) => patch({ tenantName: e.target.value })}
-              >
-                <option value="">Select a tenant…</option>
-                {tenants.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </Select>
+              {isSupabaseConfigured ? (
+                <Select
+                  value={values.tenantId ?? ""}
+                  onChange={(e) => {
+                    const tenant = refs.tenants.find((t) => t.id === e.target.value);
+                    patch({ tenantId: e.target.value || undefined, tenantName: tenant?.name ?? "", leaseId: undefined, leaseRef: "" });
+                  }}
+                >
+                  <option value="">Select a tenant…</option>
+                  {refs.tenants.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <Select
+                  value={values.tenantName}
+                  onChange={(e) => patch({ tenantName: e.target.value })}
+                >
+                  <option value="">Select a tenant…</option>
+                  {tenants.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </Select>
+              )}
             </Fieldset>
           </div>
           <div className="sm:col-span-2">
@@ -221,7 +265,7 @@ export function InvoiceFormModal({
                 value={values.propertyId}
                 onChange={(e) => {
                   const p = properties.find((x) => x.id === e.target.value);
-                  patch({ propertyId: e.target.value, propertyName: p?.name ?? "" });
+                  patch({ propertyId: e.target.value, propertyName: p?.name ?? "", unitId: undefined, unit: "" });
                 }}
               >
                 <option value="">Select a property…</option>
@@ -237,11 +281,27 @@ export function InvoiceFormModal({
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Fieldset label="Unit">
-            <Input
-              value={values.unit}
-              onChange={(e) => patch({ unit: e.target.value })}
-              placeholder="101"
-            />
+            {isSupabaseConfigured ? (
+              <Select
+                value={values.unitId ?? ""}
+                disabled={!values.propertyId}
+                onChange={(e) => {
+                  const unit = refs.units.find((u) => u.id === e.target.value);
+                  patch({ unitId: e.target.value || undefined, unit: unit?.number ?? "" });
+                }}
+              >
+                <option value="">{values.propertyId ? "Select a unit…" : "Choose a property first"}</option>
+                {refs.units.filter((u) => u.propertyId === values.propertyId).map((u) => (
+                  <option key={u.id} value={u.id}>{u.number}</option>
+                ))}
+              </Select>
+            ) : (
+              <Input
+                value={values.unit}
+                onChange={(e) => patch({ unit: e.target.value })}
+                placeholder="101"
+              />
+            )}
           </Fieldset>
           <Fieldset label="Invoice date">
             <Input

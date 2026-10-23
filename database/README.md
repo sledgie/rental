@@ -2,7 +2,7 @@
 
 The relational model, security rules and storage policies for the Keystone rental-management web app (`web/`), written for **Supabase** (PostgreSQL 15+, Supabase Auth, Row-Level Security, Storage).
 
-> **Status:** the schema is complete and tested on an in-process PostgreSQL (see `validation_checklist.md` for exactly what was run and what was *not*). It has **not** been applied to a Supabase project, and the web app is **not wired to it yet** — the app still runs on in-memory / `localStorage` data and the legacy Express + Oracle API.
+> **Status:** the schema is complete and tested on an in-process PostgreSQL (see `validation_checklist.md` for exactly what was run and what was *not*). It has been applied to a Supabase project. The web app's **auth, organizations, members, invitations and activity-log screens** read/write it when `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set (`web/src/auth/services/supabase*Service.ts`); every other module still runs on in-memory / `localStorage` data and the legacy Express + Oracle API.
 > The old Oracle scripts that used to sit in this folder (`schema_oracle.sql`, `drop_all_oracle.sql`, `add_*.sql`) were already deleted from the working tree before this work started; they are still in git history. This folder is now the only database implementation — nothing was duplicated elsewhere.
 
 ## Layout
@@ -27,7 +27,17 @@ database/
 │   ├── 008_storage_policies.sql      8 private buckets + Storage RLS
 │   ├── 009_reference_data.sql        permission catalog, role defaults, starter chart of accounts, privilege lock-down
 │   ├── 010_foreign_key_indexes.sql   covering indexes for foreign keys
-│   └── 011_table_comments.sql        documentation stored in the database
+│   ├── 011_table_comments.sql        documentation stored in the database
+│   ├── 012_invitation_inbox.sql         invitations a signed-in user can see and accept
+│   ├── 013_property_codes.sql           property codes (PR-0001)
+│   ├── 014_unit_codes.sql               unit codes (U-0001)
+│   ├── 015_property_owner_rpc.sql       replace a property's owners in one transaction
+│   ├── 016_lease_financial_notes.sql    lease financial notes
+│   ├── 017_payment_receipts.sql         payment receipt numbers
+│   ├── 018_bank_account_codes.sql       bank account codes (BA-001)
+│   ├── 019_maintenance_records.sql      schedule numbers and payment fields on linked expenses
+│   ├── 020_document_numbers.sql         document numbers (DOC-00001)
+│   └── 021_automation_condition_operators.sql   empty / not-empty tests in automation rules
 ├── seed/development_seed.sql    OPTIONAL fictional demo organization (local development only)
 ├── rollback/drop_application_schema.sql   DESTRUCTIVE reset for throwaway databases
 └── tests/

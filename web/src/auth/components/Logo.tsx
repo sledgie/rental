@@ -48,7 +48,7 @@ export function Logo({
               theme === "dark" ? "text-u-onaccent" : "text-u-ink"
             )}
           >
-            rentflow
+            L.O.F.T.
           </span>
           {size !== "sm" ? (
             <span
@@ -57,7 +57,7 @@ export function Logo({
                 theme === "dark" ? "text-u-muted" : "text-u-muted"
               )}
             >
-              rental operations
+              Landlord Operations &amp; Financial Tracking
             </span>
           ) : null}
         </span>

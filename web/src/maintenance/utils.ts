@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from '../lib/supabase';
 import type { Asset, MaintenanceRequest } from './types';
 import { TERMINAL_STATUSES } from './types';
 
@@ -118,6 +119,8 @@ export function warrantyState(asset: Asset): WarrantyState {
 }
 
 export function uid(prefix: string): string {
+  // with Supabase the ids of saved records become database primary keys, so they must be real UUIDs
+  if (isSupabaseConfigured) return crypto.randomUUID();
   return prefix + Math.random().toString(36).slice(2, 9).toUpperCase();
 }
 

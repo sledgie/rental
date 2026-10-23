@@ -3,11 +3,12 @@ import {
   Activity as ActivityIcon, AlertTriangle, ArrowUpDown, Banknote, Building2,
   CalendarClock, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight,
   CircleDollarSign, ClipboardList, Download, ExternalLink, Eye, FileText,
-  Filter, History, Hourglass, Inbox, Link2, Mail, MapPin, MoreHorizontal,
+  Filter, Hammer, History, Hourglass, Inbox, Link2, Mail, MapPin, MoreHorizontal,
   Package, Paperclip, Pencil, Phone, Plus, Receipt, RotateCcw, Search, ShieldCheck,
   Siren, Trash2, Unlink, UserCheck, Wrench, X,
 } from 'lucide-react';
 import { useStore } from '../store';
+import { useStore as useProjectsStore } from '../../projects/lib/store';
 import {
   Avatar, Chip, ConfirmDialog, DetailItem, EmptyState, GhostButton, Menu, PaymentBadge,
   PrimaryButton, PriorityBadge, SectionTitle, SelectInput, SmallButton, StatusBadge, Tabs,
@@ -252,6 +253,8 @@ export function RequestDetail({ req, setModal }: { req: MaintenanceRequest; setM
 
               {asset && <AssetSnapshot assetId={asset.id} req={req} onReplace={() => setModal({ kind: 'replace', req })} />}
 
+              <LinkedProject req={req} />
+
               <div>
                 <SectionTitle icon={<CircleDollarSign size={13} />}>Cost Summary</SectionTitle>
                 <div className="rounded-xl border border-u-line bg-u-card px-4 py-3.5 text-[12.5px]">
@@ -493,8 +496,7 @@ export function RequestDetail({ req, setModal }: { req: MaintenanceRequest; setM
                           <div className="flex justify-end gap-1">
                             <SmallButton
                               onClick={() => {
-                                if (doc.url) window.open(doc.url, '_blank');
-                                else s.toast('This is a sample file from the demo dataset — no preview is stored. Files you attach can be previewed during the session.', 'info');
+                                s.openAttachment(doc);
                               }}
                             >
                               <Eye size={11} /> Preview
@@ -715,6 +717,42 @@ function AssetSnapshot({ assetId, req, onReplace }: { assetId: string; req: Main
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+
+/** Links a request to a capital project of the same property (for work too large for a single work order). */
+function LinkedProject({ req }: { req: MaintenanceRequest }) {
+  const s = useStore();
+  const { projects } = useProjectsStore();
+  const linked = projects.find((p) => p.id === req.linkedProjectId);
+  const options = projects.filter((p) => !p.archived && p.propertyId === req.propertyId && (p.id === req.linkedProjectId || (p.status !== 'Completed' && p.status !== 'Cancelled')));
+  const change = (id: string) => {
+    const next = projects.find((p) => p.id === id);
+    s.updateRequest(req.id, { linkedProjectId: id || undefined });
+    s.logActivity(req.id, 'project', next ? `Linked to project ${next.id} · ${next.name}` : 'Project link removed');
+    s.toast(next ? `${req.id} linked to ${next.id}.` : 'Project link removed.');
+  };
+  return (
+    <div>
+      <SectionTitle icon={<Hammer size={13} />}>Linked Project</SectionTitle>
+      <div className="rounded-xl border border-u-line bg-u-card px-4 py-3.5">
+        {linked && (
+          <a href={`#/projects?project=${encodeURIComponent(linked.id)}`} className="mb-2 block text-[13.5px] font-semibold text-u-accent hover:underline">
+            {linked.id} · {linked.name} <ExternalLink size={11} className="inline" />
+          </a>
+        )}
+        <select
+          value={req.linkedProjectId ?? ''}
+          onChange={(e) => change(e.target.value)}
+          aria-label="Linked project"
+          className="w-full rounded-lg border border-u-line bg-u-s2 px-2.5 py-1.5 text-[12.5px] text-u-ink"
+        >
+          <option value="">{options.length ? 'No linked project' : 'No open projects for this property'}</option>
+          {options.map((p) => <option key={p.id} value={p.id}>{p.id} · {p.name} ({p.status})</option>)}
+        </select>
       </div>
     </div>
   );

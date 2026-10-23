@@ -1,6 +1,6 @@
 // Single source of truth for the sidebar and the placeholder pages.
 // `id` is the hash route (#/<id>). Items whose id has a real page in App.jsx open that page; the rest open <Placeholder />.
-export const BRAND = { name: 'RentNest', subtitle: 'Rental Management', icon: 'building-2', home: 'dashboard' };
+export const BRAND = { name: 'L.O.F.T.', subtitle: 'Landlord Operations & Financial Tracking', icon: 'building-2', home: 'dashboard' };
 
 export const QUICK_ACTION = {
   id: 'invoice-new', label: 'Create New Invoice', icon: 'file-plus',

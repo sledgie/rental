@@ -81,7 +81,12 @@ export interface ActivityEntry {
 }
 
 export interface Invoice {
+  /** the invoice number shown everywhere (INV-00001) */
   id: string;
+  /** database ids, set when the invoice comes from Supabase */
+  tenantId?: string;
+  unitId?: string;
+  leaseId?: string;
   tenant: {
     name: string;
     email: string;
