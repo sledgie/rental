@@ -136,7 +136,7 @@ function Catalog() {
             </section>
 
             <div className="directory-footnote">
-              <span>Mock ledger data generated in the browser; figures are illustrative and not connected to a live accounting backend.</span>
+              <span>{isSupabaseConfigured ? "Figures come from your general ledger, invoices, payments, bills and deposits. Budgets, mortgages and tax codes are not recorded yet." : "Mock ledger data generated in the browser; figures are illustrative and not connected to a live accounting backend."}</span>
             </div>
           </main>
         </div>
