@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { useTenantDb, searchTenants } from '../tenants/store';
 import { Icon } from '../icons.jsx';
 import { MenuItem, Pop } from './Pop.jsx';
+import { useAuth } from '../auth/contexts/AuthContext';
+import { useOrganization } from '../auth/contexts/OrganizationContext';
 
 const RECORDS = [['Tenant', '#/tenants?new=1'], ['Property', '#/properties?new=1'], ['Vendor', '#/vendors']];
 const ACTIVITIES = [['Invoice', null], ['Payments', null], ['Credit Notes', '#/credit-notes'], ['Bill Schedules', '#/bill-schedule']];
@@ -27,7 +29,9 @@ function Search() {
   );
 }
 
-export default function TopBar({ notify, onMenu, menuOpen, theme, onTheme }) {
+export default function TopBar({ notify, onMenu, menuOpen }) {
+  const { user, signOut } = useAuth();
+  const { activeOrganization, activeRole, workspaces } = useOrganization();
   const soon = (what) => () => notify(`${what} is not available yet.`);
   return (
     <header className="tv-top">
@@ -45,18 +49,16 @@ export default function TopBar({ notify, onMenu, menuOpen, theme, onTheme }) {
         <button type="button" className="tv-ibtn lg" aria-label="Help" title="Help" onClick={soon('Help')}><Icon name="help" size={17} /></button>
         <button type="button" className="tv-ibtn lg" aria-label="Compose email" title="Email" onClick={soon('Email')}><Icon name="mail" size={17} /></button>
         <button type="button" className="tv-ibtn lg" aria-label="Notifications" title="Notifications" onClick={soon('Notifications')}><Icon name="bell" size={17} /></button>
-        <Pop align="right" width={200} trigger={({ toggle }) => <button type="button" className="tv-avatar" aria-label="Account menu" onClick={toggle}><Icon name="user" size={16} /></button>}>
+        <Pop align="right" width={230} trigger={({ toggle }) => <button type="button" className="tv-avatar" aria-label="Account menu" onClick={toggle}><Icon name="user" size={16} /></button>}>
           {(close) => (
             <>
-              <div className="tv-gh">Theme</div>
-              {[['dark', 'Dark theme'], ['light', 'Light theme'], ['blue', 'Light with blue']].map(([t, label]) => (
-                <button key={t} type="button" role="menuitemradio" aria-checked={theme === t} className="tv-mi" onClick={() => { onTheme(t); close(); }}>
-                  <span style={{ flex: 1 }}>{label}</span>{theme === t && <Icon name="check" size={14} />}
-                </button>
-              ))}
+              {user && <div className="tv-gh" style={{ textTransform: 'none' }}>{user.fullName}<br /><span style={{ fontWeight: 400 }}>{activeOrganization?.name}{activeRole ? ` · ${activeRole}` : ''}</span></div>}
               <div className="tv-sep" />
-              <MenuItem disabled title="Coming soon" onClick={close}>Profile</MenuItem>
-              <MenuItem disabled title="Coming soon" onClick={close}>Sign out</MenuItem>
+              <MenuItem onClick={() => { close(); window.location.hash = '#/system-settings?cat=personal'; }}>Personal preferences</MenuItem>
+              <MenuItem onClick={() => { close(); window.location.hash = '#/organization'; }}>Organization settings</MenuItem>
+              {workspaces.length > 1 && <MenuItem onClick={() => { close(); window.location.hash = '#/organizations/select'; }}>Switch organization</MenuItem>}
+              <div className="tv-sep" />
+              <MenuItem onClick={async () => { close(); await signOut(); window.location.hash = '#/login'; }}>Sign out</MenuItem>
             </>
           )}
         </Pop>

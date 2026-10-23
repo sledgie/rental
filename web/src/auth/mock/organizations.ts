@@ -1,0 +1,48 @@
+import type { Organization } from "../lib/types";
+
+export const mockOrganizations: Organization[] = [
+  {
+    id: "org-001",
+    name: "Northstar Rentals",
+    businessType: "Property Management Company",
+    country: "Canada",
+    currency: "CAD",
+    timezone: "America/Toronto",
+    status: "active",
+    createdAt: "2023-02-14T15:00:00.000Z",
+    plan: "Growth",
+  },
+  {
+    id: "org-002",
+    name: "Harborline Estates",
+    businessType: "Individual Landlord",
+    country: "United States",
+    currency: "USD",
+    timezone: "America/New_York",
+    status: "active",
+    createdAt: "2023-06-02T12:00:00.000Z",
+    plan: "Starter",
+  },
+  {
+    id: "org-003",
+    name: "Cedar Key Property Group",
+    businessType: "Real Estate Business",
+    country: "United States",
+    currency: "USD",
+    timezone: "America/Chicago",
+    status: "active",
+    createdAt: "2022-10-18T09:00:00.000Z",
+    plan: "Scale",
+  },
+  {
+    id: "org-004",
+    name: "Bluewater Residences",
+    businessType: "Property Management Company",
+    country: "United Kingdom",
+    currency: "GBP",
+    timezone: "Europe/London",
+    status: "active",
+    createdAt: "2022-04-09T08:00:00.000Z",
+    plan: "Growth",
+  },
+];

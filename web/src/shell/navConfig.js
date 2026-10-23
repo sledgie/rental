@@ -54,8 +54,6 @@ export const NAV = [
   ] },
   { id: 'settings-group', label: 'Settings', items: [
     { id: 'organization', label: 'Organization', icon: 'building', desc: 'Your organization profile, branding and business details.' },
-    { id: 'users-roles', label: 'Users & Roles', icon: 'shield-check', desc: 'Invite users and control what each role can see and do.' },
-    { id: 'integrations', label: 'Integrations', icon: 'plug', desc: 'Connect payment, accounting, email and other third-party services.' },
     { id: 'system-settings', label: 'System Settings', icon: 'gear', desc: 'Defaults and preferences that apply across the application.' },
   ] },
 ];

@@ -1,0 +1,98 @@
+import type { User } from "../lib/types";
+
+/**
+ * DEV-ONLY mock users. Passwords exist purely so the prototype can simulate
+ * credential checks locally. Never ship this pattern to production.
+ */
+export const mockUsers: User[] = [
+  {
+    id: "user-001",
+    fullName: "Alex Carter",
+    email: "alex@example.com",
+    password: "Demo123!",
+    status: "active",
+    emailVerified: true,
+    createdAt: "2023-02-14T14:20:00.000Z",
+  },
+  {
+    id: "user-002",
+    fullName: "Maya Patel",
+    email: "maya@example.com",
+    password: "Demo123!",
+    status: "active",
+    emailVerified: true,
+    createdAt: "2022-11-03T09:05:00.000Z",
+  },
+  {
+    id: "user-003",
+    fullName: "Riley Chen",
+    email: "riley@example.com",
+    password: "Demo123!",
+    status: "active",
+    emailVerified: true,
+    createdAt: "2025-08-19T18:42:00.000Z",
+  },
+  {
+    id: "user-004",
+    fullName: "Jordan Lee",
+    email: "jordan@example.com",
+    password: "Demo123!",
+    status: "active",
+    emailVerified: true,
+    createdAt: "2023-05-27T11:12:00.000Z",
+  },
+  {
+    id: "user-005",
+    fullName: "Sofia Nguyen",
+    email: "sofia@example.com",
+    password: "Demo123!",
+    status: "active",
+    emailVerified: true,
+    createdAt: "2023-09-08T16:30:00.000Z",
+  },
+  {
+    id: "user-006",
+    fullName: "Daniel Brooks",
+    email: "daniel@example.com",
+    password: "Demo123!",
+    status: "active",
+    emailVerified: true,
+    createdAt: "2024-01-16T08:15:00.000Z",
+  },
+  {
+    id: "user-007",
+    fullName: "Priya Sharma",
+    email: "priya@example.com",
+    password: "Demo123!",
+    status: "active",
+    emailVerified: true,
+    createdAt: "2024-03-22T12:00:00.000Z",
+  },
+  {
+    id: "user-008",
+    fullName: "Taylor Brooks",
+    email: "taylor@example.com",
+    password: "Demo123!",
+    status: "active",
+    emailVerified: true,
+    createdAt: "2024-06-10T10:45:00.000Z",
+  },
+  {
+    id: "user-009",
+    fullName: "Nina Rossi",
+    email: "nina@example.com",
+    password: "Demo123!",
+    status: "active",
+    emailVerified: true,
+    createdAt: "2024-08-01T19:22:00.000Z",
+  },
+  {
+    id: "user-010",
+    fullName: "Morgan Ellis",
+    email: "morgan@example.com",
+    password: "Demo123!",
+    status: "active",
+    emailVerified: true,
+    createdAt: "2025-11-12T13:08:00.000Z",
+  },
+];

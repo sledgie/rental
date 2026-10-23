@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "../shim/link";
 import { useStore } from "../lib/store";
 import { computeRecon, depositLiabilityCheck, withinPeriod } from "../lib/calc";
-import { suggestForBankTx, suggestForBookTxManyToOne, Suggestion, buildAutoSuggestions } from "../lib/matching";
-import { Alert, Badge, Button, Card, Checkbox, DataTableWrap, Field, Input, Modal, ProgressBar, SegmentedTabs, Select, Th, Td, Toolbar, confidenceBadge, matchBadge, reconStatusBadge } from "../components/ui";
+import { suggestForBankTx, suggestForBookTxManyToOne, Suggestion } from "../lib/matching";
+import { Alert, Badge, Button, Card, Field, Input, Modal, ProgressBar, SegmentedTabs, Select, Th, Td, Toolbar, confidenceBadge, matchBadge, reconStatusBadge } from "../components/ui";
 import { Icon } from "../components/icons";
 import { BankTxDrawer, BookTxDrawer } from "../components/recon/TxDrawers";
 import { FinalizeModal, ReopenModal, CancelModal, RecordMissingModal, AdjustmentModal } from "../components/recon/WorkflowModals";

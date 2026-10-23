@@ -1,0 +1,15 @@
+/* Activity Logs: page shell comes from the tenants stylesheet; the table and detail views are Tailwind (u-* theme colours) inside .u-root.
+   Helper classes live in a layer so the .u-root children reset does not revert them. */
+.alg .alg-body{border-top:1px solid var(--line)}
+.alg .directory-tab svg{margin-right:5px;vertical-align:-2px}
+.alg .directory-footnote svg{vertical-align:-2px;margin-right:4px}
+@media print{.alg .no-print{display:none !important}}
+@layer utilities {
+  .alg .alg-btn{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 12px;border:1px solid var(--line2);border-radius:8px;background:var(--card);color:var(--ink);font-size:12.5px;font-weight:500;cursor:pointer}
+  .alg .alg-btn:hover:not(:disabled){background:var(--surface-2)}
+  .alg .alg-btn-primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .alg .alg-btn-primary:hover:not(:disabled){background:var(--accent-strong)}
+  .alg .alg-select{border:1px solid var(--line2);border-radius:6px;background:var(--card);color:var(--ink);padding:3px 6px;font-size:11px}
+  .alg .alg-pg{display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--line2);border-radius:6px;background:var(--card);color:var(--ink2);cursor:pointer}
+  .alg .alg-pg:disabled{opacity:.4;cursor:not-allowed}
+}

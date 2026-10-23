@@ -1,0 +1,23 @@
+/* Sign-in, onboarding and member screens. Colours are the app's u-* theme tokens; helper classes are layered
+   so the .u-root children reset does not revert them. */
+@keyframes au-fade-up { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+@keyframes au-fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes au-scale-in { from { opacity: 0; transform: scale(.97) translateY(6px) } to { opacity: 1; transform: none } }
+@keyframes au-shimmer { 100% { transform: translateX(100%) } }
+@keyframes au-drift { 0%, 100% { transform: translate3d(0, 0, 0) } 50% { transform: translate3d(12px, -18px, 0) } }
+@layer utilities {
+  .au-root { min-height: 100vh; background: var(--bg); color: var(--ink); }
+  .au-root .animate-fade-up { animation: au-fade-up .5s cubic-bezier(.22, 1, .36, 1) both }
+  .au-root .animate-fade-in { animation: au-fade-in .35s ease-out both }
+  .au-root .animate-scale-in { animation: au-scale-in .22s cubic-bezier(.22, 1, .36, 1) both }
+  .au-root .animate-drift { animation: au-drift 14s ease-in-out infinite }
+  .au-root .mesh-panel {
+    background-color: #0a1020;
+    background-image: radial-gradient(ellipse 80% 60% at 15% 0%, rgba(59, 130, 246, .24), transparent 60%), radial-gradient(ellipse 70% 50% at 90% 100%, rgba(99, 102, 241, .2), transparent 60%), radial-gradient(ellipse 50% 40% at 70% 20%, rgba(14, 165, 233, .12), transparent 65%);
+    color: #fff;
+  }
+  .au-root .dot-grid { background-image: radial-gradient(rgba(148, 163, 184, .28) .7px, transparent .7px); background-size: 18px 18px }
+  .au-root .glass-dark { background: rgba(255, 255, 255, .055); border: 1px solid rgba(255, 255, 255, .1); backdrop-filter: blur(18px) }
+  .au-root .focus-ring:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px color-mix(in srgb, var(--accent) 55%, transparent) }
+  .au-root .shadow-pop { box-shadow: 0 12px 32px -8px rgba(15, 23, 42, .3), 0 4px 12px -4px rgba(15, 23, 42, .15) }
+}

@@ -1,5 +1,5 @@
-import { DEFAULT_NOTIFICATION_CONFIGURATION } from "./sample-data";
 import { DEFAULT_SENDER } from "./catalog";
+import { DEFAULT_NOTIFICATION_CONFIGURATION } from "./sample-data";
 import type { AutomationRuleInput, TemplateInput } from "./types";
 
 export function emptyTemplate(senderSignature = DEFAULT_NOTIFICATION_CONFIGURATION.defaultSignature): TemplateInput {

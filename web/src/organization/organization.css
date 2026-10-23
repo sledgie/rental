@@ -1,0 +1,19 @@
+/* Organization: page shell comes from the tenants stylesheet; the body is Tailwind (u-* theme colours) inside .u-root.
+   Children of .u-root get unlayered CSS reverted, so the card/input helpers live in a layer. */
+.org .org-body{border-top:1px solid var(--line)}
+@layer utilities {
+  .org .org-card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .org .org-label{display:block;margin-bottom:6px;font-size:12px;font-weight:600;color:var(--ink2)}
+  .org .org-input{width:100%;min-height:40px;border:1px solid var(--line2);border-radius:8px;background:var(--card);padding:9px 11px;font-size:13px;color:var(--ink);transition:border-color .15s,box-shadow .15s}
+  .org .org-input:hover{border-color:var(--muted)}
+  .org .org-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+  .org .org-input[aria-invalid="true"]{border-color:var(--danger)}
+  .org .org-input:disabled{opacity:.6}
+}
+@layer utilities {
+  .org .org-btn{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 12px;border:1px solid var(--line2);border-radius:8px;background:var(--card);color:var(--ink);font-size:12.5px;font-weight:500;cursor:pointer}
+  .org .org-btn:hover:not(:disabled){background:var(--surface-2)}
+  .org .org-btn:disabled{opacity:.5;cursor:not-allowed}
+  .org .org-btn-primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .org .org-btn-primary:hover:not(:disabled){background:var(--accent-strong)}
+}

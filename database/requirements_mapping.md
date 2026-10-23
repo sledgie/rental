@@ -1,0 +1,104 @@
+# Requirements mapping
+
+How every persistent feature of the Keystone web app (`web/src`) maps to the Supabase schema in `database/migrations`.
+
+* **Source of requirements:** the actual React code — the `types.ts` / `data` / `store` files of each module — plus the older Express + Oracle prototype (`server/`, `docs/schema.prisma`), which I used as a domain cross-check.
+* **Test column:** `S` = `tests/schema_validation.sql`, `I` = `tests/data_integrity_validation.sql`, `R` = `tests/rls_validation.sql`, `D` = `tests/dev_seed_smoke.sql` (all executed — see `validation_checklist.md`).
+* **Permission names** are the keys in `permissions` (migration 009). Owner passes every check; defaults per role are in `role_permissions`.
+* Today the app keeps all of this in memory / `localStorage` (and a few Express endpoints). **Nothing is wired to Supabase yet** — "Gap" lists what the data-access layer still has to do or what is not persisted.
+
+## 1. Requirements inventory
+
+| Class | What it contains | Where it lives |
+|---|---|---|
+| **Persistent data** | Organizations, members, properties, units, tenants, leases, applications, documents, invoices, payments, credits, expenses, bills, journal, bank + reconciliation data, deposits, maintenance, assets, projects, templates, rules, logs, conversations, scheduled tasks, organization settings, personal preferences | Tables in `public` |
+| **Derived / calculated** | Invoice status paid/partial/overdue, invoice balances, credit remaining, bill status, lease "expiring", occupancy, KPIs, property/organization financials, maintenance dashboard, project progress, all report screens (Financial / Occupancy / Property Performance / Project Reports), dashboard cards | Views `v_*` and queries over them; never stored |
+| **Temporary UI state** | Filters, sorting, selected tab, open drawer, form drafts, avatar colours, toasts, theme preview, `draftBody` of an unsent message, search text | Stays in the browser (not persisted) |
+| **File storage** | Tenant ID scans, lease PDFs, signed PDFs, property cover images, maintenance attachments, project documents, receipts/statements, logos/avatars | Supabase Storage (8 private buckets) + `document_versions` rows |
+| **Auth-managed** | Passwords, sessions, MFA, email confirmation, password reset, last sign-in | Supabase Auth (`auth.users`); `profiles` holds display data only |
+| **System-generated** | Audit trail, hash chain, status history, template versions, task/workflow execution history, delivery logs, counters (numbers) | Append-only / trigger-written tables |
+
+## 2. Module mapping
+
+### Identity, onboarding and organization
+
+| UI module (component) | Tables / views | Access (RLS) | Functions / triggers | Seed | Tests | Gap / note |
+|---|---|---|---|---|---|---|
+| Login, Sign up, Forgot password (`auth/pages/auth/*`) | `auth.users` (Supabase), `profiles`, `user_preferences` | profiles: own + co-members; preferences: own | `private.handle_new_user` (signup trigger, never fails on missing metadata), email-change sync | Auth user via Studio (see seed header) | I (profile creation), R | Mock `mockAuthService` replaced by `supabase.auth.*`; "remember me" = Auth session persistence. |
+| Create organization / Onboarding (`auth/pages/onboarding/*`) | `organizations`, `organization_members`, `audit_policies`, `accounts`, `expense_categories` | RPC only (no INSERT policy) | `public.create_organization()` — org + owner + starter chart in one transaction | D | I, R | Business-type labels map to `individual_landlord`, `property_management_company`, `real_estate_business`, `other`. |
+| Select organization / switcher (`SelectOrganizationPage`, top bar) | `user_preferences.active_organization_id`, `organization_members` | member | `public.switch_active_organization()` | D | R | Membership list = `organization_members` joined to `organizations`. |
+| Invitations (`InvitationsPage`, Organization → Invitations) | `organization_invitations` | managers (`manage_members`); invitee sees own pending by JWT email | `public.accept_invitation()`, `decline_invitation()`; unique pending per email | — | I, R | Token is emailed by the backend; only its SHA-256 is stored. Resend = update `resend_count`/`expires_at`. |
+| Organization → Profile (`organization/OrganizationProfile`) | `organizations` (name, type, country, currency, timezone, contact, address, logo path) | read member, write `manage_settings` | `updated_at` trigger | D | R | Contact/address cards persist as real columns. Logo → bucket `organization-assets`. |
+| Organization → Members (`MembersPage`) | `organization_members`, `profiles` | read member; update/delete `manage_members` | Guards: last-owner protection, only owners touch owners; audit trigger; `public.transfer_ownership()` | D | I, R | Adding a member is by invitation only (no direct INSERT). |
+| Organization → Activity log / Activity Logs page (`activitylogs/ActivityLogs`) | `activity_events`, `activity_event_details`, `audit_exports` | `view_audit_log` (details need `view_sensitive` too) | Hash-chain trigger, append-only triggers, `public.record_activity()`, `public.verify_activity_chain()` | D | I, R | CSV export is produced by the app and recorded with `public.record_audit_export()` (event + `audit_exports` row, atomic). |
+| System Settings → 12 categories (`settings/*`) | `organization_settings` (JSON per category), `organization_role_permissions` | read `view_settings`; write by category (`private.setting_edit_permission`) | — | — | R | JSON shape is owned by the app (defaults merged client-side). Security matrix edits go to `organization_role_permissions`. Enforcement of session/MFA policy values is Supabase Auth configuration, not the database. |
+| Personal preferences | `user_preferences` | own row | — | — | R | Theme, landing page, density, language, notifications, widgets, reduce-motion. |
+| Roles & permission matrix (Security settings) | `permissions`, `role_permissions`, `organization_role_permissions` | catalog readable; overrides `manage_members` | `private.has_permission()` | 009 | S, I, R | The UI's 9 coarse toggles map to the finer DB permissions (see `schema_overview.md`). |
+
+### Portfolio
+
+| UI module | Tables / views | Access | Functions / triggers | Seed | Tests | Gap / note |
+|---|---|---|---|---|---|---|
+| Properties list/profile/Add property (`properties/*`) | `properties`, `property_owners`, `owners`, `management_companies`, `property_preferred_vendors`, `documents` + `document_links` (property documents), `v_property_financials`, `v_unit_status` | read `view_properties`, write `manage_properties` | Owner shares ≤ 100 % constraint trigger; `default_expense_category_id` FK | D | S, I, R | `PropertyFormData` is stored column-for-column (address, configuration, ownership, financial, utilities, maintenance defaults). Trend arrays/arrears are derived. |
+| Units (`units/*`) | `units`, `v_unit_status`, `v_current_occupancy`, `documents`, `maintenance_requests`, `projects` | `view_properties` / `manage_properties` | — | D | I, R | Unit "activity" = `activity_events` filtered by `unit_id`. Unit transactions/ledger = invoices, payments, credits (views). |
+| Tenants (`tenants/*`) | `tenants`, `tenant_private_details` (DOB), `tenant_contacts`, `tenant_id_documents`, `lease_parties`, `v_tenant_balances`, `v_tenant_occupancy_history` | `view_tenants` / `manage_tenants`; DOB + ID metadata need `view_sensitive` | `tenant_number` generated; documents/ID in Storage | D | I, R | Tenant "accounts" (tenant/lease/unit ledgers, `nettingRule`) are derived from invoices/payments/credits; not stored. `avatarColor` is UI-only. |
+| Leases (`leases/*`) | `leases`, `lease_units`, `lease_parties`, `lease_party_units`, `lease_additional_charges`, `lease_renewals`, `lease_renewal_documents`, `documents`, `v_leases_current`, `v_lease_expirations` | `view_tenants` / `manage_tenants` | **Exclusion constraint** forbids overlapping exclusive occupancy; triggers sync `is_occupying` from lease status; lease numbers generated | D | I, R | "Expiring" is derived (60-day window; make it configurable by reading `organization_settings.property`). Historical rent changes are modelled as renewals/amendments + `financial_effective_date`; there is no per-month rent schedule table (gap, by design). |
+| Applications (`applications/*`) | `applications`, `application_parties`, `application_reviews`, `application_status_history`, `application_communications`, `documents` (+ `review_status`, `deleted_at`, `retention_until`) | `view_tenants` / `manage_tenants` | Status history written by trigger; one `reserved` application per unit (partial unique index); numbers generated | D | I, R | Document versions → `document_versions`. Activity feed = `activity_events`. |
+| Banks (`banks/Banks`, `bankrecon/BankAccounts`) | `bank_accounts` | `view_finance` / `manage_finance` | Trigger: GL account must be asset/liability posting account | D | I, R | Only `last4` stored (never a full account number). |
+
+### Operations
+
+| UI module | Tables / views | Access | Functions / triggers | Seed | Tests | Gap / note |
+|---|---|---|---|---|---|---|
+| Maintenance Requests (`maintenance/Requests`) | `maintenance_requests`, `maintenance_request_completions`, `maintenance_estimates`, `maintenance_visits`, `maintenance_work_logs`, `documents` (attachments), `v_maintenance_dashboard` | `view_maintenance` / `manage_maintenance` | Request numbers generated; FK links to expenses/projects | D | I, R | Linked expenses via `expenses.maintenance_request_id`. |
+| Work Orders (`maintenance/WorkOrders`) | `maintenance_work_orders` | same | numbers generated | D | I, R | `linkedExpenseId` ⇒ `expenses.work_order_id`. |
+| Inspections (`maintenance/Inspections`) | `maintenance_schedules`, `maintenance_schedule_checklist_items`, `units`/`properties` last/next inspection dates | same | — | D | S | Move-in/move-out inspection *reports with results* are not modelled (the screen is schedule-based) — attach as documents. |
+| Contractors & Vendors (`maintenance/Contractors`, `pages/Vendors`) | `vendors`, `vendor_workers`, `vendor_private_details` (tax id), `property_preferred_vendors` | read `view_properties`, write `manage_vendors`; tax id `view_sensitive` | — | D | I, R | One vendor table serves contractors, vendors and utility providers (`vendor_type`). |
+| Assets & Equipment (`maintenance/Assets`) | `assets` | `view_maintenance` / `manage_maintenance` | numbers generated; replacement chain self-FK | D | S | Warranty/service dates indexed for reminders. |
+| Projects (`projects/*`) | `projects`, `project_tasks`, `project_task_dependencies`, `project_team_members`, `project_expenses`, `project_invoices` (+lines), `project_purchase_orders`, `project_payments` (+allocations), `project_change_orders`, `project_quotes`, `project_milestones`, `project_inspections`, `project_deficiencies`, `project_tenant_notifications`, `documents`, `v_project_progress` | `view_projects` / `manage_projects` | Payment allocation validated against payment and invoice; totals are generated columns | D | R | Project activity feed = `activity_events`. Project documents → bucket `project-documents`. |
+
+### Financials
+
+| UI module | Tables / views | Access | Functions / triggers | Seed | Tests | Gap / note |
+|---|---|---|---|---|---|---|
+| Accounting / Chart of Accounts (`accounting/*`) | `accounts` (tree ≤ 8 levels), `expense_categories`, `catalog_items` | `view_finance` / `manage_finance` | Tree/cycle/depth trigger; type frozen once posted; starter chart via `private.seed_organization_defaults` | D | I | `ytd`, `openItems`, balances shown on the screen are derived from `journal_entry_lines`/`v_trial_balance`. |
+| General ledger / journal | `journal_entries`, `journal_entry_lines`, `v_trial_balance` | same | Draft → post once; balance, ≥2 lines, closed-period and posting-account checks; immutability; `create_journal_entry`, `reverse_journal_entry`, `close_books` | D | I, R | Reports (trial balance, P&L) are views/queries; no stored balances. |
+| Invoices + New invoice (`invoices/*`) | `invoices`, `invoice_lines`, `invoice_notes`, `v_invoice_balances`, `v_outstanding_invoices`, `documents` (attachments) | same | Numbers generated; issued invoices immutable; **unique index prevents duplicate recurring rent invoices**; `issue_invoice`, `generate_rent_invoices` | D | I | Invoice "activity" = `activity_events`. Line tax is per-line percent. |
+| Payments (`payments/*`) | `payments`, `payment_allocations`, `payment_refunds`, `credit_notes` (overpayment credits), `v_payment_summary`, `v_credit_balances` | same | `record_payment` (atomic allocation + credit + ledger), `reverse_payment`, allocation/refund validators, idempotency key, never edit/delete | D | I, R | Receipt number/`receipt_issued_at` stored; the receipt PDF itself is a document. `StaffUser` roles map to accountant/administrator. |
+| Credit Notes (`pages/CreditNotes`) | `credit_notes`, `credit_note_lines`, `credit_note_applications`, `catalog_items`, `v_credit_balances` | same | `apply_credit_note`, application validator (tenant, invoice, remaining credit, source payment valid) | D | I | — |
+| Deposits (`deposits/*`) | `deposits`, `deposit_transactions`, `deposit_refunds`, `deposit_key_devices`, `deposit_reconciliation_items`, `deposit_rules`, `deposit_interest_rates` | `view_finance` / `manage_finance`; system rules (org NULL) readable by all | Rule/rate exclusion constraints (no overlapping validity), transactions append-only (only `posted→reversed` flag) | D | I | Rules in the seed are **samples, not legal advice**. Journal posting for deposits is done by the app/service with `create_journal_entry` (no dedicated function yet). |
+| Expenses & Bills (`expenses/*`) | `expenses`, `expense_allocations`, `bills`, `bill_units`, `bill_tenant_allocations`, `bill_payments`, `bill_tenant_recoveries`, `v_bill_balances`, `documents` | `view_finance` / `manage_finance` | Payment/recovery ≤ bill amount (locked); duplicate provider invoice number blocked; allocation total must equal expense | D | I | Reminder settings (`ReminderSettings`) are stored in `organization_settings` (category `financial`). |
+| Bill Schedule (`pages/BillSchedule`) | `bill_schedules`, `bill_schedule_tenants`, `bill_schedule_runs` | same | Unique (schedule, due date) — an occurrence is posted or skipped only once | D | I | Posting an occurrence = insert `bills` + `bill_schedule_runs` in one transaction (app/service). |
+| Bank Reconciliation (`bankrecon/*`) | `bank_accounts`, `bank_import_mappings`, `bank_import_batches`, `bank_transactions`, `book_transactions`, `book_transaction_invoices`, `reconciliations`, `reconciliation_matches` (+ bank/book line junctions), `reconciliation_adjustments`; settings in `organization_settings` (`bank_reconciliation`) | `view_finance` / `manage_finance` | Statement-line fingerprint uniqueness; match lines unique; **exclusion constraint on overlapping reconciled periods**; frozen once reconciled | D | I | The audit list on the screen = `activity_events`. |
+
+### Documents, communication and automation
+
+| UI module | Tables / views | Access | Functions / triggers | Seed | Tests | Gap / note |
+|---|---|---|---|---|---|---|
+| Document Center (`documents/*`) | `documents`, `document_versions`, `document_links`, `v_document_expirations` | read `view_documents` (+`view_sensitive` for sensitive docs), insert `upload_documents`, manage `manage_documents` | Link target validated in the same organization; signed versions immutable; path must start with the organization id | D | I, R | Storage buckets `lease-documents`, `finance-documents`, ... The mock `RecordReference/RelatedRecord` model = origin module + `document_links`. |
+| E-signatures (lease/application signatures) | `signature_requests`, `signers`, `signature_fields`, `signature_events` | `view_documents` / `manage_documents`; events written by the signing service | Evidence trail append-only; token/PIN/OTP stored hashed | — | I, R | The signing service (Edge Function / backend) that sends links and writes `signed-documents` is **not part of this deliverable**. |
+| Messages (`messaging/*`) | `conversations`, `conversation_participants`, `messages`, `message_attachments`, `conversation_stars`, `conversation_events`, `announcements` (+targets, acknowledgements) | `view_communications`; managers see all, others only conversations they take part in | Participant/sender is exactly one party kind; events append-only | D | I, R | Unsent drafts stay client-side. Message templates in this module are the same `message_templates`. |
+| Notifications (nav "Notifications") | `notifications` | own rows only | — | — | R | The screen is still a placeholder in the app. Creation is by backend/triggers (service role). |
+| Message Templates (`msgtemplates/*`) | `message_templates` (+properties, attachments, versions) | `view_communications` / `manage_communications` | Content change bumps `version`; every version snapshotted | D | I | 77 example templates are seeded by the application, not by SQL. |
+| Workflow Automation (`automation/*`) | `automation_rules`, `automation_rule_conditions`, `automation_rule_properties`, `workflow_executions`, `domain_events`, `communication_logs`, `communication_log_attempts` | `view_communications` / `manage_communications`; executions written by workers | Activation trigger (active template + same channel); `enqueue_workflow_execution` window de-duplication + unique (rule, dedupe key) | D | I, R | No worker/provider exists yet; `execution_mode` records configured / simulated / live. |
+| Scheduled Tasks (nav; settings category `tasks`) | `scheduled_tasks`, `scheduled_task_runs` | `view_communications` / `manage_communications`; runs by workers | `claim_due_scheduled_tasks` (SKIP LOCKED), `complete_scheduled_task_run`, `reclaim_stale_task_runs`; unique (task, scheduled_for) | D | I, R | The screen is a placeholder in the app; the schema is ready. Cron expressions are advanced by the worker (`p_next_run_at`). |
+
+### Reports
+
+| UI module | Source | Gap / note |
+|---|---|---|
+| Dashboard | `v_organization_financials`, `v_invoice_balances`, `v_current_occupancy`, `v_maintenance_dashboard`, `v_lease_expirations` | Cards are queries; nothing stored. |
+| Financial Reports | `v_trial_balance`, `v_property_financials`, `v_organization_financials`, `journal_entry_lines` with dimensions (property, unit, tenant, lease, vendor, bank account, project) | Cash-flow/aging reports are queries over invoices/payments/journal. |
+| Occupancy Reports | `v_current_occupancy`, `v_tenant_occupancy_history`, `lease_units`, `units` | Turnover/vacancy trends need a monthly occupancy snapshot if historical *status* (not lease dates) must be reproduced — gap. |
+| Property Performance / Project Reports | `v_property_financials`, `v_project_progress`, `project_*` | The reports' own mock databases are not persisted. |
+
+## 3. Features that are intentionally not persisted or not modelled
+
+| Item | Reason |
+|---|---|
+| Integrations (webhooks, API keys, provider credentials) | Removed from the UI. Provider secrets belong in Supabase Vault / Edge Function secrets, never in these tables. |
+| Tenant portal accounts | No portal in the app (the prototype had one). `tenants` has no auth link. |
+| Custom roles | The app has six fixed roles; permissions are data, roles are not. |
+| Per-property member scoping | Not in the UI (the prototype had it). All organization members see the organization's properties. |
+| Full-text search / fuzzy search indexes | Not required by current screens; add `pg_trgm` indexes when search volume demands. |
+| Stored report snapshots, import/export job queue | Screens compute on demand; no history is shown. |
