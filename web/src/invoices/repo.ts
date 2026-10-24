@@ -247,6 +247,18 @@ export async function updateInvoice(number: string, patch: Partial<InvoiceInput>
     const rows = linesRows(orgId, id, patch.lineItems);
     if (rows.length) check(await supabase.from("invoice_lines").insert(rows), "Unable to save the invoice lines.");
   }
+  // moving a draft forward: issuing posts it to the ledger, submitting just changes the status. Never goes back to draft.
+  if (patch.status === "unpaid" || patch.status === "pending_approval") {
+    const cur = await supabase.from("invoices").select("status").eq("id", id).single();
+    check(cur, "Unable to read the invoice status.");
+    const from = (cur.data as any)?.status;
+    if (patch.status === "unpaid" && (from === "draft" || from === "pending_approval")) check(await supabase.rpc("issue_invoice", { p_invoice: id }), "Unable to issue the invoice.");
+    else if (patch.status === "pending_approval" && from === "draft") {
+      const res = await supabase.from("invoices").update({ status: "pending_approval" }).eq("id", id).select("id");
+      check(res, "Unable to submit the invoice for approval.");
+      if (!res.data?.length) throw new Error("You don't have permission to edit invoices.");
+    }
+  }
   await record(orgId, id, "edited", "Invoice edited", "Line items or billing details changed.");
 }
 

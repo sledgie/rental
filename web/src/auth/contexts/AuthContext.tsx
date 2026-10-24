@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { SignUpInput, User } from "../lib/types";
+import type { ProfileInput, SignUpInput, User } from "../lib/types";
 import { authService } from "../services";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
 
@@ -21,6 +21,9 @@ interface AuthContextValue {
   requestPasswordReset: (email: string) => Promise<void>;
   resendSignupEmail: (email: string) => Promise<void>;
   verifyEmail: () => Promise<void>;
+  updateProfile: (input: ProfileInput) => Promise<void>;
+  /** Replace the profile picture (null removes it). `orgId` is the organization whose storage folder holds it. */
+  updateAvatar: (blob: Blob | null, orgId: string | null) => Promise<void>;
   resetDemo: () => Promise<void>;
   isAuthenticated: boolean;
 }
@@ -95,6 +98,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser((current) => (current ? { ...current, emailVerified: true } : current));
   }, [user]);
 
+  const updateProfile = useCallback(async (input: ProfileInput) => {
+    if (!user) return;
+    await authService.updateProfile(user.id, input);
+    setUser((current) => (current ? { ...current, fullName: input.fullName.trim(), phone: input.phone.trim(), jobTitle: input.jobTitle.trim() } : current));
+  }, [user]);
+
+  const updateAvatar = useCallback(async (blob: Blob | null, orgId: string | null) => {
+    if (!user) return;
+    const path = await authService.updateAvatar(user.id, orgId, blob, user.avatarPath ?? "");
+    setUser((current) => (current ? { ...current, avatarPath: path } : current));
+  }, [user]);
+
   const resetDemo = useCallback(async () => {
     await authService.resetDemoData();
     setUser(null);
@@ -111,10 +126,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       requestPasswordReset,
       resendSignupEmail,
       verifyEmail,
+      updateProfile,
+      updateAvatar,
       resetDemo,
       isAuthenticated: Boolean(user),
     }),
-    [user, initializing, authenticating, signIn, signUp, signOut, requestPasswordReset, resendSignupEmail, verifyEmail, resetDemo]
+    [user, initializing, authenticating, signIn, signUp, signOut, requestPasswordReset, resendSignupEmail, verifyEmail, updateProfile, updateAvatar, resetDemo]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

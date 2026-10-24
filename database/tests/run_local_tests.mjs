@@ -79,7 +79,7 @@ if (process.argv.includes("--with-dev-seed")) {
 
 console.log("\ntests");
 const requested = process.argv.slice(2).filter((a) => a.endsWith(".sql"));
-for (const file of requested.length ? requested : ["schema_validation.sql", "data_integrity_validation.sql", "rls_validation.sql"]) {
+for (const file of requested.length ? requested : ["schema_validation.sql", "data_integrity_validation.sql", "rls_validation.sql", "scheduled_tasks_validation.sql", "notification_center_validation.sql"]) {
   await run(file, read(file));
 }
 const total = await db.query("select count(*)::int as total, count(*) filter (where passed)::int as passed from test_results").catch(() => ({ rows: [{ total: 0, passed: 0 }] }));

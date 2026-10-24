@@ -1,7 +1,7 @@
 import { usingSupabase } from "../services";
 import type { ReactNode } from "react";
 import { Link, useNavigate } from "../shim/router";
-import { LogOut, ShieldCheck } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { Logo } from "../components/Logo";
 import { Avatar } from "../components/ui";
 import { useAuth } from "../contexts/AuthContext";
@@ -23,7 +23,7 @@ export function SetupLayout({ children, maxWidth = "max-w-5xl" }: { children: Re
   return (
     <div className="relative flex min-h-screen flex-col bg-u-bg">
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[360px] bg-[radial-gradient(ellipse_70%_100%_at_50%_0%,rgba(37,99,235,0.07),transparent)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[360px] bg-[radial-gradient(ellipse_70%_100%_at_50%_0%,rgba(29,102,80,0.07),transparent)]"
         aria-hidden
       />
       <header className="relative z-10 border-b border-u-line/80 bg-u-card/80 backdrop-blur">
@@ -32,10 +32,6 @@ export function SetupLayout({ children, maxWidth = "max-w-5xl" }: { children: Re
             <Logo />
           </Link>
           <div className="flex items-center gap-3">
-            <span className="hidden items-center gap-1.5 rounded-full border border-u-line bg-u-s2 px-2.5 py-1 text-[10px] font-medium text-u-muted sm:inline-flex">
-              <ShieldCheck className="size-3 text-u-muted" />
-              {usingSupabase ? "Workspace setup" : "Mock workspace setup"}
-            </span>
             {pendingInvitations.length > 0 ? (
               <Link
                 to="/onboarding/invitations"
@@ -69,10 +65,6 @@ export function SetupLayout({ children, maxWidth = "max-w-5xl" }: { children: Re
       <footer className="relative z-10 border-t border-u-line/70 bg-u-card/40">
         <div className={`mx-auto flex ${maxWidth} flex-wrap items-center justify-between gap-2 px-5 py-4 text-[10.5px] text-u-muted sm:px-6`}>
           <span>© 2026 L.O.F.T. · Organization setup</span>
-          <span className="flex items-center gap-1.5">
-            <span className="size-1.5 rounded-full bg-u-warn" />
-            {usingSupabase ? "Your data is stored securely" : "Mock data persists only in this browser"}
-          </span>
         </div>
       </footer>
     </div>

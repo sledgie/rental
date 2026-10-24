@@ -1,6 +1,8 @@
-import { ArrowUpRight, Bell, CircleUserRound, LayoutDashboard, Moon, Palette, ShieldCheck, Sun, Table2, UserRound } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Bell, Camera, CircleUserRound, LayoutDashboard, Moon, Palette, ShieldCheck, Sun, Table2, Trash2, UserRound } from "lucide-react";
 import { useAuth } from "../../auth/contexts/AuthContext";
 import { initials } from "../../auth/lib/format";
+import { resizeToSquare, useAvatarUrl } from "../../auth/lib/avatar";
 import { useSettings } from "../store";
 import type { PageProps } from "../types";
 import { Badge, Button, Callout, Card, CardBody, CardHeader, Field, Select, SettingRow, Toggle } from "../components/ui";
@@ -12,9 +14,45 @@ const themeOptions = [
 ];
 
 export default function PersonalPage({ value, update, notify, navigate }: PageProps) {
-  const { user } = useAuth();
+  const { user, updateProfile, updateAvatar } = useAuth();
   const { activeOrg, role } = useSettings();
   const prefs = value;
+  const [draft, setDraft] = useState({ fullName: user?.fullName ?? "", phone: user?.phone ?? "", jobTitle: user?.jobTitle ?? "" });
+  const [saving, setSaving] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [problem, setProblem] = useState("");
+  const fileInput = useRef<HTMLInputElement>(null);
+  const avatarUrl = useAvatarUrl(user?.avatarPath);
+  const profileDirty = draft.fullName.trim() !== (user?.fullName ?? "") || draft.phone.trim() !== (user?.phone ?? "") || draft.jobTitle.trim() !== (user?.jobTitle ?? "");
+
+  // arriving from the avatar menu: scroll to this card
+  useEffect(() => {
+    if (!window.location.hash.includes("anchor=personal-account")) return undefined;
+    const timer = setTimeout(() => document.getElementById("personal-account")?.scrollIntoView({ behavior: "smooth", block: "start" }), 250);
+    return () => clearTimeout(timer);
+  }, []);
+
+  async function saveProfile() {
+    if (!draft.fullName.trim()) { setProblem("Enter your full name."); return; }
+    if (draft.phone.trim() && !/^\+?[0-9\s().-]{7,20}$/.test(draft.phone.trim())) { setProblem("Enter a valid phone number, for example +1 555 123 4567."); return; }
+    setSaving(true); setProblem("");
+    try { await updateProfile(draft); notify("Profile updated", "success"); }
+    catch (e) { setProblem(e instanceof Error ? e.message : "Unable to save your profile."); }
+    finally { setSaving(false); }
+  }
+  async function pickPhoto(file: File | undefined) {
+    if (!file) return;
+    setPhotoBusy(true); setProblem("");
+    try { await updateAvatar(await resizeToSquare(file), activeOrg.id); notify("Profile photo updated", "success"); }
+    catch (e) { setProblem(e instanceof Error ? e.message : "Unable to save the photo."); }
+    finally { setPhotoBusy(false); if (fileInput.current) fileInput.current.value = ""; }
+  }
+  async function removePhoto() {
+    setPhotoBusy(true); setProblem("");
+    try { await updateAvatar(null, activeOrg.id); notify("Profile photo removed", "success"); }
+    catch (e) { setProblem(e instanceof Error ? e.message : "Unable to remove the photo."); }
+    finally { setPhotoBusy(false); }
+  }
 
   return (
     <div className="space-y-5">
@@ -152,25 +190,38 @@ export default function PersonalPage({ value, update, notify, navigate }: PagePr
       </Card>
 
       <Card id="personal-account">
-        <CardHeader icon={CircleUserRound} title="Profile & account shortcuts" description="Personal account details are managed outside the Settings Center." />
-        <CardBody className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-u-accent text-[13px] font-semibold text-u-onaccent">{initials(user?.fullName ?? "?")}</span>
-            <div>
-              <p className="text-[13px] font-semibold text-u-ink ">{user?.fullName}</p>
-              <p className="text-[11.5px] text-u-muted ">{user?.email}</p>
+        <CardHeader icon={CircleUserRound} title="Profile & account shortcuts" description="Your photo, name and contact details, as teammates see them." />
+        <CardBody className="space-y-5">
+          <div className="flex flex-wrap items-center gap-4">
+            {avatarUrl
+              ? <img src={avatarUrl} alt="Your profile photo" className="h-20 w-20 shrink-0 rounded-2xl border border-u-line object-cover" />
+              : <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-u-accent text-[22px] font-semibold text-u-onaccent" aria-hidden>{initials(user?.fullName ?? "?")}</span>}
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-u-ink">{user?.fullName}</p>
+              <p className="text-[11.5px] text-u-muted">{user?.email}</p>
+              <p className="text-[11.5px] text-u-muted">{user?.phone || "No phone number yet"}</p>
               <p className="mt-0.5 text-[10.5px] text-u-muted">{role} · {activeOrg.name}</p>
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" aria-label="Upload a profile photo" onChange={(e) => void pickPhoto(e.target.files?.[0])} />
+                <Button type="button" size="sm" variant="secondary" icon={Camera} disabled={photoBusy} onClick={() => fileInput.current?.click()}>{photoBusy ? "Working…" : user?.avatarPath ? "Change photo" : "Upload photo"}</Button>
+                {user?.avatarPath ? <Button type="button" size="sm" variant="secondary" icon={Trash2} disabled={photoBusy} onClick={() => void removePhoto()}>Remove</Button> : null}
+              </div>
+              <p className="mt-1.5 text-[10.5px] text-u-muted">JPG, PNG or WebP. It is cropped to a square. Only you can see the photo for now; teammates see your initials.</p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" size="sm" variant="secondary" icon={CircleUserRound} onClick={() => notify("Profile editing lives in the Account module", "info", "This settings prototype does not duplicate profile management.")}>
-              Edit profile
-            </Button>
-            <Button type="button" size="sm" variant="secondary" icon={ShieldCheck} onClick={() => navigate("security")}>
-              Account security
-            </Button>
-            <span className="inline-flex items-center gap-1 text-[10.5px] text-u-muted"><ArrowUpRight className="h-3 w-3" /> Reused modules</span>
-          </div>
+
+          <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); void saveProfile(); }}>
+            <Field label="Full name" required><input id="pf-name" aria-label="Full name" className="h-9 w-full rounded-lg border border-u-line bg-u-card px-3 text-[13px] text-u-ink" value={draft.fullName} onChange={(e) => setDraft({ ...draft, fullName: e.target.value })} aria-invalid={!!problem && !draft.fullName.trim()} /></Field>
+            <Field label="Email" hint="Your sign-in address."><input id="pf-email" aria-label="Email" readOnly disabled className="h-9 w-full rounded-lg border border-u-line bg-u-s2 px-3 text-[13px] text-u-muted" value={user?.email ?? ""} /></Field>
+            <Field label="Job title"><input id="pf-title" aria-label="Job title" className="h-9 w-full rounded-lg border border-u-line bg-u-card px-3 text-[13px] text-u-ink" value={draft.jobTitle} onChange={(e) => setDraft({ ...draft, jobTitle: e.target.value })} /></Field>
+            <Field label="Phone number" hint="Optional. Include the country code for texts."><input id="pf-phone" aria-label="Phone number" type="tel" autoComplete="tel" placeholder="+1 555 123 4567" className="h-9 w-full rounded-lg border border-u-line bg-u-card px-3 text-[13px] text-u-ink" value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} /></Field>
+            {problem && <p role="alert" className="text-[12px] text-u-danger sm:col-span-2">{problem}</p>}
+            <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+              <Button type="submit" size="sm" disabled={saving || !profileDirty}>{saving ? "Saving…" : "Save profile"}</Button>
+              {profileDirty && !saving ? <Button type="button" size="sm" variant="secondary" onClick={() => { setDraft({ fullName: user?.fullName ?? "", phone: user?.phone ?? "", jobTitle: user?.jobTitle ?? "" }); setProblem(""); }}>Discard changes</Button> : null}
+              <Button type="button" size="sm" variant="secondary" icon={ShieldCheck} onClick={() => navigate("security")}>Account security</Button>
+            </div>
+          </form>
         </CardBody>
       </Card>
     </div>

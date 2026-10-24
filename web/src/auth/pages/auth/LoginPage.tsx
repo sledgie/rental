@@ -4,42 +4,17 @@ import {
   ArrowRight,
   Building2,
   CheckCircle2,
-  ChevronDown,
   Eye,
   EyeOff,
-  KeyRound,
   Lock,
   Mail,
-  Sparkles,
 } from "lucide-react";
 import { AuthLayout } from "../../layouts/AuthLayout";
 import { Alert, Button, CheckInput, Spinner, TextInput } from "../../components/ui";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import { isValidEmail } from "../../lib/format";
-import { organizationService, usingSupabase } from "../../services";
-import { cn } from "../../utils/cn";
-
-const demoAccounts = [
-  {
-    name: "Alex Carter",
-    email: "alex@example.com",
-    hint: "alex@example.com · Owner, 2 workspaces",
-    tone: "from-u-accent to-u-accent",
-  },
-  {
-    name: "Maya Patel",
-    email: "maya@example.com",
-    hint: "maya@example.com · Workspace picker",
-    tone: "from-u-violet to-u-accent",
-  },
-  {
-    name: "Riley Chen",
-    email: "riley@example.com",
-    hint: "riley@example.com · No workspace, 2 invites",
-    tone: "from-u-blue to-u-accent",
-  },
-];
+import { organizationService } from "../../services";
 
 export default function LoginPage() {
   useDocumentTitle("Sign in");
@@ -51,9 +26,7 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
-  const [demoOpen, setDemoOpen] = useState(true);
   const [signedInAs, setSignedInAs] = useState<string | null>(null);
-  const [pendingDemo, setPendingDemo] = useState<string | null>(null);
   const timeoutRef = useRef<number | null>(null);
   const mountedRef = useRef(true);
 
@@ -88,21 +61,12 @@ export default function LoginPage() {
       if (message.toLowerCase().includes("email")) nextFormErrors.email = message;
       else if (message.toLowerCase().includes("password")) nextFormErrors.password = message;
       setErrors(nextFormErrors);
-      setPendingDemo(null);
     }
   }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     await completeSignIn(email, password);
-  }
-
-  async function handleDemo(account: (typeof demoAccounts)[number]) {
-    setPendingDemo(account.email);
-    setDemoOpen(true);
-    setEmail(account.email);
-    setPassword("Demo123!");
-    await completeSignIn(account.email, "Demo123!", true);
   }
 
   if (signedInAs) {
@@ -225,105 +189,6 @@ export default function LoginPage() {
             Create an account
           </Link>
         </p>
-
-        {!usingSupabase ? (
-          <>
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center" aria-hidden>
-            <div className="w-full border-t border-u-line" />
-          </div>
-          <div className="relative flex justify-center">
-            <span className="bg-u-card px-3 text-[10px] font-medium tracking-[0.1em] text-u-muted uppercase">
-              Prototype access
-            </span>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-u-line bg-u-s2/60 p-3.5">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="flex size-7 items-center justify-center rounded-lg bg-u-card ring-1 ring-u-line">
-                <Sparkles className="size-3.5 text-u-accent" />
-              </span>
-              <div>
-                <p className="text-[11.5px] font-semibold text-u-ink">Development demo accounts</p>
-                <p className="text-[10.5px] text-u-muted">
-                  Password <span className="font-mono font-medium text-u-ink2">Demo123!</span> · mock only
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setDemoOpen((value) => !value)}
-              className="focus-ring rounded-md p-1 text-u-muted hover:bg-u-card hover:text-u-ink2"
-              aria-expanded={demoOpen}
-              aria-label={demoOpen ? "Hide demo accounts" : "Show demo accounts"}
-            >
-              <ChevronDown className={cn("size-4 transition-transform", demoOpen && "rotate-180")} />
-            </button>
-          </div>
-
-          {demoOpen ? (
-            <div className="animate-fade-in mt-3 space-y-1.5">
-              {demoAccounts.map((account) => {
-                const busy = authenticating && pendingDemo === account.email;
-                return (
-                  <button
-                    key={account.email}
-                    type="button"
-                    disabled={authenticating}
-                    onClick={() => handleDemo(account)}
-                    className="focus-ring group flex w-full items-center gap-2.5 rounded-lg border border-u-line bg-u-card px-2.5 py-2 text-left transition hover:border-u-accent/30 hover:shadow-[0_2px_8px_-2px_rgba(37,99,235,0.18)] disabled:opacity-60"
-                  >
-                    <span
-                      className={cn(
-                        "flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-[9.5px] font-semibold text-u-onaccent",
-                        account.tone
-                      )}
-                    >
-                      {account.name
-                        .split(" ")
-                        .map((part) => part[0])
-                        .join("")}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[11.5px] font-medium text-u-ink">{account.name}</span>
-                      <span className="block truncate text-[10px] text-u-muted">{account.hint}</span>
-                    </span>
-                    {busy ? (
-                      <Spinner className="shrink-0" />
-                    ) : (
-                      <ArrowRight className="size-3.5 shrink-0 text-u-s3 transition group-hover:text-u-accent" />
-                    )}
-                  </button>
-                );
-              })}
-              <p className="flex items-center gap-1.5 pt-1 text-[10px] text-u-muted">
-                <KeyRound className="size-3" />
-                No real authentication. Credentials are stored locally for the demo.
-              </p>
-            </div>
-          ) : (
-            <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-              {demoAccounts.map((account) => (
-                <button
-                  key={account.email}
-                  type="button"
-                  onClick={() => handleDemo(account)}
-                  disabled={authenticating}
-                  className="focus-ring inline-flex items-center gap-1 rounded-md border border-u-line bg-u-card px-2 py-1 text-[10.5px] font-medium text-u-ink2 transition hover:border-u-accent/30 hover:text-u-accent disabled:opacity-60"
-                >
-                  <span className={cn("size-1.5 rounded-full bg-gradient-to-br", account.tone)} />
-                  {account.name.split(" ")[0]}
-                </button>
-              ))}
-              <span className="ml-auto text-[10px] text-u-muted">One-click test access</span>
-            </div>
-          )}
-        </div>
-
-          </>
-        ) : null}
 
         <div className="mt-5 flex items-start gap-2 rounded-lg border border-u-line border-dashed px-3 py-2.5">
           <Building2 className="mt-0.5 size-3.5 shrink-0 text-u-muted" />

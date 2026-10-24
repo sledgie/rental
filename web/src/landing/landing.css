@@ -1,0 +1,225 @@
+/* L.O.F.T. landing page. A separate Tailwind build (with its own reset), limited to this folder and attached to the page only
+   while the landing page is shown (see Landing.tsx), so it never styles the app. */
+@import "tailwindcss" source("./");
+
+/* ==========================================================================
+   L.O.F.T. design tokens
+   Colors, typography, radii, elevation and motion shared across the page.
+   ========================================================================== */
+@theme {
+  /* Typography ------------------------------------------------------------ */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+  --text-display: clamp(2.375rem, 1.6rem + 2.6vw, 3.625rem);
+  --text-display--line-height: 1.04;
+  --text-display--letter-spacing: -0.034em;
+
+  --text-title: clamp(1.875rem, 1.4rem + 1.6vw, 2.75rem);
+  --text-title--line-height: 1.1;
+  --text-title--letter-spacing: -0.028em;
+
+  --text-lead: clamp(1.0625rem, 1rem + 0.22vw, 1.1875rem);
+  --text-lead--line-height: 1.65;
+
+  --text-eyebrow: 0.75rem;
+  --text-eyebrow--line-height: 1rem;
+  --text-eyebrow--letter-spacing: 0.14em;
+
+  /* Compact dashboard labels */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-3xs: 0.625rem;
+  --text-3xs--line-height: 0.875rem;
+
+  /* Brand palette --------------------------------------------------------- */
+  --color-evergreen: #123d32; /* primary brand, headings */
+  --color-evergreen-deep: #0c2a22;
+  --color-forest: #1d6650; /* primary actions */
+  --color-forest-hover: #185a46;
+  --color-mint: #9ed6bf; /* accent on dark surfaces */
+  --color-ivory: #f8f7f2; /* page background */
+  --color-ivory-deep: #f1efe7;
+  --color-ink: #202925; /* primary text */
+  --color-muted: #69756f; /* secondary text */
+  --color-sage: #e6efe8;
+  --color-sage-soft: #f1f6f2;
+  --color-line: #e5e9e5;
+  --color-line-strong: #d4dbd6;
+  --color-amber: #c88a32; /* financial highlights, notices */
+  --color-amber-soft: #f8eedd;
+  --color-amber-ink: #85571a;
+  --color-rose: #ad4636;
+  --color-rose-soft: #f8e7e3;
+  --color-sky: #3b6a88;
+  --color-sky-soft: #e5eef4;
+  --color-canvas: #fbfbf8; /* app background inside product previews */
+
+  /* Radii ------------------------------------------------------------------ */
+  --radius-control: 0.5rem;
+  --radius-card: 0.875rem;
+  --radius-panel: 1.125rem;
+
+  /* Elevation -------------------------------------------------------------- */
+  --shadow-xs: 0 1px 2px 0 rgb(18 61 50 / 0.05);
+  --shadow-card: 0 1px 2px rgb(18 61 50 / 0.04), 0 4px 14px -6px rgb(18 61 50 / 0.08);
+  --shadow-card-hover: 0 2px 4px rgb(18 61 50 / 0.04), 0 20px 40px -18px rgb(18 61 50 / 0.22);
+  --shadow-mockup: 0 1px 2px rgb(18 61 50 / 0.05), 0 22px 44px -22px rgb(18 61 50 / 0.24),
+    0 60px 110px -50px rgb(18 61 50 / 0.24);
+  --shadow-button: 0 1px 2px rgb(12 42 34 / 0.22), inset 0 1px 0 rgb(255 255 255 / 0.12);
+  --shadow-float: 0 18px 40px -16px rgb(12 42 34 / 0.32), 0 2px 8px -2px rgb(12 42 34 / 0.1);
+
+  /* Motion ----------------------------------------------------------------- */
+  --ease-soft: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --animate-fade-up: fade-up 0.45s var(--ease-soft) both;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  body {
+    background-color: var(--color-ivory);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11";
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Keep anchored sections clear of the sticky header */
+  [id] {
+    scroll-margin-top: 5.5rem;
+  }
+
+  ::selection {
+    background-color: rgb(29 102 80 / 0.18);
+    color: var(--color-evergreen);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-forest);
+    outline-offset: 3px;
+  }
+
+  .on-dark :focus-visible {
+    outline-color: var(--color-mint);
+  }
+}
+
+/* ==========================================================================
+   Custom utilities
+   ========================================================================== */
+@utility bg-blueprint {
+  background-image:
+    linear-gradient(to right, rgb(18 61 50 / 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(18 61 50 / 0.055) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+@utility bg-blueprint-light {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+@utility mask-fade-hero {
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 65% 0%, #000 30%, transparent 100%);
+  mask-image: radial-gradient(ellipse 80% 70% at 65% 0%, #000 30%, transparent 100%);
+}
+
+@utility mask-fade-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, #000 20%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 20%, transparent 100%);
+}
+
+@utility mask-fade-center {
+  -webkit-mask-image: radial-gradient(ellipse 70% 80% at 50% 50%, #000 20%, transparent 100%);
+  mask-image: radial-gradient(ellipse 70% 80% at 50% 50%, #000 20%, transparent 100%);
+}
+
+/* ==========================================================================
+   Scroll-triggered entrance (see components/ui/Reveal.tsx)
+   ========================================================================== */
+@layer components {
+  .reveal {
+    /* Reveal wrappers are often grid/flex items: let them shrink so long,
+       truncated text inside never forces horizontal overflow. */
+    min-width: 0;
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+    transition:
+      opacity 0.7s var(--ease-soft),
+      transform 0.7s var(--ease-soft);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ==========================================================================
+   Overrides of the app's global styles (they live in the app layer, which outranks the reset above)
+   ========================================================================== */
+html, body { height: auto; }
+body {
+  background-color: var(--color-ivory);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+}
+h1, h2, h3 { font-family: inherit; letter-spacing: inherit; }
+.lf-root { --shadow-card: 0 1px 2px rgb(18 61 50 / 0.04), 0 4px 14px -6px rgb(18 61 50 / 0.08); }

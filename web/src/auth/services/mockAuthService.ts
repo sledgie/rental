@@ -6,7 +6,7 @@ import {
   resetDemoDatabase,
   writeStoredSession,
 } from "../mock/store";
-import type { SignUpInput, User } from "../lib/types";
+import type { ProfileInput, SignUpInput, User } from "../lib/types";
 import { passwordIsStrong, isValidEmail } from "../lib/format";
 import { assert, delay, makeId, normalizeEmail, simulate } from "./mockApi";
 
@@ -104,6 +104,25 @@ export async function verifyEmail(userId: string): Promise<void> {
     const user = draft.users.find((candidate) => candidate.id === userId);
     if (user) user.emailVerified = true;
   });
+}
+
+export async function updateProfile(userId: string, input: ProfileInput): Promise<void> {
+  await delay(300);
+  assert(input.fullName.trim(), "Enter your full name.");
+  mutateDatabase((draft) => {
+    const user = draft.users.find((candidate) => candidate.id === userId);
+    if (user) { user.fullName = input.fullName.trim(); user.phone = input.phone.trim(); user.jobTitle = input.jobTitle.trim(); }
+  });
+}
+
+export async function updateAvatar(userId: string, _orgId: string | null, blob: Blob | null, _previous: string): Promise<string> {
+  await delay(300);
+  const dataUrl = blob ? await new Promise<string>((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result)); r.onerror = () => reject(new Error("That image could not be read.")); r.readAsDataURL(blob); }) : "";
+  mutateDatabase((draft) => {
+    const user = draft.users.find((candidate) => candidate.id === userId);
+    if (user) user.avatarPath = dataUrl;
+  });
+  return dataUrl;
 }
 
 /** The mock backend never requires email confirmation, so there is nothing to resend. */

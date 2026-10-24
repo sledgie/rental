@@ -1235,6 +1235,12 @@ erDiagram
     uuid id PK
     uuid organization_id
     uuid conversation_id FK
+    uuid property_id FK
+  }
+  notification_preferences {
+    uuid organization_id PK
+    uuid user_id PK
+    text category PK
   }
   domain_events {
     uuid id PK
@@ -1274,6 +1280,9 @@ erDiagram
   documents {
     uuid id
   }
+  organization_members {
+    uuid id
+  }
   announcements ||--o{ announcement_acknowledgements : "announcement_id"
   tenants |o--o{ announcement_acknowledgements : "tenant_id"
   announcements ||--o{ announcement_targets : "announcement_id"
@@ -1307,7 +1316,9 @@ erDiagram
   owners |o--o{ messages : "sender_owner_id"
   tenants |o--o{ messages : "sender_tenant_id"
   vendors |o--o{ messages : "sender_vendor_id"
+  organization_members ||--o{ notification_preferences : "user_id"
   conversations |o--o{ notifications : "conversation_id"
+  properties |o--o{ notifications : "property_id"
   properties ||--o{ property_notification_settings : "property_id"
   scheduled_tasks ||--o{ scheduled_task_runs : "task_id"
   tenants ||--o{ tenant_communication_preferences : "tenant_id"
@@ -1316,8 +1327,100 @@ erDiagram
   automation_rules ||--o{ workflow_executions : "rule_id"
 ```
 
+## Scheduled tasks (people-facing work assignments)
+
+```mermaid
+erDiagram
+  tasks {
+    uuid id PK
+    uuid organization_id
+    uuid category_id FK
+    uuid property_id FK
+    uuid unit_id FK
+    uuid tenant_id FK
+    uuid lease_id FK
+    uuid maintenance_request_id FK
+    uuid vendor_id FK
+    uuid project_id FK
+    uuid recurrence_id FK
+  }
+  task_categories {
+    uuid id PK
+    uuid organization_id
+  }
+  task_recurrences {
+    uuid id PK
+    uuid organization_id
+  }
+  task_checklist_items {
+    uuid id PK
+    uuid organization_id
+    uuid task_id FK
+  }
+  task_comments {
+    uuid id PK
+    uuid organization_id
+    uuid task_id FK
+  }
+  task_attachments {
+    uuid id PK
+    uuid organization_id
+    uuid task_id FK
+    uuid document_id FK
+  }
+  task_reminders {
+    uuid id PK
+    uuid organization_id
+    uuid task_id FK
+  }
+  task_activities {
+    uuid id PK
+    uuid organization_id
+    uuid task_id FK
+  }
+  documents {
+    uuid id
+  }
+  leases {
+    uuid id
+  }
+  maintenance_requests {
+    uuid id
+  }
+  projects {
+    uuid id
+  }
+  properties {
+    uuid id
+  }
+  tenants {
+    uuid id
+  }
+  units {
+    uuid id
+  }
+  vendors {
+    uuid id
+  }
+  tasks ||--o{ task_activities : "task_id"
+  documents |o--o{ task_attachments : "document_id"
+  tasks ||--o{ task_attachments : "task_id"
+  tasks ||--o{ task_checklist_items : "task_id"
+  tasks ||--o{ task_comments : "task_id"
+  tasks ||--o{ task_reminders : "task_id"
+  task_categories |o--o{ tasks : "category_id"
+  leases |o--o{ tasks : "lease_id"
+  maintenance_requests |o--o{ tasks : "maintenance_request_id"
+  projects |o--o{ tasks : "project_id"
+  properties |o--o{ tasks : "property_id"
+  task_recurrences |o--o{ tasks : "recurrence_id"
+  tenants |o--o{ tasks : "tenant_id"
+  units |o--o{ tasks : "unit_id"
+  vendors |o--o{ tasks : "vendor_id"
+```
+
 ## Cross-cutting references
 
-- 41 tables reference `organizations` (tenant boundary).
-- 84 columns reference `profiles` (actors, assignees, uploaders).
+- 44 tables reference `organizations` (tenant boundary).
+- 95 columns reference `profiles` (actors, assignees, uploaders).
 - `auth.users` is referenced only by `profiles.id`.

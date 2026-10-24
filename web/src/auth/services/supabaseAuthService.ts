@@ -1,5 +1,5 @@
 import { supabase, toError } from "../../lib/supabase";
-import type { SignUpInput, User } from "../lib/types";
+import type { ProfileInput, SignUpInput, User } from "../lib/types";
 import { isValidEmail, passwordIsStrong } from "../lib/format";
 import { ConfirmationRequiredError } from "../lib/errors";
 import { userFromProfile } from "./supabaseMappers";
@@ -78,6 +78,35 @@ export async function getCurrentUser(): Promise<User | null> {
   const user = await loadUser(verified.user);
   if (!user) await supabase.auth.signOut();
   return user;
+}
+
+/** Your own profile row (row-level security lets you change only your own). */
+export async function updateProfile(userId: string, input: ProfileInput): Promise<void> {
+  const fullName = input.fullName.trim();
+  if (!fullName) throw new Error("Enter your full name.");
+  const { error } = await supabase.from("profiles").update({ full_name: fullName, phone: input.phone.trim() || null, job_title: input.jobTitle.trim() || null }).eq("id", userId);
+  if (error) throw toError(error, "Unable to save your profile.");
+}
+
+/**
+ * Stores a new profile picture (or removes it with null). Files live in the private organization-assets bucket under
+ * <organization>/avatars/<you>/..., the only place storage policies let you write a personal picture. Returns the new path.
+ */
+export async function updateAvatar(userId: string, orgId: string | null, blob: Blob | null, previous: string): Promise<string> {
+  let path = "";
+  if (blob) {
+    if (!orgId) throw new Error("Select an organization first.");
+    path = `${orgId}/avatars/${userId}/${Date.now()}.jpg`;
+    const up = await supabase.storage.from("organization-assets").upload(path, blob, { contentType: "image/jpeg", upsert: false });
+    if (up.error) throw toError(up.error, "Unable to upload the picture.");
+  }
+  const { error } = await supabase.from("profiles").update({ avatar_path: path || null }).eq("id", userId);
+  if (error) {
+    if (path) await supabase.storage.from("organization-assets").remove([path]);
+    throw toError(error, "Unable to save the picture.");
+  }
+  if (previous && !previous.startsWith("data:")) await supabase.storage.from("organization-assets").remove([previous]);   // best effort
+  return path;
 }
 
 export async function logout(): Promise<void> {

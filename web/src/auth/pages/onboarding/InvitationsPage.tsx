@@ -152,7 +152,7 @@ export default function InvitationsPage() {
           </Alert>
         ) : null}
 
-        <div className="mt-6 flex flex-wrap items-center gap-1 rounded-lg border border-u-line bg-u-card p-1 shadow-[0_1px_2px_rgba(16,24,40,0.03)] sm:w-fit">
+        <div className="mt-6 flex flex-wrap items-center gap-1 rounded-lg border border-u-line bg-u-card p-1 shadow-[0_1px_2px_rgba(12,42,34,0.03)] sm:w-fit">
           {(
             [
               { key: "all", label: "All" },
@@ -217,7 +217,7 @@ export default function InvitationsPage() {
                   key={invitation.id}
                   className={cn(
                     "overflow-hidden transition",
-                    isPending ? "hover:border-u-line2 hover:shadow-[0_8px_28px_-20px_rgba(15,23,42,0.35)]" : "opacity-90"
+                    isPending ? "hover:border-u-line2 hover:shadow-[0_8px_28px_-20px_rgba(12,42,34,0.35)]" : "opacity-90"
                   )}
                 >
                   <div className="flex flex-col gap-4 p-4 sm:p-5">
@@ -344,7 +344,7 @@ export default function InvitationsPage() {
           <button
             type="button"
             onClick={() => navigate("/onboarding/create-organization")}
-            className="focus-ring group flex items-center gap-3 rounded-xl border border-u-line bg-u-card px-4 py-3.5 text-left transition hover:border-u-accent/30 hover:shadow-[0_6px_20px_-16px_rgba(37,99,235,0.5)]"
+            className="focus-ring group flex items-center gap-3 rounded-xl border border-u-line bg-u-card px-4 py-3.5 text-left transition hover:border-u-accent/30 hover:shadow-[0_6px_20px_-16px_rgba(29,102,80,0.5)]"
           >
             <span className="flex size-9 items-center justify-center rounded-lg bg-u-accent-soft ring-1 ring-u-accent/30">
               <Building2 className="size-4 text-u-accent" />

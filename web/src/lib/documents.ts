@@ -10,7 +10,7 @@ import { fetchAll } from "./financeData";
 export type DocumentBucket = "maintenance-attachments" | "project-documents" | "lease-documents" | "finance-documents" | "property-images" | "tenant-identification";
 export type EntityType =
   | "property" | "unit" | "tenant" | "lease" | "vendor" | "maintenance_request" | "work_order" | "asset" | "project" | "project_task" | "invoice" | "payment"
-  | "expense" | "bill" | "bank_account" | "deposit" | "project_expense" | "project_invoice";
+  | "expense" | "bill" | "bank_account" | "deposit" | "project_expense" | "project_invoice" | "task";
 
 export interface StoredDocument {
   id: string;

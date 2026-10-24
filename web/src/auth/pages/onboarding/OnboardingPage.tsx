@@ -64,7 +64,7 @@ export default function OnboardingPage() {
           </span>
         </div>
 
-        <div className="mt-7 grid gap-4 rounded-2xl border border-u-line bg-u-card p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:grid-cols-[1fr_auto] sm:items-center sm:p-6">
+        <div className="mt-7 grid gap-4 rounded-2xl border border-u-line bg-u-card p-5 shadow-[0_1px_2px_rgba(12,42,34,0.04)] sm:grid-cols-[1fr_auto] sm:items-center sm:p-6">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.14em] text-u-accent uppercase">One last step</p>
             <h1 className="mt-2 text-[26px] font-semibold tracking-[-0.035em] text-u-ink sm:text-[30px]">
@@ -101,10 +101,10 @@ export default function OnboardingPage() {
         ) : null}
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <Card className="group relative flex flex-col overflow-hidden p-5 transition hover:border-u-accent/30 hover:shadow-[0_12px_36px_-18px_rgba(37,99,235,0.35)]">
+          <Card className="group relative flex flex-col overflow-hidden p-5 transition hover:border-u-accent/30 hover:shadow-[0_12px_36px_-18px_rgba(29,102,80,0.35)]">
             <div className="absolute -top-16 -right-16 size-40 rounded-full bg-u-accent-soft opacity-70 blur-2xl transition group-hover:opacity-100" aria-hidden />
             <div className="relative flex items-start justify-between">
-              <span className="flex size-11 items-center justify-center rounded-xl bg-gradient-to-br from-u-accent to-u-accent shadow-[0_8px_20px_-8px_rgba(37,99,235,0.7)]">
+              <span className="flex size-11 items-center justify-center rounded-xl bg-gradient-to-br from-u-accent to-u-accent shadow-[0_8px_20px_-8px_rgba(29,102,80,0.7)]">
                 <Building2 className="size-5 text-u-onaccent" />
               </span>
               <Badge tone="blue">Recommended</Badge>

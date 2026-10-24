@@ -20,12 +20,12 @@ type ButtonSize = "xs" | "sm" | "md" | "lg";
 
 const buttonVariants: Record<ButtonVariant, string> = {
   primary:
-    "bg-u-accent text-u-onaccent shadow-[0_1px_2px_rgba(16,24,40,0.08),inset_0_1px_0_rgba(255,255,255,0.16)] hover:bg-u-accent-strong active:bg-u-accent-strong disabled:bg-u-accent",
+    "bg-u-accent text-u-onaccent shadow-[0_1px_2px_rgba(12,42,34,0.08),inset_0_1px_0_rgba(255,255,255,0.16)] hover:bg-u-accent-strong active:bg-u-accent-strong disabled:bg-u-accent",
   secondary:
-    "border border-u-line bg-u-card text-u-ink2 shadow-[0_1px_2px_rgba(16,24,40,0.04)] hover:border-u-line2 hover:bg-u-s2 active:bg-u-s3 disabled:text-u-muted",
+    "border border-u-line bg-u-card text-u-ink2 shadow-[0_1px_2px_rgba(12,42,34,0.04)] hover:border-u-line2 hover:bg-u-s2 active:bg-u-s3 disabled:text-u-muted",
   ghost: "text-u-ink2 hover:bg-u-s3 hover:text-u-ink disabled:text-u-s3",
   danger:
-    "bg-u-danger text-u-onaccent shadow-[0_1px_2px_rgba(16,24,40,0.08)] hover:bg-u-danger active:bg-u-danger disabled:bg-u-danger",
+    "bg-u-danger text-u-onaccent shadow-[0_1px_2px_rgba(12,42,34,0.08)] hover:bg-u-danger active:bg-u-danger disabled:bg-u-danger",
   dark: "bg-u-ink2 text-u-onaccent hover:bg-u-ink2 active:bg-u-ink2 disabled:bg-u-line2",
   success: "bg-u-ok text-u-onaccent hover:bg-u-ok disabled:bg-u-ok",
 };
@@ -102,7 +102,7 @@ export function IconButton({
 /* ------------------------------------------------------------------ Fields */
 
 const fieldBase =
-  "w-full rounded-lg border bg-u-card text-[13.5px] text-u-ink shadow-[0_1px_2px_rgba(16,24,40,0.03)] transition placeholder:text-u-muted focus:outline-none focus:ring-[3.5px] disabled:cursor-not-allowed disabled:bg-u-s2 disabled:text-u-muted";
+  "w-full rounded-lg border bg-u-card text-[13.5px] text-u-ink shadow-[0_1px_2px_rgba(12,42,34,0.03)] transition placeholder:text-u-muted focus:outline-none focus:ring-[3.5px] disabled:cursor-not-allowed disabled:bg-u-s2 disabled:text-u-muted";
 
 function fieldState(error?: string) {
   return error
@@ -506,7 +506,7 @@ export function Modal({
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("rounded-xl border border-u-line/80 bg-u-card shadow-[0_1px_2px_rgba(16,24,40,0.04)]", className)}>
+    <div className={cn("rounded-xl border border-u-line/80 bg-u-card shadow-[0_1px_2px_rgba(12,42,34,0.04)]", className)}>
       {children}
     </div>
   );
@@ -570,7 +570,7 @@ export function EmptyState({
 }) {
   return (
     <div className={cn("flex flex-col items-center justify-center px-6 py-12 text-center", className)}>
-      <div className="mb-4 flex size-11 items-center justify-center rounded-xl border border-u-line bg-u-s2 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+      <div className="mb-4 flex size-11 items-center justify-center rounded-xl border border-u-line bg-u-s2 shadow-[0_1px_2px_rgba(12,42,34,0.04)]">
         <Icon className="size-5 text-u-muted" aria-hidden />
       </div>
       <h3 className="text-[13.5px] font-semibold text-u-ink">{title}</h3>

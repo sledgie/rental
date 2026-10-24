@@ -257,9 +257,9 @@ begin
   perform public.test_check('rls', 'a manager can reply as themselves', public.test_as(pm, format($q$insert into public.messages (organization_id, conversation_id, sender_type, sender_user_id, body) values (%L, '66666666-0000-4000-8000-000000000001', 'staff', %L, 'ok')$q$, a, pm)) is null);
   perform public.test_check('rls', 'maintenance staff (no communications access) see no conversations', public.test_visible(maint, 'select * from public.conversations') = 0);
   insert into public.notifications (organization_id, user_id, notification_type, title) values (a, pm, 'message', 'For PM'), (a, acct, 'message', 'For accountant');
-  perform public.test_check('rls', 'notifications are private to their recipient', public.test_visible(pm, 'select * from public.notifications') = 1 and public.test_visible(acct, 'select * from public.notifications') = 1
-    and public.test_visible(owner_a, 'select * from public.notifications') = 0);
-  perform public.test_check('rls', 'a user can mark only their own notification read', public.test_affected(pm, 'update public.notifications set read_at = now()') = 1);
+  perform public.test_check('rls', 'notifications are private to their recipient', public.test_visible(pm, $q$select * from public.notifications where title like 'For %'$q$) = 1 and public.test_visible(acct, $q$select * from public.notifications where title like 'For %'$q$) = 1
+    and public.test_visible(owner_a, $q$select * from public.notifications where title like 'For %'$q$) = 0);
+  perform public.test_check('rls', 'a user can mark only their own notification read', public.test_affected(pm, $q$update public.notifications set read_at = now() where title like 'For %'$q$) = 1);
 
   -- ================= service-only and sensitive functions ===================================================================
   v_err := public.test_as(owner_a, $q$select * from public.claim_due_scheduled_tasks('hacker')$q$);

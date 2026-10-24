@@ -1,0 +1,26 @@
+/* Notification Center: the page shell comes from the tenants stylesheet; the inbox, preferences and the bell menu are Tailwind (u-* theme colours)
+   inside .u-root. Helper classes live in a layer so the .u-root children reset does not revert them. */
+.nc .nc-body{border-top:1px solid var(--line)}
+.nc .directory-tab svg{margin-right:5px;vertical-align:-2px}
+.nc .directory-footnote svg{vertical-align:-2px;margin-right:4px}
+@media print{.nc .no-print{display:none !important}}
+.nc-bell{position:relative}
+.nc-bell-badge{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:var(--danger);color:#fff;font-size:10px;font-weight:700;line-height:17px;text-align:center;border:2px solid var(--card)}
+@layer utilities {
+  .nc .nc-btn,.nc-menu .nc-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:30px;padding:0 10px;border:1px solid var(--line2);border-radius:8px;background:var(--card);color:var(--ink);font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;transition:background .15s,border-color .15s}
+  .nc .nc-btn:hover:not(:disabled),.nc-menu .nc-btn:hover:not(:disabled){background:var(--surface-2)}
+  .nc .nc-btn:disabled,.nc-menu .nc-btn:disabled{opacity:.5;cursor:not-allowed}
+  .nc .nc-btn-ghost,.nc-menu .nc-btn-ghost{border-color:transparent;background:transparent;color:var(--ink-2)}
+  .nc .nc-btn-danger,.nc-menu .nc-btn-danger{border-color:color-mix(in srgb,var(--danger) 40%,transparent);color:var(--danger)}
+  .nc .nc-btn-danger:hover:not(:disabled){background:var(--danger-soft)}
+  .nc .nc-menu-item{display:flex;width:100%;align-items:center;gap:8px;padding:7px 10px;border:0;border-radius:6px;background:transparent;color:var(--ink);font-size:13px;text-align:left;cursor:pointer}
+  .nc .nc-menu-item:hover{background:var(--surface-2)}
+  .nc .nc-input{width:100%;min-height:36px;border:1px solid var(--line2);border-radius:8px;background:var(--card);padding:6px 10px;font-size:13px;color:var(--ink)}
+  .nc .nc-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+  .nc .nc-input:disabled{opacity:.55;cursor:not-allowed}
+  .nc .nc-chip,.nc-menu .nc-chip{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 12px;border:1px solid var(--line2);border-radius:999px;background:var(--card);color:var(--ink-2);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .nc .nc-chip:hover{border-color:var(--muted)}
+  .nc .nc-chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .nc .nc-chip[aria-pressed="true"] .text-u-muted{color:inherit;opacity:.8}
+  .nc .nc-chip-count{min-width:18px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font-size:10px;font-weight:700;line-height:18px;text-align:center}
+}

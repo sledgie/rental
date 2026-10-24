@@ -8,14 +8,16 @@ The migrations, seed and tests were executed on **PGlite 0.5.11** (real PostgreS
 
 ```text
 cd database/tests && node run_local_tests.mjs
-  stubs + 11 migrations                      ok (every file applies cleanly, in order)
+  stubs + 23 migrations                      ok (every file applies cleanly, in order)
   schema      40/40
   integrity  155/155
-  rls        150/150                         assertions: 345/345 passed
+  rls        150/150
+  tasks       91/91
+  notify      47/47                          assertions: 483/483 passed
 
 node run_local_tests.mjs --with-dev-seed     seed ran twice (2nd run a no-op)        assertions: 19/19 passed
 node run_local_tests.mjs --rollback-check    refused without confirmation → dropped everything (0 relations, no private schema,
-                                             no auth triggers, no buckets) → re-applied all 11 migrations → schema tests 40/40
+                                             no auth triggers, no buckets) → re-applied all 23 migrations → schema tests 40/40
 node tests/generate_docs.mjs                 data_dictionary.md + entity_relationships.md regenerated from the live schema
 ```
 
@@ -28,7 +30,7 @@ Failures found *by these tests* and fixed during development (so they are not hy
 | 1 | Expected tables and columns exist | `schema`: all 138 tables present, no undocumented tables; every table has a comment; data dictionary generated from the live catalog | ✅ run |
 | 2 | Foreign keys reference valid tables/columns | PostgreSQL creates them or the migration fails; 392 FKs; every FK (except to `profiles`) has a covering index (`schema`) | ✅ run |
 | 3 | Constraints and indexes present | exclusion constraints (lease occupancy, reconciliation periods, deposit rules), partial unique indexes (recurring rent invoice, one reserved application per unit, one primary contact), CHECKs, ~550 indexes (`schema`, `integrity`) | ✅ run |
-| 4 | Migrations apply in order | 001→011 on an empty database, and again after the rollback script | ✅ run |
+| 4 | Migrations apply in order | 001→023 on an empty database, and again after the rollback script | ✅ run |
 | 5 | Seed data respects the schema | development seed (run twice) + 19 consistency assertions (balanced ledger, no duplicates, valid chain) | ✅ run |
 | 6 | RLS enabled on intended tables | `schema`: RLS on every public table; every readable table has a SELECT policy; `organization_counters` deliberately closed; no policy for `anon`/PUBLIC; `anon` has no table/view/function privilege | ✅ run |
 | 7 | Policies for each required operation | `rls`: read/insert/update/delete tested per role on representative tables; append-only tables have no UPDATE/DELETE policy | ✅ run |

@@ -13,7 +13,7 @@
 * **One authoritative location:** `database/migrations/NNN_name.sql`, applied in file order, each in its own transaction. They only create/extend objects, so applying them to an empty project is the supported path. For the Supabase CLI, copy them to `supabase/migrations/<timestamp>_<name>.sql` at deploy time (see `installation_guide.md`).
 * Recovery: every migration is additive; `rollback/drop_application_schema.sql` removes everything for throwaway databases; for shared environments the strategy is a backup/PITR snapshot before each migration.
 
-## 3. Structure (138 tables · 17 views · 20 public functions · ~500 policies · ~550 indexes)
+## 3. Structure (147 tables · 17 views · 30 public functions · ~500 policies · ~600 indexes)
 
 | Domain | Migration | Tables |
 |---|---|---|
@@ -27,6 +27,8 @@
 | Maintenance | 005 | assets, maintenance_requests (+completions), maintenance_work_orders, maintenance_estimates, maintenance_visits, maintenance_work_logs, maintenance_schedules (+checklist) |
 | Projects | 005 | projects and 15 child tables (tasks, dependencies, team, invoices, expenses, payments, change orders, quotes, POs, milestones, inspections, deficiencies, tenant notices) |
 | Communication & automation | 006 | message_templates (+versions), automation_rules (+conditions), communication_logs, conversations, messages, announcements, notifications, domain_events, workflow_executions, scheduled_tasks, scheduled_task_runs ... |
+| Notification Center | 023 | notifications (extended with category, severity, action link, dismiss / snooze / expiry, required permission), notification_preferences (per member and category); producers are triggers plus `process_notification_events` |
+| Scheduled tasks | 022 | tasks, task_categories, task_recurrences, task_checklist_items, task_comments, task_attachments, task_reminders, task_activities (people-facing work assignments; separate from `scheduled_tasks`, which are background jobs, and `project_tasks`) |
 
 Full column-level detail: `data_dictionary.md`. Diagrams: `entity_relationships.md`.
 

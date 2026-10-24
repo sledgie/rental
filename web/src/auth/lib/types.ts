@@ -13,6 +13,16 @@ export interface User {
   status: UserStatus;
   emailVerified: boolean;
   createdAt: string;
+  phone?: string;
+  jobTitle?: string;
+  /** Storage path of the profile picture (a data URL in demo mode). */
+  avatarPath?: string;
+}
+
+export interface ProfileInput {
+  fullName: string;
+  phone: string;
+  jobTitle: string;
 }
 
 export type BusinessType =

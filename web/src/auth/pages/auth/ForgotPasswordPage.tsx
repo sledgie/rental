@@ -6,6 +6,7 @@ import { Alert, Button, TextInput } from "../../components/ui";
 import { useAuth } from "../../contexts/AuthContext";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import { isValidEmail } from "../../lib/format";
+import { usingSupabase } from "../../services";
 
 export default function ForgotPasswordPage() {
   useDocumentTitle("Reset your password");
@@ -49,12 +50,14 @@ export default function ForgotPasswordPage() {
           <h1 className="mt-5 text-[26px] font-semibold tracking-[-0.03em] text-u-ink">Check your inbox</h1>
           <p className="mt-2 text-[13.5px] leading-relaxed text-u-muted">
             If an account exists for <span className="font-medium text-u-ink2">{sentTo}</span>, password
-            reset instructions have been simulated.
+            {usingSupabase ? "a password reset link has been sent. It can take a minute to arrive." : "reset instructions have been simulated."}
           </p>
+          {!usingSupabase ? (
           <Alert tone="info" className="mt-5" title="Development simulation">
             No email was actually sent. This prototype does not have real email delivery or a reset token
             endpoint. Use the demo credentials on the sign-in page.
           </Alert>
+          ) : null}
           <div className="mt-6 flex flex-col gap-2 sm:flex-row">
             <Link to="/login" className="flex-1">
               <Button variant="secondary" fullWidth icon={ArrowLeft}>
@@ -120,6 +123,7 @@ export default function ForgotPasswordPage() {
           </Button>
         </form>
 
+        {!usingSupabase ? (
         <div className="mt-6 rounded-lg border border-u-line bg-u-s2/70 p-3.5">
           <p className="text-[11.5px] font-medium text-u-ink2">Testing the prototype?</p>
           <p className="mt-1 text-[11px] leading-relaxed text-u-muted">
@@ -127,6 +131,7 @@ export default function ForgotPasswordPage() {
             Password resets do not change credentials — mock data only.
           </p>
         </div>
+        ) : null}
       </div>
     </AuthLayout>
   );

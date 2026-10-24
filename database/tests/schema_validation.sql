@@ -86,7 +86,7 @@ declare
     'invoice_lines','invoice_notes','invoices','journal_entries','journal_entry_lines','lease_additional_charges','lease_parties','lease_party_units',
     'lease_renewal_documents','lease_renewals','lease_units','leases','maintenance_estimates','maintenance_request_completions','maintenance_requests',
     'maintenance_schedule_checklist_items','maintenance_schedules','maintenance_visits','maintenance_work_logs','maintenance_work_orders','management_companies',
-    'message_attachments','message_template_attachments','message_template_properties','message_template_versions','message_templates','messages','notifications',
+    'message_attachments','message_template_attachments','message_template_properties','message_template_versions','message_templates','messages','notification_preferences','notifications',
     'organization_counters','organization_invitations','organization_members','organization_role_permissions','organization_settings','organizations','owners',
     'payment_allocations','payment_refunds','payments','permissions','profiles','project_change_orders','project_deficiencies','project_expenses',
     'project_inspections','project_invoice_lines','project_invoices','project_milestones','project_payment_allocations','project_payments','project_purchase_orders',
@@ -94,7 +94,8 @@ declare
     'property_notification_settings','property_owners','property_preferred_vendors','reconciliation_adjustments','reconciliation_match_bank_lines',
     'reconciliation_match_book_lines','reconciliation_matches','reconciliations','role_permissions','scheduled_task_runs','scheduled_tasks','signature_events',
     'signature_fields','signature_requests','signers','tenant_communication_preferences','tenant_contacts','tenant_id_documents','tenant_private_details','tenants',
-    'units','user_preferences','vendor_private_details','vendor_workers','vendors','workflow_executions'];
+    'units','user_preferences','vendor_private_details','vendor_workers','vendors','workflow_executions',
+    'task_activities','task_attachments','task_categories','task_checklist_items','task_comments','task_recurrences','task_reminders','tasks'];
   v_missing text[];
   v_extra text[];
   v_views text[] := array['v_bill_balances','v_credit_balances','v_current_occupancy','v_document_expirations','v_invoice_balances','v_lease_expirations','v_leases_current',
@@ -210,7 +211,7 @@ begin
                  and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c where c like 'search_path=%')));
 
   -- 7. reference data -----------------------------------------------------------------------------------------------------
-  perform public.test_check('schema', 'permission catalog loaded (22 keys)', (select count(*) from public.permissions) = 22, (select count(*) from public.permissions));
+  perform public.test_check('schema', 'permission catalog loaded (26 keys)', (select count(*) from public.permissions) = 26, (select count(*) from public.permissions));
   perform public.test_check('schema', 'every role has defaults', (select count(distinct role) from public.role_permissions) = 5);
   perform public.test_check('schema', 'administrator has every permission', (select count(*) from public.role_permissions where role = 'administrator') = (select count(*) from public.permissions));
   perform public.test_check('schema', 'read_only holds no manage_* permission', not exists (select 1 from public.role_permissions where role = 'read_only' and permission like 'manage\_%'));

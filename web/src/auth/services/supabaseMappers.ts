@@ -70,6 +70,9 @@ export function userFromProfile(profile: any, extra?: { emailVerified?: boolean 
     status: profile.status === "active" ? "active" : "inactive",
     emailVerified: extra?.emailVerified ?? true,
     createdAt: profile.created_at,
+    phone: profile.phone ?? "",
+    jobTitle: profile.job_title ?? "",
+    avatarPath: profile.avatar_path ?? "",
   };
 }
 

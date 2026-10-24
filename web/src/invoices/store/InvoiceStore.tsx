@@ -106,6 +106,7 @@ const toInput = (patch: Partial<Invoice>): Partial<repo.InvoiceInput> => {
   if ("billingPeriodEnd" in patch) input.billingPeriodEnd = patch.billingPeriodEnd;
   if ("discount" in patch) input.discount = patch.discount;
   if ("memo" in patch) input.memo = patch.memo;
+  if ("status" in patch) input.status = patch.status;
   if ("lineItems" in patch) input.lineItems = patch.lineItems;
   return input;
 };

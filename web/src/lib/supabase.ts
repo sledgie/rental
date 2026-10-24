@@ -8,8 +8,8 @@ export const isSupabaseConfigured = Boolean(url && anonKey);
 
 /** The browser only ever gets the anon (publishable) key; Row-Level Security does the authorization. */
 export const supabase: SupabaseClient = createClient(
-  url ?? "http://localhost:54321",
-  anonKey ?? "anon-key-not-configured",
+  url || "http://localhost:54321",
+  anonKey || "anon-key-not-configured",
   { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }
 );
 

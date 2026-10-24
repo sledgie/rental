@@ -130,7 +130,7 @@ export default function SelectOrganizationPage() {
                 key={workspace.organization.id}
                 className={cn(
                   "group relative overflow-hidden transition",
-                  isActive ? "border-u-accent/30 ring-1 ring-u-accent/10" : "hover:border-u-line2 hover:shadow-[0_14px_40px_-28px_rgba(15,23,42,0.45)]"
+                  isActive ? "border-u-accent/30 ring-1 ring-u-accent/10" : "hover:border-u-line2 hover:shadow-[0_14px_40px_-28px_rgba(12,42,34,0.45)]"
                 )}
               >
                 {isActive ? (

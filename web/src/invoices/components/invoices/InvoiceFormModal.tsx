@@ -374,9 +374,9 @@ export function InvoiceFormModal({
             {values.lineItems.map((item, idx) => (
               <div
                 key={item.id}
-                className="grid grid-cols-2 items-end gap-2 rounded-lg border border-line bg-surface p-2 lg:grid-cols-12"
+                className="grid grid-cols-2 items-end gap-2 rounded-lg border border-line bg-surface p-2 lg:grid-cols-[repeat(24,minmax(0,1fr))]"
               >
-                <div className="col-span-2 lg:col-span-4">
+                <div className="col-span-2 lg:col-span-8">
                   <p className="mb-1 text-[10.5px] uppercase tracking-wide text-ink-faint">
                     Description
                   </p>
@@ -391,7 +391,7 @@ export function InvoiceFormModal({
                     className="h-8 text-[13px]"
                   />
                 </div>
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-4">
                   <p className="mb-1 text-[10.5px] uppercase tracking-wide text-ink-faint">
                     Category
                   </p>
@@ -414,7 +414,7 @@ export function InvoiceFormModal({
                     ))}
                   </Select>
                 </div>
-                <div>
+                <div className="lg:col-span-2">
                   <p className="mb-1 text-[10.5px] uppercase tracking-wide text-ink-faint">Qty</p>
                   <Input
                     type="number"
@@ -429,7 +429,7 @@ export function InvoiceFormModal({
                     className="h-8 text-[13px]"
                   />
                 </div>
-                <div>
+                <div className="lg:col-span-3">
                   <p className="mb-1 text-[10.5px] uppercase tracking-wide text-ink-faint">
                     Unit $
                   </p>
@@ -446,7 +446,7 @@ export function InvoiceFormModal({
                     className="h-8 text-[13px]"
                   />
                 </div>
-                <div>
+                <div className="lg:col-span-2">
                   <p className="mb-1 text-[10.5px] uppercase tracking-wide text-ink-faint">
                     Tax %
                   </p>
@@ -466,7 +466,7 @@ export function InvoiceFormModal({
                     ))}
                   </Select>
                 </div>
-                <div className="flex items-center justify-between gap-2 lg:justify-end">
+                <div className="flex items-center justify-between gap-2 lg:col-span-3 lg:justify-end">
                   <span className="text-[12.5px] text-ink-muted tabular-nums lg:hidden">
                     Line total
                   </span>

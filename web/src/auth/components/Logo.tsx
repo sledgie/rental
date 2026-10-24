@@ -9,7 +9,7 @@ export function BrandMark({ className, size = "md" }: { className?: string; size
   return (
     <span
       className={cn(
-        "relative inline-flex shrink-0 items-center justify-center overflow-hidden bg-gradient-to-br from-u-accent via-u-accent to-u-accent shadow-[0_6px_16px_-6px_rgba(37,99,235,0.8)]",
+        "relative inline-flex shrink-0 items-center justify-center overflow-hidden bg-gradient-to-br from-[#1d6650] to-[#123d32] ring-1 ring-white/25 shadow-[0_6px_16px_-6px_rgba(12,42,34,0.7)]",
         dimensions[size],
         className
       )}

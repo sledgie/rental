@@ -48,7 +48,7 @@ export const NAV = [
   ] },
   { id: 'automation', label: 'Automation', items: [
     { id: 'workflows', label: 'Workflow Automation', icon: 'workflow', desc: 'Automate repetitive steps such as reminders, approvals and follow-ups.' },
-    { id: 'scheduled-tasks', label: 'Scheduled Tasks', icon: 'clock', desc: 'Manage jobs that run on a schedule, such as billing runs and reports.' },
+    { id: 'scheduled-tasks', label: 'Scheduled Tasks', icon: 'clock', desc: 'Assign and track work with due dates, recurring schedules, checklists and reminders.' },
     { id: 'message-templates', label: 'Message Templates', icon: 'mail', desc: 'Create and edit reusable email, SMS and in-app message templates used across the system.' },
     { id: 'activity-logs', label: 'Activity Logs', icon: 'activity', desc: 'An audit trail of who did what, and when.' },
   ] },

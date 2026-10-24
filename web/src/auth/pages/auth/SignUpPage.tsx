@@ -20,6 +20,7 @@ import { isValidEmail, passwordChecks, passwordIsStrong } from "../../lib/format
 import { PASSWORD_REQUIREMENTS } from "../../lib/constants";
 import { ConfirmationRequiredError } from "../../lib/errors";
 import { cn } from "../../utils/cn";
+import { usingSupabase } from "../../services";
 
 type Errors = {
   fullName?: string;
@@ -74,7 +75,7 @@ export default function SignUpPage() {
       toast({
         variant: "success",
         title: "Account created",
-        description: "Email verification simulated. Next: set up or join an organization.",
+        description: usingSupabase ? "Next: set up or join an organization." : "Email verification simulated. Next: set up or join an organization.",
       });
       navigate("/onboarding", { replace: true });
     } catch (error) {
@@ -336,6 +337,7 @@ export default function SignUpPage() {
           </Link>
         </p>
 
+        {!usingSupabase ? (
         <div className="mt-6 flex items-start gap-2.5 rounded-lg border border-u-accent/30 bg-u-accent-soft/60 px-3.5 py-3">
           <ShieldCheck className="mt-0.5 size-4 shrink-0 text-u-accent" />
           <p className="text-[11px] leading-relaxed text-u-accent/80">
@@ -343,6 +345,7 @@ export default function SignUpPage() {
             message is sent. Creating an account never creates an organization automatically.
           </p>
         </div>
+        ) : null}
       </div>
 
       <Modal

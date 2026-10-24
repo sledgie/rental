@@ -5,6 +5,8 @@ import { Icon } from '../icons.jsx';
 import { MenuItem, Pop } from './Pop.jsx';
 import { useAuth } from '../auth/contexts/AuthContext';
 import { useOrganization } from '../auth/contexts/OrganizationContext';
+import NotificationBell from '../notificationcenter/NotificationBell';
+import { useAvatarUrl } from '../auth/lib/avatar';
 
 const RECORDS = [['Tenant', '#/tenants?new=1'], ['Property', '#/properties?new=1'], ['Vendor', '#/vendors']];
 const ACTIVITIES = [['Invoice', null], ['Payments', null], ['Credit Notes', '#/credit-notes'], ['Bill Schedules', '#/bill-schedule']];
@@ -33,6 +35,7 @@ export default function TopBar({ notify, onMenu, menuOpen }) {
   const { user, signOut } = useAuth();
   const { activeOrganization, activeRole, workspaces } = useOrganization();
   const soon = (what) => () => notify(`${what} is not available yet.`);
+  const avatarUrl = useAvatarUrl(user?.avatarPath);
   return (
     <header className="tv-top">
       <button type="button" className="tv-ibtn lg tv-menu-btn" onClick={onMenu} aria-label="Open navigation" aria-expanded={!!menuOpen} aria-controls="app-sidebar"><Icon name="menu" size={20} /></button>
@@ -48,12 +51,13 @@ export default function TopBar({ notify, onMenu, menuOpen }) {
         </Pop>
         <button type="button" className="tv-ibtn lg" aria-label="Help" title="Help" onClick={soon('Help')}><Icon name="help" size={17} /></button>
         <button type="button" className="tv-ibtn lg" aria-label="Compose email" title="Email" onClick={soon('Email')}><Icon name="mail" size={17} /></button>
-        <button type="button" className="tv-ibtn lg" aria-label="Notifications" title="Notifications" onClick={soon('Notifications')}><Icon name="bell" size={17} /></button>
-        <Pop align="right" width={230} trigger={({ toggle }) => <button type="button" className="tv-avatar" aria-label="Account menu" onClick={toggle}><Icon name="user" size={16} /></button>}>
+        <NotificationBell notify={notify} />
+        <Pop align="right" width={230} trigger={({ toggle }) => <button type="button" className="tv-avatar" aria-label="Account menu" onClick={toggle}>{avatarUrl ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} /> : <Icon name="user" size={16} />}</button>}>
           {(close) => (
             <>
               {user && <div className="tv-gh" style={{ textTransform: 'none' }}>{user.fullName}<br /><span style={{ fontWeight: 400 }}>{activeOrganization?.name}{activeRole ? ` · ${activeRole}` : ''}</span></div>}
               <div className="tv-sep" />
+              <MenuItem onClick={() => { close(); window.location.hash = '#/system-settings?cat=personal&anchor=personal-account'; }}>My profile &amp; photo</MenuItem>
               <MenuItem onClick={() => { close(); window.location.hash = '#/system-settings?cat=personal'; }}>Personal preferences</MenuItem>
               <MenuItem onClick={() => { close(); window.location.hash = '#/organization'; }}>Organization settings</MenuItem>
               {workspaces.length > 1 && <MenuItem onClick={() => { close(); window.location.hash = '#/organizations/select'; }}>Switch organization</MenuItem>}

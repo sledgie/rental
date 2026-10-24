@@ -1,0 +1,27 @@
+/* Scheduled Tasks: the page shell comes from the tenants stylesheet; lists, forms and the calendar are Tailwind (u-* theme colours) inside .u-root.
+   Helper classes live in a layer so the .u-root children reset does not revert them. */
+.st .st-body{border-top:1px solid var(--line)}
+.st .directory-tab svg{margin-right:5px;vertical-align:-2px}
+.st .directory-footnote svg{vertical-align:-2px;margin-right:4px}
+@media print{.st .no-print{display:none !important}}
+@layer utilities {
+  .st .st-btn,.st-drawer .st-btn,.st-modal .st-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;padding:0 12px;border:1px solid var(--line2);border-radius:8px;background:var(--card);color:var(--ink);font-size:12.5px;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s}
+  .st .st-btn:hover:not(:disabled),.st-drawer .st-btn:hover:not(:disabled),.st-modal .st-btn:hover:not(:disabled){background:var(--surface-2)}
+  .st .st-btn:disabled,.st-drawer .st-btn:disabled,.st-modal .st-btn:disabled{opacity:.5;cursor:not-allowed}
+  .st .st-btn-primary,.st-drawer .st-btn-primary,.st-modal .st-btn-primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .st .st-btn-primary:hover:not(:disabled),.st-drawer .st-btn-primary:hover:not(:disabled),.st-modal .st-btn-primary:hover:not(:disabled){background:var(--accent-strong)}
+  .st .st-btn-danger,.st-drawer .st-btn-danger,.st-modal .st-btn-danger{border-color:color-mix(in srgb,var(--danger) 40%,transparent);color:var(--danger)}
+  .st .st-btn-danger:hover:not(:disabled),.st-drawer .st-btn-danger:hover:not(:disabled),.st-modal .st-btn-danger:hover:not(:disabled){background:var(--danger-soft)}
+  .st .st-btn-sm,.st-drawer .st-btn-sm,.st-modal .st-btn-sm{min-height:28px;padding:0 9px;font-size:11.5px}
+  .st .st-input,.st-drawer .st-input,.st-modal .st-input{width:100%;min-height:38px;border:1px solid var(--line2);border-radius:8px;background:var(--card);padding:8px 10px;font-size:13px;color:var(--ink);transition:border-color .15s,box-shadow .15s}
+  .st .st-input:hover,.st-drawer .st-input:hover,.st-modal .st-input:hover{border-color:var(--muted)}
+  .st .st-input:focus,.st-drawer .st-input:focus,.st-modal .st-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+  .st .st-input:disabled,.st-drawer .st-input:disabled,.st-modal .st-input:disabled{opacity:.6}
+  .st .st-input[aria-invalid="true"],.st-drawer .st-input[aria-invalid="true"]{border-color:var(--danger)}
+  .st .st-chip,.st-drawer .st-chip{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 12px;border:1px solid var(--line2);border-radius:999px;background:var(--card);color:var(--ink-2);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .st .st-chip:hover,.st-drawer .st-chip:hover{border-color:var(--muted)}
+  .st .st-chip[aria-pressed="true"],.st-drawer .st-chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .st .st-pg{display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--line2);border-radius:6px;background:var(--card);color:var(--ink-2);cursor:pointer}
+  .st .st-pg:disabled{opacity:.4;cursor:not-allowed}
+}
+@media (max-width:900px){.st-drawer{max-width:100vw}}

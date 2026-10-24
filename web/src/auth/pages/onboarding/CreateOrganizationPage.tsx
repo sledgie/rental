@@ -115,7 +115,7 @@ export default function CreateOrganizationPage() {
         <Card className="animate-fade-up overflow-hidden">
           <div className="border-b border-u-line px-5 py-5 sm:px-6">
             <div className="flex items-start gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-u-accent to-u-accent shadow-[0_8px_20px_-8px_rgba(37,99,235,0.7)]">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-u-accent to-u-accent shadow-[0_8px_20px_-8px_rgba(29,102,80,0.7)]">
                 <Building2 className="size-5 text-u-onaccent" />
               </span>
               <div>

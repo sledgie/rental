@@ -37,14 +37,18 @@ database/
 │   ├── 018_bank_account_codes.sql       bank account codes (BA-001)
 │   ├── 019_maintenance_records.sql      schedule numbers and payment fields on linked expenses
 │   ├── 020_document_numbers.sql         document numbers (DOC-00001)
-│   └── 021_automation_condition_operators.sql   empty / not-empty tests in automation rules
+│   ├── 021_automation_condition_operators.sql   empty / not-empty tests in automation rules
+│   ├── 022_scheduled_tasks.sql          Scheduled Tasks: tasks, series, categories, checklist, comments, reminders, history + RPCs
+│   └── 023_notification_center.sql      Notification Center: inbox columns on notifications, preferences, producers, process_notification_events
 ├── seed/development_seed.sql    OPTIONAL fictional demo organization (local development only)
 ├── rollback/drop_application_schema.sql   DESTRUCTIVE reset for throwaway databases
 └── tests/
     ├── schema_validation.sql         structure, RLS coverage, privileges, storage config
     ├── data_integrity_validation.sql business rules (isolation, ledger, payments, leases, audit chain, tasks ...)
     ├── rls_validation.sql            many simulated users: isolation, roles, sensitive data, storage, views, service-only functions
+    ├── scheduled_tasks_validation.sql  Scheduled Tasks: visibility, permissions, frozen history, recurrence maths, generation, reminders
     ├── dev_seed_smoke.sql            consistency checks of the development seed
+    ├── notification_center_validation.sql  Notification Center: recipients, preferences, de-duplication, privacy, required permission, time-based events
     ├── supabase_stubs.sql            minimal auth/storage/roles so the above run on plain PostgreSQL (NEVER apply to Supabase)
     ├── run_local_tests.mjs           runs everything on PGlite (WebAssembly PostgreSQL) — no Docker needed
     └── generate_docs.mjs             regenerates data_dictionary.md and entity_relationships.md from the live schema
